@@ -1,10 +1,11 @@
 {
   "name": "observer",
   "version": "0.0.1",
-  "description": "Data-driven component library",
+  "description": "observer tool",
   "main": "src/scripts/index.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "deploy": "bower register observer.js git://github.com/tao-zeng/observer.js.git"
   },
   "repository": {
     "type": "git",
