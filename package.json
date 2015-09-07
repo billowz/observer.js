@@ -4,8 +4,7 @@
   "description": "observer tool",
   "main": "src/scripts/index.js",
   "scripts": {
-    "test": "test",
-    "deploy": "bower register observer.js git://github.com/tao-zeng/observer.js.git"
+    "test": "test"
   },
   "repository": {
     "type": "git",
