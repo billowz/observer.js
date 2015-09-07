@@ -23,7 +23,6 @@
     "tests"
   ],
   "dependencies": {
-    "dat.js":"",
     "lodash":"",
     "respond": "^1.4.2",
     "es5-shim": "^4.1.10",
