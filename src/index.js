@@ -72,7 +72,6 @@ class Observer {
       });
       return;
     }
-
     state = this.watchers[attr] = {
       value: this.target[attr],
       history: [],
@@ -90,7 +89,7 @@ class Observer {
           if (this.history > 0) {
             state.history.splice(0, 0, oldValue);
             if (state.history.length > this.history) {
-              state.history.splice(this.history, state.history.length - this.history);
+              state.history.splice(this.history, state.history.length - 1 - this.history);
             }
           }
           this._onChanged(attr, state, oldValue);
@@ -102,10 +101,15 @@ class Observer {
     let state = this.watchers[attr];
     if (state) {
       handler = Observer.handlerArg(handler);
-      if (handler.length == 0) {
-        // unwatch all
-      } else {
-
+      if (handler.length > 0) {
+        _.remove(state.handlers, (h) => {
+          return _.include(handler, h);
+        })
+        if (state.handlers.length == 0) {
+          Object.defineProperty(this.target, attr, {
+            value: state.value
+          });
+        }
       }
     }
   }

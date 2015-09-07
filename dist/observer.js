@@ -7,7 +7,7 @@
 		exports["observer"] = factory(require("_"));
 	else
 		root["observer"] = factory(root["_"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_56__) {
+})(this, function(__WEBPACK_EXTERNAL_MODULE_58__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -60,23 +60,165 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _Map = __webpack_require__(2)['default'];
 	
-	var _ = __webpack_require__(56);
+	var _Object$defineProperty = __webpack_require__(56)['default'];
+	
+	var _ = __webpack_require__(58),
+	    ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
 	var _observers = new _Map();
 	
-	function bindObserver(target, observer) {
-	  _observers.set(target, observer);
+	function bindObserver(observer) {
+	  if (observer._binded !== true) {
+	    _observers.set(observer.target, observer);
+	    observer._binded = true;
+	  }
+	}
+	
+	function unbindObserver(observer) {
+	  if (observer._binded === true) {
+	    _observers['delete'](observer.target, observer);
+	    observer._binded = false;
+	  }
 	}
 	
 	function getBindObserver(target) {
 	  return _observers.get(target);
 	}
 	
-	var Observer = function Observer(target) {
-	  _classCallCheck(this, Observer);
+	function isBind(observer) {
+	  return observer._binded;
+	}
 	
-	  if (!_.isArray(target) || !_.isObject(target)) {}
-	  bindObserver(target, this);
-	};
+	var Observer = (function () {
+	  function Observer(target, history) {
+	    _classCallCheck(this, Observer);
+	
+	    if (!_.isArray(target) || !_.isObject(target)) {
+	      throw TypeError('can not observe object[' + typeof target + ']');
+	    }
+	    this.target = target;
+	    this.listens = [];
+	    this.attrListens = {};
+	    this.watchers = {};
+	    this.history = _.isNumber(history) ? history : 0;
+	    bindObserver(this);
+	  }
+	
+	  Observer.attrArg = function attrArg(attr) {
+	    if (_.isUndefined(attr) || _.isNull(attr)) {
+	      attr = _.keys(this.target);
+	    } else if (!_.isArray(attr)) {
+	      attr = [attr];
+	    }
+	    return attr;
+	  };
+	
+	  Observer.handlerArg = function handlerArg(handler) {
+	    if (!_.isArray(handler)) {
+	      handler = [handler];
+	    }
+	    handler = _.filter(hander, function (h) {
+	      return _.isFunction(h);
+	    });
+	    return handler;
+	  };
+	
+	  Observer.prototype._onChanged = function _onChanged(attr, state, oldVal) {
+	    var _this = this;
+	
+	    _.each(state.handlers, function (handler) {
+	      handler(attr, state.value, oldValue, _this.target, state.history);
+	    });
+	  };
+	
+	  Observer.prototype._watch = function _watch(attr, handler) {
+	    var _this2 = this;
+	
+	    handler = Observer.handlerArg(handler);
+	    if (handler.length == 0) {
+	      return;
+	    }
+	    var state = this.watchers[attr];
+	    if (state) {
+	      _.each(handler, function (h) {
+	        if (!_.include(state.handlers, h)) {
+	          state.handlers.push(h);
+	        }
+	      });
+	      return;
+	    }
+	    state = this.watchers[attr] = {
+	      value: this.target[attr],
+	      history: [],
+	      handlers: handler
+	    };
+	    state.value = this.target[attr];
+	    _Object$defineProperty(this.target, attr, {
+	      get: function get() {
+	        return state.value;
+	      },
+	      set: function set(value) {
+	        var oldValue = state.value;
+	        if (value !== oldValue) {
+	          state.value = value;
+	          if (_this2.history > 0) {
+	            state.history.splice(0, 0, oldValue);
+	            if (state.history.length > _this2.history) {
+	              state.history.splice(_this2.history, state.history.length - 1 - _this2.history);
+	            }
+	          }
+	          _this2._onChanged(attr, state, oldValue);
+	        }
+	      }
+	    });
+	  };
+	
+	  Observer.prototype._unwatch = function _unwatch(attr, handler) {
+	    var state = this.watchers[attr];
+	    if (state) {
+	      handler = Observer.handlerArg(handler);
+	      if (handler.length > 0) {
+	        _.remove(state.handlers, function (h) {
+	          return _.include(handler, h);
+	        });
+	        if (state.handlers.length == 0) {
+	          _Object$defineProperty(this.target, attr, {
+	            value: state.value
+	          });
+	        }
+	      }
+	    }
+	  };
+	
+	  Observer.prototype.getHistory = function getHistory(attr) {
+	    var state = this.watchers[attr];
+	    return state ? state.history : [];
+	  };
+	
+	  Observer.prototype.on = function on(attr, handler) {
+	    if (_.isFunction(attr)) {
+	      handler = attr;
+	      attr = undefined;
+	    }
+	    attr = Observer.attrArg(attr);
+	    if (attr.length = 0) {
+	      return;
+	    }
+	  };
+	
+	  Observer.prototype.un = function un(attr, handler) {};
+	
+	  Observer.prototype.destory = function destory() {
+	    var _this3 = this;
+	
+	    _.map(this.watchers, function (state, attr) {
+	      _this3._unwatch(attr);
+	    });
+	    this.watchers = {};
+	    unbindObserver(this);
+	  };
+	
+	  return Observer;
+	})();
 	
 	module.exports = Observer;
 
@@ -1157,9 +1299,28 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 56 */
+/***/ function(module, exports, __webpack_require__) {
+
+	"use strict";
+	
+	module.exports = { "default": __webpack_require__(57), __esModule: true };
+
+/***/ },
+/* 57 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	var $ = __webpack_require__(16);
+	module.exports = function defineProperty(it, key, desc) {
+	  return $.setDesc(it, key, desc);
+	};
+
+/***/ },
+/* 58 */
 /***/ function(module, exports) {
 
-	module.exports = __WEBPACK_EXTERNAL_MODULE_56__;
+	module.exports = __WEBPACK_EXTERNAL_MODULE_58__;
 
 /***/ }
 /******/ ])
