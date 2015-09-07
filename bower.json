@@ -1,0 +1,36 @@
+{
+  "name": "observer.js",
+  "version": "0.0.1",
+  "homepage": "https://github.com/tao-zeng/observer.js",
+  "authors": [
+    "tao.zeng <tao.zeng.zt@gmail.com>"
+  ],
+  "description": "Data-driven component library",
+  "main": "src/scripts/index.js",
+  "moduleType": [
+    "yui"
+  ],
+  "keywords": [
+    "databinding",
+    "javascript",
+    "observe",
+    "watch",
+    "library"
+  ],
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "lodash":"",
+    "respond": "^1.4.2",
+    "es5-shim": "^4.1.10",
+    "html5shiv": "^3.7.3",
+    "console-polyfill":""
+  }
+}

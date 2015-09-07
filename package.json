@@ -1,0 +1,36 @@
+{
+  "name": "observer",
+  "version": "0.0.1",
+  "description": "Data-driven component library",
+  "main": "src/scripts/index.js",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tao-zeng/observer.js.git"
+  },
+  "keywords": [
+    "compontent",
+    "data-driven",
+    "databinding",
+    "javascript",
+    "library"
+  ],
+  "author": "Tao Zeng <tao.zeng.zt@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tao-zeng/observer.js/issues"
+  },
+  "homepage": "https://github.com/tao-zeng/observer.js",
+  "devDependencies": {
+    "path": "^0.11.14",
+    "gulp": "^3.9.0",
+    "gulp-clean": "^0.3.1",
+    "gulp-webpack": "^1.4.0",
+    "webpack": "^1.10.0",
+    "babel-runtime": "^5.4.7",
+    "babel-loader": "^5.0.0",
+    "webpack-dev-server": "^1.10.0"
+  }
+}
