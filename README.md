@@ -1,6 +1,8 @@
 ##observer.js
 
 用于观察任意对象的任意变化的类库。
+支持 ES7 Object.observe, IE 6 7 8
+
 
 ### 对象字面量
 ```javascript

@@ -1,6 +1,8 @@
-let _ = require('lodash');
+const _ = require('lodash');
+let shims = {},
+  protoShims = {};
 if (!Function.prototype.bind) {
-  Function.prototype.bind = function bind(scope) {
+  protoShims.bind = function bind(scope) {
     if (arguments.length < 2 && scope === undefined) {
       return this
     }
@@ -11,6 +13,5 @@ if (!Function.prototype.bind) {
     }
   }
 }
-module.exports = {
-  bind: Function.prototype.bind
-}
+_.assign(Function.prototype, protoShims);
+module.exports = _.assign(shims, protoShims);
