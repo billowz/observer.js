@@ -103,22 +103,41 @@ if (window.VBArray) {
   class ObjectDescriptor {
     constructor(object) {
       this.object = object;
-
+      this.defines = {};
     }
     defineProperty(attr, desc) {
       this.defines[attr] = desc;
+      if (!desc.get && !desc.set) {
+        if ('value' in desc) {
+          this.object[attr] = desc.value;
+        }
+      } else {
+        if (!_.isFunction(desc.get)) {
+          delete desc.get;
+        }
+        if (!_.isFunction(desc.set)) {
+          delete desc.set;
+        }
+      }
     }
-    get(instance, prop) {
-      console.log('--->get property ' + prop)
+    get(instance, attr) {
+      console.log('--->get property ' + attr)
+      let define = this.defines[attr];
+      if (define && define.get) {
+        return define.get.call(instance);
+      } else {
+        return this.object[attr];
+      }
     }
-    set(instance, prop, value) {
-      this.object[prop] = value;
-      console.log('--->set property ' + prop + '=' + value + ' ' + this.object.a)
+    set(instance, attr, value) {
+      let define = this.defines[attr];
+      if (define && define.set) {
+        define.set.call(instance, value);
+      }
+      this.object[attr] = value;
+      console.log('--->set property ' + attr + '=' + value + ' ' + this.object.a)
+      return value;
     }
-  }
-
-  function Proxy(proxy, target, prop, value) { // jshint ignore:line
-    console.log('-->>' + target + ' ' + prop + ' ' + value + ' ' + arguments.length)
   }
 
   let VBProxyLoop = new Map();
