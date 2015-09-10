@@ -1,3 +1,9 @@
+/**
+ * 监控对象属性变化
+ * 高版本浏览器(Chrome 36+, Opera 23+)基于 Object.observe(ES7)实现
+ * 基于浏览器使用 Object.defineProperty实现
+ * IE 6,7,8使用VBScript实现Object.defineProperty
+ */
 const _ = require('lodash'),
   ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
   prefixes = 'webkit moz ms o'.split(' '),
@@ -323,7 +329,10 @@ module.exports = {
 
   cfg: cfg,
 
-  support: !!Object.observe || Object.defineProperty && (function() {
+  support: !!Object.observe || (window.supportDefinePropertyOnObject !== undefined ? window.supportDefinePropertyOnObject : (function() {
+      if (!Object.defineProperty) {
+        return false;
+      }
       try {
         let val;
         Object.defineProperty(object, 'sentinel', {
@@ -339,5 +348,5 @@ module.exports = {
       } catch (exception) {
         return false;
       }
-    })() || window.supportDefinePropertyOnObject
+    })())
 };

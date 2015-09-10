@@ -1,3 +1,6 @@
+/**
+ * Map & Set & WeakMap & WeakSet
+ */
 let i;
 //Polyfill global objects
 if (!window.WeakMap) {

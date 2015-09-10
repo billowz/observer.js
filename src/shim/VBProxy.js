@@ -1,4 +1,7 @@
-
+/**
+ * 使用VBScript对象代理js对象的get/set方法, 参考Avalon实现
+ * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
+ */
 const coll = require('./collection');
 
 let VBProxy = {};

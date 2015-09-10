@@ -1,3 +1,7 @@
+/**
+ * 修复浏览器(IE 6,7,8)对Object.defineProperty的支持，使用VBProxy
+ */
+
 function doesDefinePropertyWork(object) {
   try {
     let val;
