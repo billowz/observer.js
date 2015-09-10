@@ -1,17 +1,20 @@
-const _ = require('lodash');
-let shims = {},
-  protoShims = {};
 if (!Function.prototype.bind) {
-  protoShims.bind = function bind(scope) {
+  Function.prototype.bind = function bind(scope) {
     if (arguments.length < 2 && scope === undefined) {
       return this
     }
     let fn = this,
-      args = _.slice(arguments, 1);
+      args = [], i;
+    for (i = 1; i < arguments.length; i++) {
+      args.push(arguments[i]);
+    }
     return function() {
-      return fn.apply(scope, args.push.apply(args, arguments));
+      let i,
+        arg = args.concat([]);
+      for (i = 0; i < arguments.length; i++) {
+        arg.push(arguments[i]);
+      }
+      return fn.apply(scope, arg);
     }
   }
 }
-_.assign(Function.prototype, protoShims);
-module.exports = _.assign(shims, protoShims);

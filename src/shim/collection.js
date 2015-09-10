@@ -1,9 +1,7 @@
-const _ = require('lodash');
-let i,
-  shims = {};
+let i;
 //Polyfill global objects
-if (typeof WeakMap == 'undefined') {
-  shims.WeakMap = createCollection({
+if (!window.WeakMap) {
+  window.WeakMap = createCollection({
     // WeakMap#delete(key:void*):boolean
     'delete': sharedDelete,
     // WeakMap#clear():
@@ -17,8 +15,8 @@ if (typeof WeakMap == 'undefined') {
   }, true);
 }
 
-if (typeof Map == 'undefined' || !_.isFunction(((new Map).values)) || !(new Map).values().next) {
-  shims.Map = createCollection({
+if (!window.Map) {
+  window.Map = createCollection({
     // WeakMap#delete(key:void*):boolean
     'delete': sharedDelete,
     //:was Map#get(key:void*[, d3fault:void*]):void*
@@ -41,8 +39,8 @@ if (typeof Map == 'undefined' || !_.isFunction(((new Map).values)) || !(new Map)
   });
 }
 
-if (typeof Set == 'undefined' || !_.isFunction(((new Set).values)) || !(new Set).values().next) {
-  shims.Set = createCollection({
+if (!window.Set) {
+  window.Set = createCollection({
     // Set#has(value:void*):boolean
     has: setHas,
     // Set#add(value:void*):boolean
@@ -62,8 +60,8 @@ if (typeof Set == 'undefined' || !_.isFunction(((new Set).values)) || !(new Set)
   });
 }
 
-if (typeof WeakSet == 'undefined') {
-  shims.WeakSet = createCollection({
+if (!window.WeakSet) {
+  window.WeakSet = createCollection({
     // WeakSet#delete(key:void*):boolean
     'delete': sharedDelete,
     // WeakSet#add(value:void*):boolean
@@ -75,6 +73,25 @@ if (typeof WeakSet == 'undefined') {
   }, true);
 }
 
+function each(arr, callback, scope) {
+  if (window._)
+    return window._.each(arr, callback, scope);
+  if (arr.forEach)
+    arr.forEach(callback, scope);
+  else
+    for (var i = 0; i < arr.length; i++)
+      callback.call(scope, arr[i], i);
+}
+function indexOf(arr, val) {
+  if (window._)
+    return window._.indexOf(arr, val);
+  if (arr.indexOf)
+    return arr.indexOf(val);
+  for (var i = 0; i < arr.length; i++)
+    if (arr[i] === val)
+      return i;
+  return -1;
+}
 
 /**
  * ES6 collection constructor
@@ -110,12 +127,12 @@ function init(a) {
   var i;
   //init Set argument, like `[1,2,3,{}]`
   if (this.add)
-    a.forEach(this.add, this);
+    each(a, this.add, this);
   //init Map argument like `[[1,2], [{}, 4]]`
   else
-    a.forEach(function(a) {
+    each(a, function(a) {
       this.set(a[0], a[1])
-    }, this);
+    }, this)
 }
 
 
@@ -125,7 +142,7 @@ function sharedDelete(key) {
     this._keys.splice(i, 1);
     this._values.splice(i, 1);
     // update iteration pointers
-    this._itp.forEach(function(p) {
+    each(this._itp, function(p) {
       if (i < p[0]) p[0]--;
     });
   }
@@ -146,7 +163,7 @@ function has(list, key) {
     for (i = list.length; i-- && !is(list[i], key);) {
   }
   else
-    i = _.indexOf(list, key);
+    i = indexOf(list, key);
   return -1 < i;
 }
 
@@ -208,7 +225,7 @@ function sharedIterator(itp, array, array2) {
         p[0]++;
       } else {
         done = true;
-        itp.splice(_.indexOf(itp, p), 1);
+        itp.splice(indexOf(itp, p), 1);
       }
       return {
         done: done,
@@ -231,5 +248,11 @@ function sharedForEach(callback, context) {
   }
 }
 
-_.assign(window, shims);
-module.exports = shims;
+module.exports = {
+  each: each,
+  indexOf: indexOf,
+  Map: window.Map,
+  Set: window.Set,
+  WeakMap: window.WeakMap,
+  WeakSet: window.WeakSet
+}

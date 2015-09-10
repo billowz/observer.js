@@ -9,7 +9,7 @@ var fs = require('fs'),
   main = {
     src: './src',
     dist: './dist',
-    entry: 'index.js',
+    entry: 'observer.js',
     library: 'observer',
     output: 'observer.js',
     moduleDirectories: ['dependency'],
@@ -18,6 +18,12 @@ var fs = require('fs'),
       root: '_',
       lib: '_'
     }]
+  },
+  shim = {
+    src: './src',
+    dist: './dist',
+    entry: 'shim.js',
+    output: 'shim.js'
   },
   devserver = {
     host: 'localhost',
@@ -47,8 +53,14 @@ function _buildCompontent(config, rebuild) {
     .pipe(gulp.dest(config.dist));
 }
 
-gulp.task('build', ['clean'], function() {
+gulp.task('build:lib', function() {
   return _buildCompontent(main, true);
+});
+gulp.task('build:shim', function() {
+  return _buildCompontent(shim, true);
+});
+gulp.task('build', ['clean'], function() {
+  return gulp.start(['build:lib', 'build:shim']);
 });
 
 gulp.task('clean', function() {
@@ -64,12 +76,14 @@ gulp.task('watch', function(event) {
 
 gulp.task('server', ['build'], function() {
   var cfg = Object.create(main);
-  cfg.entry = cfg.src + '/' + cfg.entry;
+  cfg.entry = {};
+  cfg.entry[main.output] = main.src + '/' + main.entry;
+  cfg.entry[shim.output] = shim.src + '/' + shim.entry;
   cfg.publicPath = 'http://' + devserver.host + ':' + devserver.port + main.dist.replace(/^\.\//, '/');
   cfg.hot = true;
   cfg.devtool = 'source-map',
-  cfg.plugins = (cfg.plugins || []).push(new webpack.NoErrorsPlugin());
-  cfg.output = path.join(__dirname, cfg.output);
+  cfg.plugins = (main.plugins || []).concat(shim.plugins || []).push(new webpack.NoErrorsPlugin());
+  cfg.output = path.join(__dirname, '[name]');
   var devServer = new WebpackDevServer(webpack(mkcfg(cfg)), {
     contentBase: path.join('./'),
     publicPath: cfg.publicPath,

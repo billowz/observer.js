@@ -84,12 +84,13 @@ class State {
 
   bind() {
     if (!this._binded) {
-      Object.defineProperty(this.target, this.attr, {
+      let object = Object.defineProperty(this.target, this.attr, {
         enumerable: true,
         configurable: true,
         get: this.getValue.bind(this),
         set: this.setValue.bind(this)
       });
+      this.target = object;
       this._binded = true;
     }
     return this;
@@ -97,7 +98,7 @@ class State {
 
   unbind() {
     if (this._binded) {
-      Object.defineProperty(this.target, this.attr, this.define);
+      this.target = Object.defineProperty(this.target, this.attr, this.define);
       this._binded = false;
     }
     return this;
@@ -129,6 +130,7 @@ class Observer {
         h(attr, this.target[attr], oldVal, this.target);
       })
     });
+    this.__request_frame = null;
     this.changeRecords = {};
   }
 
@@ -173,6 +175,7 @@ class Observer {
 
   _onStateChanged(attr, oldVal) {
     if (attr in this.listens) {
+      console.log('changed:', attr, ' ', oldVal)
       this._addChangeRecord(attr, oldVal);
     }
   }
@@ -191,6 +194,7 @@ class Observer {
       }
     } else if (!this.watchers[attr]) {
       this.watchers[attr] = new State(this.target, attr, this._onStateChanged.bind(this)).bind();
+      this.target = this.watchers[attr].target;
     }
   }
 
@@ -202,6 +206,7 @@ class Observer {
       }
     } else if (this.watchers[attr]) {
       this.watchers[attr].unbind();
+      this.target = this.watchers[attr].target;
       delete this.watchers[attr];
     }
   }
@@ -235,24 +240,28 @@ class Observer {
 
   on() {
     let arg = this._parseBindArg.apply(this, arguments);
-    if (!arg.attrs.length || !arg.handlers.length) {
-      return;
+    if (arg.attrs.length && arg.handlers.length) {
+      _.each(arg.attrs, attr => {
+        if (this.target.__proxy__) {
+          let obj = this.target.__proxy__.object;
+          if (!(attr in obj)) {
+            obj[attr] = undefined;
+          }
+        }
+        this._addListen(attr, arg.handlers);
+      });
     }
-    _.each(arg.attrs, attr => {
-      this._addListen(attr, arg.handlers);
-    });
-
+    return this.target;
   }
 
   un() {
     let arg = this._parseBindArg.apply(this, arguments);
-    if (!arg.attrs.length) {
-      return;
+    if (arg.attrs.length) {
+      _.each(arg.attrs, attr => {
+        this._removeListen(attr, arg.handlers);
+      });
     }
-    _.each(arg.attrs, attr => {
-      this._removeListen(attr, arg.handlers);
-    });
-    return this;
+    return this.target;
   }
 
 
@@ -269,29 +278,66 @@ class Observer {
     unbindObserver(this);
   }
 }
-
+class Expression {
+  constructor(target, expression, handler) {
+    this.target = target;
+    this.expression = expression;
+    this.handler = handler;
+    this.observers = [];
+  }
+  parsePath() {}
+  destory() {}
+}
 module.exports = {
   on(obj) {
+    // VB Proxy
+    if (obj.__proxy__) {
+      obj = obj.__proxy__.object;
+    }
+
     let observer = getBindObserver(obj);
     if (!observer) {
       observer = new Observer(obj);
     }
-    observer.on.apply(observer, _.slice(arguments, 1));
+    let ret = observer.on.apply(observer, _.slice(arguments, 1));
     if (!observer.hasListen()) {
       observer.destory();
     }
+    return ret;
   },
+
   un(obj) {
     let observer = getBindObserver(obj);
     if (observer) {
-      observer.un.apply(observer, _.slice(arguments, 1));
+      let ret = observer.un.apply(observer, _.slice(arguments, 1));
       if (!observer.hasListen()) {
         observer.destory();
       }
+      return ret;
     }
   },
-  getObserver(obj) {
+
+  _getObserver(obj) {
     return getBindObserver(obj);
   },
-  cfg: cfg
+
+  cfg: cfg,
+
+  support: !!Object.observe || Object.defineProperty && (function() {
+      try {
+        let val;
+        Object.defineProperty(object, 'sentinel', {
+          get() {
+            return val;
+          },
+          set(value) {
+            val = value;
+          }
+        });
+        object.sentinel = 1;
+        return object.sentinel === val;
+      } catch (exception) {
+        return false;
+      }
+    })() || window.supportDefinePropertyOnObject
 };
