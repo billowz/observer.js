@@ -65,6 +65,9 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 1 */
 /***/ function(module, exports) {
 
+	/**
+	 * Map & Set & WeakMap & WeakSet
+	 */
 	'use strict';
 	
 	var i = undefined;
@@ -336,6 +339,10 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/**
+	 * 修复浏览器(IE 6,7,8)对Object.defineProperty的支持，使用VBProxy
+	 */
+	
 	'use strict';
 	
 	function doesDefinePropertyWork(object) {
@@ -471,6 +478,10 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/**
+	 * 使用VBScript对象代理js对象的get/set方法, 参考Avalon实现
+	 * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
+	 */
 	'use strict';
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }

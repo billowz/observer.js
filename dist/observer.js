@@ -54,6 +54,12 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
+	/**
+	 * 监控对象属性变化
+	 * 高版本浏览器(Chrome 36+, Opera 23+)基于 Object.observe(ES7)实现
+	 * 基于浏览器使用 Object.defineProperty实现
+	 * IE 6,7,8使用VBScript实现Object.defineProperty
+	 */
 	'use strict';
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
@@ -353,6 +359,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Observer;
 	})();
 	
+	var Expression = (function () {
+	  function Expression(target, expression, handler) {
+	    _classCallCheck(this, Expression);
+	
+	    this.target = target;
+	    this.expression = expression;
+	    this.handler = handler;
+	    this.observers = [];
+	  }
+	
+	  Expression.prototype.parsePath = function parsePath() {};
+	
+	  Expression.prototype.destory = function destory() {};
+	
+	  return Expression;
+	})();
+	
 	module.exports = {
 	  on: function on(obj) {
 	    // VB Proxy
@@ -388,7 +411,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  cfg: cfg,
 	
-	  support: !!Object.observe || Object.defineProperty && (function () {
+	  support: !!Object.observe || (window.supportDefinePropertyOnObject !== undefined ? window.supportDefinePropertyOnObject : (function () {
+	    if (!Object.defineProperty) {
+	      return false;
+	    }
 	    try {
 	      var _ret = (function () {
 	        var val = undefined;
@@ -410,7 +436,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    } catch (exception) {
 	      return false;
 	    }
-	  })() || window.supportDefinePropertyOnObject
+	  })())
 	};
 
 /***/ },

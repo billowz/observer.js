@@ -112,6 +112,7 @@ function init() {
     }
     return VBProxyLoop.get(object);
   }
+
   function _createVBProxy(object, defines) {
     let desc = new ObjectDescriptor(object, defines),
       accessors = [],
@@ -149,6 +150,7 @@ function init() {
     }
     return proxy;
   }
+
   function createVBProxy(object) {
     let proxy = getVBProxy(object),
       rebuild = false, name, defines;

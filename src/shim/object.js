@@ -62,49 +62,26 @@ if (!window.supportDefinePropertyOnObject) {
   }
 
   fixObject('defineProperty', function(object, prop, desc) {
-    if (isAccessor(desc)) {
-      // use VBProxy
-      if (VBProxy.isSupport()) {
-        let proxy = VBProxy.getVBProxy(object);
-        if (proxy != null) {
-          object = proxy.__proxy__.object;
-        }
-        if (proxy == null || !(prop in proxy)) {
-          proxy = buildProxy(proxy, object, [prop]);
-        }
-        proxy.__proxy__.defineProperty(prop, desc);
-        return proxy;
-      } else {
-        console.error('defineProperty is unSupported on this Browser.') ;
-        object[prop] = desc.get ? desc.get() : desc.value;
-      }
-    } else {
-      if (VBProxy.isSupport()) {
-        let proxy = VBProxy.getVBProxy(object);
-        if (proxy != null) {
-          object = proxy.__proxy__.object;
-          if (!(prop in proxy)) {
-            proxy = buildProxy(proxy, object, [prop]);
-          }
-          proxy.__proxy__.defineProperty(prop, desc);
-          return proxy;
-        }
-      }
-      object[prop] = desc.value;
-    }
-    return object;
+    var descs = {};
+    descs[prop] = desc;
+    return Object.defineProperties(object, descs);
   }, supportDefinePropertyOnDom ? Object.defineProperty : null);
   fixObject('defineProperties', function(object, descs) {
-    let prop, desc,
-      accessors = {};
-    for (prop in descs) {
-      desc = descs[prop];
-      if ('get' in desc || 'set' in desc) {
-
-      }
-      props.push(prop);
+    let prop;
+    if (VBProxy.isVBProxy(object)) {
+      proxy = object;
+      object = proxy.__proxy__.object;
     }
-
+    for (prop in descs) {
+      if (!(prop in object)) {
+        object[prop] = undefined;
+      }
+    }
+    proxy = VBProxy.createVBProxy(object);
+    for (prop in descs) {
+      proxy.__proxy__.defineProperty(prop, descs[prop]);
+    }
+    return proxy;
   }, supportDefinePropertyOnDom ? Object.defineProperties : null);
   fixObject('getOwnPropertyDescriptor', function(object, attr) {
     let proxy, define;
