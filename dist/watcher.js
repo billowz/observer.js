@@ -4,9 +4,9 @@
 	else if(typeof define === 'function' && define.amd)
 		define(["_"], factory);
 	else if(typeof exports === 'object')
-		exports["observer"] = factory(require("_"));
+		exports["watcher"] = factory(require("_"));
 	else
-		root["observer"] = factory(root["_"]);
+		root["watcher"] = factory(root["_"]);
 })(this, function(__WEBPACK_EXTERNAL_MODULE_1__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
@@ -54,6 +54,75 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 0 */
 /***/ function(module, exports, __webpack_require__) {
 
+	'use strict';
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	
+	var _ = __webpack_require__(1),
+	    observer = __webpack_require__(2),
+	    expressionVars = /[^\[\]\.]+/g;
+	
+	var Watcher = (function () {
+	  function Watcher(target, expression, handler) {
+	    _classCallCheck(this, Watcher);
+	
+	    this.target = target;
+	    this.expression = expression;
+	    this.handler = handler;
+	    this.path = this.parsePath(expression);
+	    this.observers = [];
+	    this._watchItem(this.target, 0);
+	  }
+	
+	  Watcher.prototype._watchItem = function _watchItem(obj, idx) {
+	    if (idx >= this.path.length) {
+	      return;
+	    }
+	    var attr = this.path[idx];
+	    if (_.isPlainObject(obj) || _.isArray(obj)) {
+	      this._observe(obj, idx);
+	      this._watchItem(obj[attr], idx + 1);
+	    }
+	  };
+	
+	  Watcher.prototype._observe = function _observe(obj, idx) {
+	    var _this = this;
+	
+	    var handler = function handler(attr, val, oldVal) {
+	      if (_.isPlainObject(oldVal) || _.isArray(oldVal)) {
+	        _this._unobserve(oldVal, idx++);
+	      }
+	    };
+	    observer.observe(obj, attr, handler);
+	  };
+	
+	  Watcher.prototype._unobserve = function _unobserve(obj, idx) {};
+	
+	  Watcher.prototype.parsePath = function parsePath(expression) {
+	    var path = [],
+	        item = undefined;
+	    while (item = expressionVars.exec(expression)) {
+	      path.push(item);
+	    }
+	    return path;
+	  };
+	
+	  return Watcher;
+	})();
+	
+	Watcher.observer = observer;
+	module.exports = Watcher;
+
+/***/ },
+/* 1 */
+/***/ function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
+
+/***/ },
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
 	/**
 	 * 监控对象属性变化
 	 * 高版本浏览器(Chrome 36+, Opera 23+)基于 Object.observe(ES7)实现
@@ -66,32 +135,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _ = __webpack_require__(1),
 	    ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
-	    prefixes = 'webkit moz ms o'.split(' '),
-	    getFrame = function getFrame(prop, defaultVal) {
-	  var ret = window[prop];
-	  if (!ret) {
-	    prop = _.capitalize(prop);
-	    prop = _.find(prefixes, function (prefix) {
-	      return window[prefix + prop];
-	    });
-	    ret = prop ? window[prop] : null;
-	  }
-	  return ret || defaultVal;
-	},
-	    requestFrame = getFrame('requestAnimationFrame', function requestAnimationFrame(callback) {
+	    requestTimeoutFrame = function requestTimeoutFrame(callback) {
 	  var currTime = new Date().getTime(),
-	      timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+	      timeToCall = Math.max(0, cfg.timeoutFrameInterval - (currTime - lastTime)),
 	      reqId = setTimeout(function () {
 	    callback(currTime + timeToCall);
 	  }, timeToCall);
 	  lastTime = currTime + timeToCall;
 	  return reqId;
-	}).bind(window);
+	},
+	    requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame,
+	    requestFrame = function requestFrame(callback) {
+	  if (requestAnimationFrame && cfg.useAnimationFrame) {
+	    return requestAnimationFrame(callback);
+	  } else {
+	    return requestTimeoutFrame(callback);
+	  }
+	};
 	
 	var _observers = new Map(),
 	    lastTime = 0,
 	    cfg = {
-	  useES7Observe: true
+	  useES7Observe: true,
+	  useAnimationFrame: false,
+	  timeoutFrameInterval: 16
 	};
 	
 	function bindObserver(observer) {
@@ -113,70 +180,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	function getBindObserver(target) {
 	  return _observers.get(target);
 	}
-	
-	var State = (function () {
-	  function State(target, attr, onChange) {
-	    _classCallCheck(this, State);
-	
-	    this.target = target;
-	    this.attr = attr;
-	    this.onChange = onChange;
-	    this.define = Object.getOwnPropertyDescriptor(target, attr) || {
-	      enumerable: true,
-	      configurable: true,
-	      writable: true,
-	      value: target[attr]
-	    };
-	  }
-	
-	  State.prototype.getValue = function getValue() {
-	    if (this.define.get) {
-	      return this.define.get.call(this.target);
-	    } else {
-	      return this.define.value;
-	    }
-	  };
-	
-	  State.prototype.setValue = function setValue(value) {
-	    var oldValue = this.getValue();
-	    if (value !== oldValue) {
-	      if (this.define.set) {
-	        this.define.set.call(this.target, value);
-	      } else {
-	        this.define.value = value;
-	      }
-	      this.onChange(this.attr, oldValue);
-	    }
-	  };
-	
-	  State.prototype.bind = function bind() {
-	    if (!this._binded) {
-	      var _object = Object.defineProperty(this.target, this.attr, {
-	        enumerable: true,
-	        configurable: true,
-	        get: this.getValue.bind(this),
-	        set: this.setValue.bind(this)
-	      });
-	      this.target = _object;
-	      this._binded = true;
-	    }
-	    return this;
-	  };
-	
-	  State.prototype.unbind = function unbind() {
-	    if (this._binded) {
-	      this.target = Object.defineProperty(this.target, this.attr, this.define);
-	      this._binded = false;
-	    }
-	    return this;
-	  };
-	
-	  State.prototype.isBinded = function isBinded() {
-	    return !!this._binded;
-	  };
-	
-	  return State;
-	})();
 	
 	var Observer = (function () {
 	  function Observer(target) {
@@ -248,7 +251,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  Observer.prototype._onStateChanged = function _onStateChanged(attr, oldVal) {
 	    if (attr in this.listens) {
-	      console.log('changed:', attr, ' ', oldVal);
 	      this._addChangeRecord(attr, oldVal);
 	    }
 	  };
@@ -261,6 +263,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	    });
 	  };
 	
+	  Observer.prototype._defineProperty = function _defineProperty(attr, value) {
+	    this.target = Object.defineProperty(this.target, this.attr, {
+	      enumerable: true,
+	      configurable: true,
+	      get: function get() {
+	        return value;
+	      },
+	      set: function set(val) {
+	        if (value !== val) {
+	          var oldVal = value;
+	          value = val;
+	          this._onStateChanged(attr, oldVal);
+	        }
+	      }
+	    });
+	  };
+	
+	  Observer.prototype._undefineProperty = function _undefineProperty(attr, value) {
+	    this.target = Object.defineProperty(this.target, this.attr, {
+	      enumerable: true,
+	      configurable: true,
+	      value: value
+	    });
+	  };
+	
 	  Observer.prototype._watch = function _watch(attr) {
 	    if (Object.observe && cfg.useES7Observe) {
 	      if (!this._es7observe) {
@@ -268,8 +295,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this._es7observe = true;
 	      }
 	    } else if (!this.watchers[attr]) {
-	      this.watchers[attr] = new State(this.target, attr, this._onStateChanged.bind(this)).bind();
-	      this.target = this.watchers[attr].target;
+	      this._defineProperty(attr, this.target[attr]);
+	      this.watchers[attr] = true;
 	    }
 	  };
 	
@@ -280,8 +307,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        _es7observe = false;
 	      }
 	    } else if (this.watchers[attr]) {
-	      this.watchers[attr].unbind();
-	      this.target = this.watchers[attr].target;
+	      this._undefineProperty(attr, this.target[attr]);
 	      delete this.watchers[attr];
 	    }
 	  };
@@ -318,15 +344,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    var arg = this._parseBindArg.apply(this, arguments);
 	    if (arg.attrs.length && arg.handlers.length) {
-	      _.each(arg.attrs, function (attr) {
-	        if (_this3.target.__proxy__) {
-	          var obj = _this3.target.__proxy__.object;
+	      (function () {
+	        var obj = checkObj(_this3.target);
+	        _.each(arg.attrs, function (attr) {
 	          if (!(attr in obj)) {
 	            obj[attr] = undefined;
 	          }
-	        }
-	        _this3._addListen(attr, arg.handlers);
-	      });
+	        });
+	        _.each(arg.attrs, function (attr) {
+	          _this3._addListen(attr, arg.handlers);
+	        });
+	      })();
 	    }
 	    return this.target;
 	  };
@@ -359,30 +387,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Observer;
 	})();
 	
-	var Expression = (function () {
-	  function Expression(target, expression, handler) {
-	    _classCallCheck(this, Expression);
-	
-	    this.target = target;
-	    this.expression = expression;
-	    this.handler = handler;
-	    this.observers = [];
+	function checkObj(obj) {
+	  if (window.VBProxy && window.VBProxy.isVBProxy(obj)) {
+	    obj = window.VBProxy.getVBProxyDesc(obj).object;
 	  }
-	
-	  Expression.prototype.parsePath = function parsePath() {};
-	
-	  Expression.prototype.destory = function destory() {};
-	
-	  return Expression;
-	})();
-	
+	  return obj;
+	}
 	module.exports = {
-	  on: function on(obj) {
+	  observe: function observe(obj) {
 	    // VB Proxy
-	    if (obj.__proxy__) {
-	      obj = obj.__proxy__.object;
-	    }
-	
+	    //
+	    obj = checkObj(obj);
 	    var observer = getBindObserver(obj);
 	    if (!observer) {
 	      observer = new Observer(obj);
@@ -394,7 +409,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return ret;
 	  },
 	
-	  un: function un(obj) {
+	  unobserve: function unobserve(obj) {
+	    obj = checkObj(obj);
 	    var observer = getBindObserver(obj);
 	    if (observer) {
 	      var ret = observer.un.apply(observer, _.slice(arguments, 1));
@@ -416,7 +432,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return false;
 	    }
 	    try {
-	      var _ret = (function () {
+	      var _ret2 = (function () {
 	        var val = undefined;
 	        Object.defineProperty(object, 'sentinel', {
 	          get: function get() {
@@ -432,21 +448,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	        };
 	      })();
 	
-	      if (typeof _ret === 'object') return _ret.v;
+	      if (typeof _ret2 === 'object') return _ret2.v;
 	    } catch (exception) {
 	      return false;
 	    }
 	  })())
 	};
 
-/***/ },
-/* 1 */
-/***/ function(module, exports) {
-
-	module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
-
 /***/ }
 /******/ ])
 });
 ;
-//# sourceMappingURL=observer.js.map
+//# sourceMappingURL=watcher.js.map

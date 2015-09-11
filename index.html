@@ -11,27 +11,28 @@
     <![endif]-->
     <script src="dist/shim.js"></script>
     <script src="dependency/lodash/lodash.js"></script>
-    <script src="dist/observer.js"></script>
+    <script src="dist/watcher.js"></script>
     <script>
     var obj = {
-        a: 1
+        a: {
+          b:{
+            c:123
+          }
+        }
     };
-    obj = observer.on(obj, function(name, value, old) {
+    obj = watcher.observer.observe(obj, function(name, value, old) {
         console.log(name + "__" + value + "__" + old);
     });
-    obj = observer.on(obj, 'b', function(name, value, old) {
+    obj = watcher.observer.observe(obj, 'b', function(name, value, old) {
         console.log(name + "__" + value + "__" + old);
     });
-    obj.a = 2;
-    obj.b = 2;
     obj.b = 3;
-    obj.a = 3;
 
 
 
 
     var arr = [1, 2, 3];
-    arr = observer.on(arr, function(name, value, old) {
+    arr = watcher.observer.observe(arr, function(name, value, old) {
         console.log(name + "__" + value + "__" + old);
     });
     arr.push(4); //Array-push__[1,2,3,4]__[1,2,3]
@@ -46,7 +47,7 @@
             d: [4]
         }]
     };
-    complexObj = observer.on(complexObj, function(name, value, old, path) {
+    complexObj = watcher.observer.observe(complexObj, function(name, value, old, path) {
         console.log(name + "__" + value + "__" + old); //d__100__4
         console.log(path) //#-c-0
     });
@@ -55,7 +56,7 @@
     var objs = [];
     for(var i=0; i<100; i++){
       var o = {};
-      for(var j=0;j <10; j++){
+      for(var j=0;j <1; j++){
         o['key'+j] = j;
       }
       objs.push(o);
@@ -63,7 +64,7 @@
 
     var start = new Date();
     _.each(objs, function(obj, i){
-      objs[i] = observer.on(obj, function(name, value, old){
+      objs[i] = watcher.observer.observe(obj, function(name, value, old){
         console.log(name+' : '+value+' -> '+old);
       });
     });

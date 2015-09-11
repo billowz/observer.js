@@ -1,6 +1,8 @@
 /**
  * Map & Set & WeakMap & WeakSet
  */
+require('./es5')
+
 let i;
 //Polyfill global objects
 if (!window.WeakMap) {
@@ -76,25 +78,6 @@ if (!window.WeakSet) {
   }, true);
 }
 
-function each(arr, callback, scope) {
-  if (window._)
-    return window._.each(arr, callback, scope);
-  if (arr.forEach)
-    arr.forEach(callback, scope);
-  else
-    for (var i = 0; i < arr.length; i++)
-      callback.call(scope, arr[i], i);
-}
-function indexOf(arr, val) {
-  if (window._)
-    return window._.indexOf(arr, val);
-  if (arr.indexOf)
-    return arr.indexOf(val);
-  for (var i = 0; i < arr.length; i++)
-    if (arr[i] === val)
-      return i;
-  return -1;
-}
 
 /**
  * ES6 collection constructor
@@ -130,10 +113,10 @@ function init(a) {
   var i;
   //init Set argument, like `[1,2,3,{}]`
   if (this.add)
-    each(a, this.add, this);
+    a.forEach(this.add, this);
   //init Map argument like `[[1,2], [{}, 4]]`
   else
-    each(a, function(a) {
+    a.forEach(function(a) {
       this.set(a[0], a[1])
     }, this)
 }
@@ -145,7 +128,7 @@ function sharedDelete(key) {
     this._keys.splice(i, 1);
     this._values.splice(i, 1);
     // update iteration pointers
-    each(this._itp, function(p) {
+    this._itp.forEach(function(p) {
       if (i < p[0]) p[0]--;
     });
   }
@@ -166,7 +149,7 @@ function has(list, key) {
     for (i = list.length; i-- && !is(list[i], key);) {
   }
   else
-    i = indexOf(list, key);
+    i = list.indexOf(key);
   return -1 < i;
 }
 
@@ -228,7 +211,7 @@ function sharedIterator(itp, array, array2) {
         p[0]++;
       } else {
         done = true;
-        itp.splice(indexOf(itp, p), 1);
+        itp.splice(itp.indexOf(p), 1);
       }
       return {
         done: done,
@@ -252,8 +235,6 @@ function sharedForEach(callback, context) {
 }
 
 module.exports = {
-  each: each,
-  indexOf: indexOf,
   Map: window.Map,
   Set: window.Set,
   WeakMap: window.WeakMap,

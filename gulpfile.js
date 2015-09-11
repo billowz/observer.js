@@ -9,9 +9,9 @@ var fs = require('fs'),
   main = {
     src: './src',
     dist: './dist',
-    entry: 'observer.js',
-    library: 'observer',
-    output: 'observer.js',
+    entry: 'watcher.js',
+    library: 'watcher',
+    output: 'watcher.js',
     moduleDirectories: ['dependency'],
     externals: [{
       path: 'lodash',

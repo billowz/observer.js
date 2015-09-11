@@ -65,10 +65,42 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 1 */
 /***/ function(module, exports) {
 
+	'use strict';
+	
+	function fixFn(Type, name, _name) {
+	  if (!Type[name]) {
+	    Type[name] = typeof _name === 'function' ? _name : function () {
+	      return _[_name || name].apply(_, arguments);
+	    };
+	  }
+	}
+	function fixProtoFn(Type, name, _name) {
+	  Type = Type.prototype;
+	  if (!Type[name]) {
+	    Type[name] = typeof _name === 'function' ? _name : function () {
+	      return _[_name || name].apply(_, [this].concat(_.slice(arguments)));
+	    };
+	  }
+	}
+	
+	fixFn(Object, 'create');
+	
+	fixProtoFn(Function, 'bind');
+	
+	fixProtoFn(Array, 'forEach', 'each');
+	
+	fixProtoFn(Array, 'indexOf');
+
+/***/ },
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
 	/**
 	 * Map & Set & WeakMap & WeakSet
 	 */
 	'use strict';
+	
+	__webpack_require__(1);
 	
 	var i = undefined;
 	//Polyfill global objects
@@ -145,17 +177,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }, true);
 	}
 	
-	function each(arr, callback, scope) {
-	  if (window._) return window._.each(arr, callback, scope);
-	  if (arr.forEach) arr.forEach(callback, scope);else for (var i = 0; i < arr.length; i++) callback.call(scope, arr[i], i);
-	}
-	function indexOf(arr, val) {
-	  if (window._) return window._.indexOf(arr, val);
-	  if (arr.indexOf) return arr.indexOf(val);
-	  for (var i = 0; i < arr.length; i++) if (arr[i] === val) return i;
-	  return -1;
-	}
-	
 	/**
 	 * ES6 collection constructor
 	 * @return {Function} a collection class
@@ -188,9 +209,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	function init(a) {
 	  var i;
 	  //init Set argument, like `[1,2,3,{}]`
-	  if (this.add) each(a, this.add, this);
+	  if (this.add) a.forEach(this.add, this);
 	  //init Map argument like `[[1,2], [{}, 4]]`
-	  else each(a, function (a) {
+	  else a.forEach(function (a) {
 	      this.set(a[0], a[1]);
 	    }, this);
 	}
@@ -201,7 +222,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this._keys.splice(i, 1);
 	    this._values.splice(i, 1);
 	    // update iteration pointers
-	    each(this._itp, function (p) {
+	    this._itp.forEach(function (p) {
 	      if (i < p[0]) p[0]--;
 	    });
 	  }
@@ -217,7 +238,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	function has(list, key) {
 	  if (this.objectOnly && key !== Object(key)) throw new TypeError("Invalid value used as weak collection key");
 	  //NaN or 0 passed
-	  if (key != key || key === 0) for (i = list.length; i-- && !is(list[i], key);) {} else i = indexOf(list, key);
+	  if (key != key || key === 0) for (i = list.length; i-- && !is(list[i], key);) {} else i = list.indexOf(key);
 	  return -1 < i;
 	}
 	
@@ -275,7 +296,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        p[0]++;
 	      } else {
 	        done = true;
-	        itp.splice(indexOf(itp, p), 1);
+	        itp.splice(itp.indexOf(p), 1);
 	      }
 	      return {
 	        done: done,
@@ -299,8 +320,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	module.exports = {
-	  each: each,
-	  indexOf: indexOf,
 	  Map: window.Map,
 	  Set: window.Set,
 	  WeakMap: window.WeakMap,
@@ -308,35 +327,258 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 
 /***/ },
-/* 2 */
-/***/ function(module, exports) {
+/* 3 */
+/***/ function(module, exports, __webpack_require__) {
 
-	"use strict";
+	/**
+	 * 使用VBScript对象代理js对象的get/set方法, 参考Avalon实现
+	 * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
+	 */
+	'use strict';
 	
-	if (!Function.prototype.bind) {
-	  Function.prototype.bind = function bind(scope) {
-	    if (arguments.length < 2 && scope === undefined) {
-	      return this;
-	    }
-	    var fn = this,
-	        args = [],
-	        i = undefined;
-	    for (i = 1; i < arguments.length; i++) {
-	      args.push(arguments[i]);
-	    }
-	    return function () {
-	      var i = undefined,
-	          arg = args.concat([]);
-	      for (i = 0; i < arguments.length; i++) {
-	        arg.push(arguments[i]);
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	
+	var coll = __webpack_require__(2);
+	
+	var OBJECT_PROTO_PROPS = ['hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
+	    ARRAY_PROTO_PROPS = ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'indexOf', 'lastIndexOf', 'length', 'map', 'keys', 'join', 'pop', 'push', 'reverse', 'reverseRight', 'some', 'shift', 'slice', 'sort', 'splice', 'toSource', 'unshift'],
+	    DESC_BINDING = '__PROXY__',
+	    CONST_BINDING = '__VB_CONST__',
+	    CONST_SCRIPT = ['\tPublic [' + DESC_BINDING + ']', '\tPublic Default Function [' + CONST_BINDING + '](desc)', '\t\tset [' + DESC_BINDING + '] = desc', '\t\tSet [' + CONST_BINDING + '] = Me', '\tEnd Function'].join('\r\n'),
+	    VBClassPool = {},
+	    VBProxyLoop = new Map(),
+	    classId = 0,
+	    support = undefined;
+	
+	function isSupported() {
+	  if (support === undefined) {
+	    if (window.VBArray) {
+	      try {
+	        window.execScript([// jshint ignore:line
+	        'Function parseVB(code)', '\tExecuteGlobal(code)', 'End Function' //转换一段文本为VB代码
+	        ].join('\n'), 'VBScript');
+	        support = true;
+	      } catch (e) {
+	        support = false;
+	        console.error(e.message, e);
 	      }
-	      return fn.apply(scope, arg);
-	    };
-	  };
+	    } else {
+	      support = false;
+	    }
+	  }
+	  return support;
 	}
+	
+	function genClassName() {
+	  return 'VBClass' + classId++;
+	}
+	
+	function parseVBClassFactoryName(className) {
+	  return className + 'Factory';
+	}
+	
+	function genVBClassPropertyGetterScript(name, valueScript) {
+	  return ['\tPublic Property Get [' + name + ']', '\tOn Error Resume Next', //必须优先使用set语句,否则它会误将数组当字符串返回
+	  '\t\tSet[' + name + '] = ' + valueScript, '\tIf Err.Number <> 0 Then', '\t\t[' + name + '] = ' + valueScript, '\tEnd If', '\tOn Error Goto 0', '\tEnd Property'].join('\r\n');
+	}
+	
+	function genVBClassPropertySetterScript(name, valueScript) {
+	  return ['\tPublic Property Let [' + name + '](val)', '\t\t' + valueScript, '\tEnd Property', '\tPublic Property Set [' + name + '](val)', //setter
+	  '\t\t' + valueScript, '\tEnd Property'].join('\r\n');
+	}
+	
+	function genVBClassScript(className, properties, accessors) {
+	  var buffer = [],
+	      i = undefined,
+	      j = undefined,
+	      name = undefined,
+	      added = [];
+	
+	  buffer.push('Class ' + className, CONST_SCRIPT);
+	
+	  //添加访问器属性
+	  accessors.forEach(function (name) {
+	    buffer.push(genVBClassPropertySetterScript(name, 'Call [' + DESC_BINDING + '].set(Me, "' + name + '", val)'), genVBClassPropertyGetterScript(name, '[' + DESC_BINDING + '].get(Me, "' + name + '")'));
+	    added.push(name);
+	  });
+	  //添加普通属性,因为VBScript对象不能像JS那样随意增删属性，必须在这里预先定义好
+	  properties.forEach(function (name) {
+	    if (added.indexOf(name) == -1) {
+	      buffer.push('\tPublic [' + name + ']');
+	    }
+	  });
+	
+	  buffer.push('End Class');
+	  return buffer.join('\r\n');
+	}
+	function genVBClass(properties, accessors) {
+	  var buffer = [],
+	      className = undefined,
+	      factoryName = undefined,
+	      key = '[' + properties.join(',') + ']&&[' + accessors.join(',') + ']';
+	  className = VBClassPool[key];
+	  if (className) {
+	    return parseVBClassFactoryName(className);
+	  } else {
+	    className = genClassName();
+	    factoryName = parseVBClassFactoryName(className);
+	    window.parseVB(genVBClassScript(className, properties, accessors));
+	    window.parseVB(['Function ' + factoryName + '(desc)', //创建实例并传入两个关键的参数
+	    '\tDim o', '\tSet o = (New ' + className + ')(desc)', '\tSet ' + factoryName + ' = o', 'End Function'].join('\r\n'));
+	    VBClassPool[key] = className;
+	    return factoryName;
+	  }
+	}
+	
+	var ObjectDescriptor = (function () {
+	  function ObjectDescriptor(object, defines) {
+	    _classCallCheck(this, ObjectDescriptor);
+	
+	    this.object = object;
+	    this.defines = defines || {};
+	  }
+	
+	  ObjectDescriptor.prototype.defineProperty = function defineProperty(attr, desc) {
+	    this.defines[attr] = desc;
+	    if (!desc.get && !desc.set) {
+	      this.object[attr] = desc.value;
+	    } else {
+	      if (typeof desc.get !== 'function') {
+	        delete desc.get;
+	        this.object[attr] = desc.value;
+	      } else {
+	        this.object[attr] = desc.get();
+	      }
+	      if (typeof desc.set !== 'function') {
+	        delete desc.set;
+	      }
+	    }
+	  };
+	
+	  ObjectDescriptor.prototype.getPropertyDefine = function getPropertyDefine(attr) {
+	    return this.defines[attr];
+	  };
+	
+	  ObjectDescriptor.prototype.get = function get(instance, attr) {
+	    var define = this.defines[attr];
+	    if (define && define.get) {
+	      return define.get.call(instance);
+	    } else {
+	      return this.object[attr];
+	    }
+	  };
+	
+	  ObjectDescriptor.prototype.set = function set(instance, attr, value) {
+	    var define = this.defines[attr];
+	    if (define && define.set) {
+	      define.set.call(instance, value);
+	    }
+	    this.object[attr] = value;
+	  };
+	
+	  return ObjectDescriptor;
+	})();
+	
+	function _createVBProxy(object, desc) {
+	  var accessors = [],
+	      props = [],
+	      i = undefined,
+	      bind = undefined;
+	  desc = desc || new ObjectDescriptor(object);
+	  for (name in object) {
+	    accessors.push(name);
+	  }
+	
+	  props = props.concat(OBJECT_PROTO_PROPS);
+	  if (Object.prototype.toString.call(object) === '[object Array]') {
+	    props = props.concat(ARRAY_PROTO_PROPS);
+	  }
+	
+	  proxy = window[genVBClass(props, accessors)](desc);
+	
+	  proxy['hasOwnProperty'] = function hasOwnProperty(attr) {
+	    return attr !== DESC_BINDING && attr !== CONST_BINDING && coll.indexOf(props, attr) == -1;
+	  };
+	
+	  props.forEach(function (name) {
+	    if (typeof proxy[name] === 'undefined') {
+	      bind = object[name];
+	      if (typeof bind === 'function') {
+	        bind = bind.bind(object);
+	      }
+	      proxy[name] = bind;
+	    }
+	  });
+	  return proxy;
+	}
+	
+	var VBProxy = {
+	  isSupport: isSupported,
+	  isVBProxy: function isVBProxy(object) {
+	    return CONST_BINDING in object;
+	  },
+	  getVBProxy: function getVBProxy(object, justInPool) {
+	    if (VBProxy.isVBProxy(object)) {
+	      if (justInPool === false) {
+	        return VBProxyLoop.get(object[DESC_BINDING].object) || object;
+	      }
+	      object = object[DESC_BINDING].object;
+	    }
+	    return VBProxyLoop.get(object);
+	  },
+	  getVBProxyDesc: function getVBProxyDesc(object) {
+	    var proxy = VBProxy.isVBProxy(object) ? object : VBProxyLoop.get(object);
+	    return proxy ? proxy[DESC_BINDING] : undefined;
+	  },
+	  createVBProxy: function createVBProxy(object) {
+	    var proxy = VBProxy.getVBProxy(object, false),
+	        rebuild = false,
+	        name = undefined,
+	        desc = undefined;
+	    if (proxy) {
+	      object = proxy[DESC_BINDING].object;
+	      for (name in object) {
+	        if (!(name in proxy)) {
+	          rebuild = true;
+	          break;
+	        }
+	      }
+	      if (!rebuild) {
+	        return proxy;
+	      }
+	      desc = proxy[DESC_BINDING];
+	    }
+	    proxy = _createVBProxy(object, desc);
+	    VBProxyLoop.set(object, proxy);
+	    return proxy;
+	  }
+	};
+	
+	function fixPrototypeProp(Type, name) {
+	  var fn = Type.prototype[name];
+	  if (typeof fn === 'function') {
+	    Type.prototype[name] = function () {
+	      if (VBProxy.isVBProxy(this)) {
+	        return fn.apply(this[DESC_BINDING].object, arguments);
+	      }
+	      return fn.apply(this, arguments);
+	    };
+	  }
+	}
+	function fixPrototypeProps(Type, props) {
+	  for (var i = 0; i < props.length; i++) {
+	    fixPrototypeProp(Type, props[i]);
+	  }
+	}
+	
+	fixPrototypeProps(Object, OBJECT_PROTO_PROPS);
+	fixPrototypeProps(Array, ARRAY_PROTO_PROPS);
+	
+	window.VBProxy = VBProxy;
+	module.exports = VBProxy;
 
 /***/ },
-/* 3 */
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -372,389 +614,84 @@ return /******/ (function(modules) { // webpackBootstrap
 	window.supportDefinePropertyOnObject = Object.defineProperty && doesDefinePropertyWork({}), window.supportDefinePropertyOnDom = Object.defineProperty && doesDefinePropertyWork(document.createElement('div'));
 	if (!window.supportDefinePropertyOnObject) {
 	  (function () {
-	    var isElement = function isElement(value) {
-	      return value !== undefined && typeof HTMLElement !== 'undefined' && value instanceof HTMLElement && value.nodeType === 1;
-	    };
+	    var VBProxy = __webpack_require__(3);
+	    if (VBProxy.isSupport()) {
+	      (function () {
+	        var isElement = function isElement(value) {
+	          return value !== undefined && typeof HTMLElement !== 'undefined' && value instanceof HTMLElement && value.nodeType === 1;
+	        };
 	
-	    var fixObject = function fixObject(name, fixedFn, domFn) {
-	      if (domFn) {
-	        Object[name] = function (object) {
-	          if (isElement(object)) {
-	            return domFn.apply(Object, arguments);
+	        var fixObject = function fixObject(name, fixedFn, domFn) {
+	          if (domFn) {
+	            Object[name] = function (object) {
+	              if (isElement(object)) {
+	                return domFn.apply(Object, arguments);
+	              } else {
+	                return fixedFn.apply(Object, arguments);
+	              }
+	            };
 	          } else {
-	            return fixedFn.apply(Object, arguments);
+	            Object[name] = fixedFn;
 	          }
 	        };
-	      } else {
-	        Object[name] = fixedFn;
-	      }
-	    };
 	
-	    var isAccessor = function isAccessor(desc) {
-	      return 'get' in desc || 'set' in desc;
-	    };
+	        var isAccessor = function isAccessor(desc) {
+	          return 'get' in desc || 'set' in desc;
+	        };
 	
-	    var buildProxy = function buildProxy(proxy, object, appendProps) {
-	      var prop = undefined;
-	      for (var i = 0; appendProps && i < appendProps.length; i++) {
-	        prop = appendProps[i];
-	        if (!(prop in object)) {
-	          object[prop] = undefined;
-	        }
-	      }
-	      return VBProxy.createVBProxy(proxy || object);
-	    };
+	        window.supportDefinePropertyOnObject = true;
 	
-	    var VBProxy = __webpack_require__(4).init();
-	    window.supportDefinePropertyOnObject = VBProxy.isSupport();
+	        fixObject('defineProperty', function (object, prop, desc) {
+	          var descs = {};
+	          descs[prop] = desc;
+	          return Object.defineProperties(object, descs);
+	        }, supportDefinePropertyOnDom ? Object.defineProperty : null);
 	
-	    fixObject('defineProperty', function (object, prop, desc) {
-	      if (isAccessor(desc)) {
-	        // use VBProxy
-	        if (VBProxy.isSupport()) {
-	          var proxy = VBProxy.getVBProxy(object);
-	          if (proxy != null) {
-	            object = proxy.__proxy__.object;
+	        fixObject('defineProperties', function (object, descs) {
+	          var proxy = undefined,
+	              prop = undefined,
+	              proxyDesc = undefined;
+	          if (VBProxy.isVBProxy(object)) {
+	            proxy = object;
+	            object = VBProxy.getVBProxyDesc(proxy).object;
 	          }
-	          if (proxy == null || !(prop in proxy)) {
-	            proxy = buildProxy(proxy, object, [prop]);
-	          }
-	          proxy.__proxy__.defineProperty(prop, desc);
-	          return proxy;
-	        } else {
-	          console.error('defineProperty is unSupported on this Browser.');
-	          object[prop] = desc.get ? desc.get() : desc.value;
-	        }
-	      } else {
-	        if (VBProxy.isSupport()) {
-	          var proxy = VBProxy.getVBProxy(object);
-	          if (proxy != null) {
-	            object = proxy.__proxy__.object;
-	            if (!(prop in proxy)) {
-	              proxy = buildProxy(proxy, object, [prop]);
+	          for (prop in descs) {
+	            if (!(prop in object)) {
+	              object[prop] = undefined;
 	            }
-	            proxy.__proxy__.defineProperty(prop, desc);
-	            return proxy;
 	          }
-	        }
-	        object[prop] = desc.value;
-	      }
-	      return object;
-	    }, supportDefinePropertyOnDom ? Object.defineProperty : null);
-	    fixObject('defineProperties', function (object, descs) {
-	      var prop = undefined,
-	          desc = undefined,
-	          accessors = {};
-	      for (prop in descs) {
-	        desc = descs[prop];
-	        if ('get' in desc || 'set' in desc) {}
-	        props.push(prop);
-	      }
-	    }, supportDefinePropertyOnDom ? Object.defineProperties : null);
-	    fixObject('getOwnPropertyDescriptor', function (object, attr) {
-	      var proxy = undefined,
-	          define = undefined;
-	      if (VBProxy.isSupport()) {
-	        proxy = VBProxy.getVBProxy(object);
-	        if (proxy) {
-	          if (!(attr in proxy)) {
-	            return undefined;
+	          proxy = VBProxy.createVBProxy(proxy || object);
+	          proxyDesc = VBProxy.getVBProxyDesc(proxy);
+	          for (prop in descs) {
+	            proxyDesc.defineProperty(prop, descs[prop]);
 	          }
-	          object = proxy.__proxy__.object;
-	          define = proxy.__proxy__.getPropertyDefine(attr);
-	        }
-	      }
-	      return define || {
-	        value: object[attr],
-	        writable: true,
-	        enumerable: true,
-	        configurable: true
-	      };
-	    }, supportDefinePropertyOnDom ? Object.getOwnPropertyDescriptor : null);
+	          return proxy;
+	        }, supportDefinePropertyOnDom ? Object.defineProperties : null);
+	
+	        fixObject('getOwnPropertyDescriptor', function (object, attr) {
+	          var proxy = undefined,
+	              define = undefined;
+	          if (VBProxy.isSupport()) {
+	            proxy = VBProxy.getVBProxy(object);
+	            if (proxy) {
+	              if (!(attr in proxy)) {
+	                return undefined;
+	              }
+	              object = proxy.__proxy__.object;
+	              define = proxy.__proxy__.getPropertyDefine(attr);
+	            }
+	          }
+	          return define || {
+	            value: object[attr],
+	            writable: true,
+	            enumerable: true,
+	            configurable: true
+	          };
+	        }, supportDefinePropertyOnDom ? Object.getOwnPropertyDescriptor : null);
+	      })();
+	    }
 	  })();
 	}
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * 使用VBScript对象代理js对象的get/set方法, 参考Avalon实现
-	 * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
-	 */
-	'use strict';
-	
-	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-	
-	var coll = __webpack_require__(1);
-	
-	var VBProxy = {};
-	function init() {
-	  if (!window.VBArray) {
-	    return;
-	  }
-	  var VBClassPool = {},
-	      IDGen = 0,
-	      VBClassNormalScript = ['\tPublic [__proxy__]', '\tPublic Default Function [__vbconst__](desc)', '\t\tset [__proxy__] = desc', '\t\tSet [__vbconst__] = Me', //链式调用
-	  '\tEnd Function'].join('\r\n'),
-	      util = {
-	    genClassName: function genClassName() {
-	      return 'VBClass' + IDGen++;
-	    },
-	    parseVBClassFactoryName: function parseVBClassFactoryName(className) {
-	      return className + 'Factory';
-	    },
-	    genVBClassPropertyGetterScript: function genVBClassPropertyGetterScript(name, valueScript) {
-	      return ['\tPublic Property Get [' + name + ']', //getter
-	      '\tOn Error Resume Next', //必须优先使用set语句,否则它会误将数组当字符串返回
-	      '\t\tSet[' + name + '] = ' + valueScript, '\tIf Err.Number <> 0 Then', '\t\t[' + name + '] = ' + valueScript, '\tEnd If', '\tOn Error Goto 0', '\tEnd Property'].join('\r\n');
-	    },
-	    genVBClassPropertySetterScript: function genVBClassPropertySetterScript(name, valueScript) {
-	      return ['\tPublic Property Let [' + name + '](val)', '\t\t' + valueScript, '\tEnd Property', '\tPublic Property Set [' + name + '](val)', //setter
-	      '\t\t' + valueScript, '\tEnd Property'].join('\r\n');
-	    },
-	    genVBClassScript: function genVBClassScript(className, properties, accessors) {
-	      var buffer = [],
-	          i = undefined,
-	          j = undefined,
-	          name = undefined,
-	          added = [];
-	
-	      buffer.push('Class ' + className, VBClassNormalScript);
-	
-	      //添加访问器属性
-	      for (i = 0; i < accessors.length; i++) {
-	        name = accessors[i];
-	        added.push(name);
-	        buffer.push(util.genVBClassPropertySetterScript(name, 'Call [__proxy__].set(Me, "' + name + '", val)'), util.genVBClassPropertyGetterScript(name, '[__proxy__].get(Me, "' + name + '")'));
-	      }
-	      //添加普通属性,因为VBScript对象不能像JS那样随意增删属性，必须在这里预先定义好
-	      for (i = 0; i < properties.length; i++) {
-	        name = properties[i];
-	        if (coll.indexOf(added, name) == -1) {
-	          buffer.push('\tPublic [' + name + ']');
-	        }
-	      }
-	
-	      buffer.push('End Class');
-	      return buffer.join('\r\n');
-	    },
-	    getVBClass: function getVBClass(properties, accessors) {
-	      var buffer = [],
-	          className = undefined,
-	          factoryName = undefined,
-	          key = '[' + properties.join(',') + ']&&[' + accessors.join(',') + ']';
-	      className = VBClassPool[key];
-	      if (className) {
-	        return util.parseVBClassFactoryName(className);
-	      } else {
-	        className = util.genClassName();
-	        factoryName = util.parseVBClassFactoryName(className);
-	        window.parseVB(util.genVBClassScript(className, properties, accessors));
-	        window.parseVB(['Function ' + factoryName + '(desc)', //创建实例并传入两个关键的参数
-	        '\tDim o', '\tSet o = (New ' + className + ')(desc)', '\tSet ' + factoryName + ' = o', 'End Function'].join('\r\n'));
-	        VBClassPool[key] = className;
-	        return factoryName;
-	      }
-	    }
-	  },
-	      VBProxyLoop = new Map(),
-	      ObjectProtoProps = ['hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
-	      FuncProtoProps = ['apply', 'call', 'constructor', 'prototype', 'name', 'bind'],
-	      ArrayProtoProps = ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'indexOf', 'lastIndexOf', 'length', 'map', 'keys', 'join', 'pop', 'push', 'reverse', 'reverseRight', 'some', 'shift', 'slice', 'sort', 'splice', 'toSource', 'unshift'];
-	
-	  function isVBProxy(object) {
-	    return '__vbconst__' in object;
-	  }
-	
-	  function getVBProxy(object) {
-	    if (isVBProxy(object)) {
-	      object = object.__proxy__.object;
-	    }
-	    return VBProxyLoop.get(object);
-	  }
-	  function _createVBProxy(object, defines) {
-	    var desc = new ObjectDescriptor(object, defines),
-	        accessors = [],
-	        props = [],
-	        i = undefined,
-	        bind = undefined;
-	    for (name in object) {
-	      accessors.push(name);
-	    }
-	    props = props.concat(ObjectProtoProps);
-	    if (typeof object === 'function') {
-	      props = props.concat(FuncProtoProps);
-	    }
-	    if (Object.prototype.toString.call(object) === '[object Array]') {
-	      props = props.concat(ArrayProtoProps);
-	    }
-	
-	    proxy = window[util.getVBClass(props, accessors)](desc);
-	    desc._setProxy(proxy);
-	
-	    proxy['hasOwnProperty'] = function hasOwnProperty(attr) {
-	      if (attr === '__proxy__' || attr === '__vbconst__' || coll.indexOf(props, attr) != -1) {
-	        return false;
-	      }
-	      return true;
-	    };
-	
-	    for (i = 0; i < props.length; i++) {
-	      name = props[i];
-	      if (typeof proxy[name] === 'undefined') {
-	        bind = object[name];
-	        if (typeof bind === 'function') {
-	          bind = bind.bind(object);
-	        }
-	        proxy[name] = bind;
-	      }
-	    }
-	    return proxy;
-	  }
-	  function createVBProxy(object) {
-	    var proxy = getVBProxy(object),
-	        rebuild = false,
-	        name = undefined,
-	        defines = undefined;
-	    if (proxy != null) {
-	      object = proxy.__proxy__.object;
-	      for (var _name in object) {
-	        if (!(_name in proxy)) {
-	          rebuild = true;
-	          break;
-	        }
-	      }
-	      if (!rebuild) {
-	        return proxy;
-	      }
-	      defines = proxy.__proxy__.defines;
-	      proxy.__proxy__.destory();
-	    }
-	    proxy = _createVBProxy(object, defines);
-	    VBProxyLoop.set(object, proxy);
-	    return proxy;
-	  }
-	
-	  var ObjectDescriptor = (function () {
-	    function ObjectDescriptor(object, defines) {
-	      _classCallCheck(this, ObjectDescriptor);
-	
-	      this.object = object;
-	      this.defines = defines || {};
-	    }
-	
-	    ObjectDescriptor.prototype._setProxy = function _setProxy(proxy) {
-	      this._proxy = proxy;
-	    };
-	
-	    ObjectDescriptor.prototype.isDestoried = function isDestoried() {
-	      return !this._proxy;
-	    };
-	
-	    ObjectDescriptor.prototype.destory = function destory() {
-	      if (this._proxy) {
-	        var pro = VBProxyLoop.get(this.object);
-	        if (pro && pro === proxy) {
-	          VBProxyLoop['delete'](this.object);
-	        }
-	        this._proxy = null;
-	      }
-	    };
-	
-	    ObjectDescriptor.prototype.defineProperty = function defineProperty(attr, desc) {
-	      this.defines[attr] = desc;
-	      if (!desc.get && !desc.set) {
-	        this.object[attr] = desc.value;
-	      } else {
-	        if (typeof desc.get !== 'function') {
-	          delete desc.get;
-	          this.object[attr] = desc.value;
-	        } else {
-	          this.object[attr] = desc.get();
-	        }
-	        if (typeof desc.set !== 'function') {
-	          delete desc.set;
-	        }
-	      }
-	    };
-	
-	    ObjectDescriptor.prototype.getPropertyDefine = function getPropertyDefine(attr) {
-	      return this.defines[attr];
-	    };
-	
-	    ObjectDescriptor.prototype.get = function get(instance, attr) {
-	      var define = this.defines[attr];
-	      if (define && define.get) {
-	        return define.get.call(instance);
-	      } else {
-	        return this.object[attr];
-	      }
-	    };
-	
-	    ObjectDescriptor.prototype.set = function set(instance, attr, value) {
-	      var define = this.defines[attr];
-	      if (define && define.set) {
-	        define.set.call(instance, value);
-	      }
-	      this.object[attr] = value;
-	    };
-	
-	    return ObjectDescriptor;
-	  })();
-	
-	  function fixPrototypeProp(Type, name) {
-	    var fn = Type.prototype[name];
-	    if (typeof fn === 'function') {
-	      Type.prototype[name] = function () {
-	        if (isVBProxy(this)) {
-	          return fn.apply(this.__proxy__.object, arguments);
-	        }
-	        return fn.apply(this, arguments);
-	      };
-	    }
-	  }
-	
-	  function fixPrototypeProps(Type, props) {
-	    for (var i = 0; i < props.length; i++) {
-	      fixPrototypeProp(Type, props[i]);
-	    }
-	  }
-	
-	  fixPrototypeProps(Object, ObjectProtoProps);
-	
-	  fixPrototypeProps(Array, ArrayProtoProps);
-	
-	  window.execScript([// jshint ignore:line
-	  'Function parseVB(code)', '\tExecuteGlobal(code)', 'End Function' //转换一段文本为VB代码
-	  ].join('\n'), 'VBScript');
-	
-	  VBProxy.isVBProxy = isVBProxy;
-	  VBProxy.createVBProxy = createVBProxy;
-	  VBProxy.getVBProxy = getVBProxy;
-	  VBProxy.__support = true;
-	}
-	
-	VBProxy.isSupport = function () {
-	  return VBProxy.init().__support;
-	};
-	
-	VBProxy.init = function () {
-	  if (typeof VBProxy.__support === 'undefined') {
-	    try {
-	      init();
-	      if (typeof VBProxy.__support === 'undefined') {
-	        VBProxy.__support = false;
-	      }
-	    } catch (e) {
-	      console.error(e.message, e);
-	      VBProxy.__support = false;
-	    }
-	  }
-	  return VBProxy;
-	};
-	window.VBProxy = VBProxy;
-	module.exports = VBProxy;
 
 /***/ }
 /******/ ])

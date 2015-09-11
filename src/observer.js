@@ -6,32 +6,34 @@
  */
 const _ = require('lodash'),
   ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
-  prefixes = 'webkit moz ms o'.split(' '),
-  getFrame = function getFrame(prop, defaultVal) {
-    let ret = window[prop];
-    if (!ret) {
-      prop = _.capitalize(prop);
-      prop = _.find(prefixes, prefix => {
-        return window[prefix + prop];
-      })
-      ret = prop ? window[prop] : null;
-    }
-    return ret || defaultVal;
-  },
-  requestFrame = getFrame('requestAnimationFrame', function requestAnimationFrame(callback) {
+  requestTimeoutFrame = function requestTimeoutFrame(callback) {
     let currTime = new Date().getTime(),
-      timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+      timeToCall = Math.max(0, cfg.timeoutFrameInterval - (currTime - lastTime)),
       reqId = setTimeout(function() {
         callback(currTime + timeToCall);
       }, timeToCall);
     lastTime = currTime + timeToCall;
     return reqId;
-  }).bind(window);
+  },
+  requestAnimationFrame = window.requestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame ||
+    window.oRequestAnimationFrame ||
+    window.msRequestAnimationFrame,
+  requestFrame = function requestFrame(callback) {
+    if (requestAnimationFrame && cfg.useAnimationFrame) {
+      return requestAnimationFrame(callback);
+    } else {
+      return requestTimeoutFrame(callback);
+    }
+  };
 
 let _observers = new Map(),
   lastTime = 0,
   cfg = {
-    useES7Observe: true
+    useES7Observe: true,
+    useAnimationFrame: false,
+    timeoutFrameInterval: 16
   };
 
 function bindObserver(observer) {
@@ -52,67 +54,6 @@ function unbindObserver(observer) {
 
 function getBindObserver(target) {
   return _observers.get(target);
-}
-
-class State {
-  constructor(target, attr, onChange) {
-    this.target = target;
-    this.attr = attr;
-    this.onChange = onChange;
-    this.define = Object.getOwnPropertyDescriptor(target, attr) || {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: target[attr]
-    };
-  }
-
-
-  getValue() {
-    if (this.define.get) {
-      return this.define.get.call(this.target);
-    } else {
-      return this.define.value;
-    }
-  }
-
-  setValue(value) {
-    let oldValue = this.getValue();
-    if (value !== oldValue) {
-      if (this.define.set) {
-        this.define.set.call(this.target, value);
-      } else {
-        this.define.value = value;
-      }
-      this.onChange(this.attr, oldValue);
-    }
-  }
-
-  bind() {
-    if (!this._binded) {
-      let object = Object.defineProperty(this.target, this.attr, {
-        enumerable: true,
-        configurable: true,
-        get: this.getValue.bind(this),
-        set: this.setValue.bind(this)
-      });
-      this.target = object;
-      this._binded = true;
-    }
-    return this;
-  }
-
-  unbind() {
-    if (this._binded) {
-      this.target = Object.defineProperty(this.target, this.attr, this.define);
-      this._binded = false;
-    }
-    return this;
-  }
-
-  isBinded() {
-    return !!this._binded;
-  }
 }
 
 class Observer {
@@ -181,7 +122,6 @@ class Observer {
 
   _onStateChanged(attr, oldVal) {
     if (attr in this.listens) {
-      console.log('changed:', attr, ' ', oldVal)
       this._addChangeRecord(attr, oldVal);
     }
   }
@@ -191,7 +131,29 @@ class Observer {
       this._onStateChanged(change.name, change.oldValue);
     });
   }
-
+  _defineProperty(attr, value) {
+    this.target = Object.defineProperty(this.target, this.attr, {
+      enumerable: true,
+      configurable: true,
+      get: function() {
+        return value;
+      },
+      set: function(val) {
+        if (value !== val) {
+          let oldVal = value;
+          value = val;
+          this._onStateChanged(attr, oldVal);
+        }
+      }
+    });
+  }
+  _undefineProperty(attr, value) {
+    this.target = Object.defineProperty(this.target, this.attr, {
+      enumerable: true,
+      configurable: true,
+      value: value
+    });
+  }
   _watch(attr) {
     if (Object.observe && cfg.useES7Observe) {
       if (!this._es7observe) {
@@ -199,8 +161,8 @@ class Observer {
         this._es7observe = true;
       }
     } else if (!this.watchers[attr]) {
-      this.watchers[attr] = new State(this.target, attr, this._onStateChanged.bind(this)).bind();
-      this.target = this.watchers[attr].target;
+      this._defineProperty(attr, this.target[attr]);
+      this.watchers[attr] = true;
     }
   }
 
@@ -211,8 +173,7 @@ class Observer {
         _es7observe = false;
       }
     } else if (this.watchers[attr]) {
-      this.watchers[attr].unbind();
-      this.target = this.watchers[attr].target;
+      this._undefineProperty(attr, this.target[attr]);
       delete this.watchers[attr];
     }
   }
@@ -247,13 +208,13 @@ class Observer {
   on() {
     let arg = this._parseBindArg.apply(this, arguments);
     if (arg.attrs.length && arg.handlers.length) {
+      let obj = checkObj(this.target);
       _.each(arg.attrs, attr => {
-        if (this.target.__proxy__) {
-          let obj = this.target.__proxy__.object;
-          if (!(attr in obj)) {
-            obj[attr] = undefined;
-          }
+        if (!(attr in obj)) {
+          obj[attr] = undefined;
         }
+      });
+      _.each(arg.attrs, attr => {
         this._addListen(attr, arg.handlers);
       });
     }
@@ -284,23 +245,17 @@ class Observer {
     unbindObserver(this);
   }
 }
-class Expression {
-  constructor(target, expression, handler) {
-    this.target = target;
-    this.expression = expression;
-    this.handler = handler;
-    this.observers = [];
+function checkObj(obj) {
+  if (window.VBProxy && window.VBProxy.isVBProxy(obj)) {
+    obj = window.VBProxy.getVBProxyDesc(obj).object;
   }
-  parsePath() {}
-  destory() {}
+  return obj;
 }
 module.exports = {
-  on(obj) {
+  observe(obj) {
     // VB Proxy
-    if (obj.__proxy__) {
-      obj = obj.__proxy__.object;
-    }
-
+    //
+    obj = checkObj(obj);
     let observer = getBindObserver(obj);
     if (!observer) {
       observer = new Observer(obj);
@@ -312,7 +267,8 @@ module.exports = {
     return ret;
   },
 
-  un(obj) {
+  unobserve(obj) {
+    obj = checkObj(obj);
     let observer = getBindObserver(obj);
     if (observer) {
       let ret = observer.un.apply(observer, _.slice(arguments, 1));
