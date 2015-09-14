@@ -124,19 +124,24 @@ class ObjectDescriptor {
     this.object = object;
     this.defines = defines || {};
   }
-  defineProperty(attr, desc) {
-    this.defines[attr] = desc;
-    if (!desc.get && !desc.set) {
-      this.object[attr] = desc.value;
-    } else {
-      if (typeof desc.get !== 'function') {
-        delete desc.get;
-        this.object[attr] = desc.value;
-      } else {
-        this.object[attr] = desc.get();
+  isAccessor(desc) {
+    return desc.get || desc.set;
+  }
+  hasAccessor() {
+    for (let attr in this.defines) {
+      if (this.isAccessor(this.defines[attr])) {
+        return true;
       }
-      if (typeof desc.set !== 'function') {
-        delete desc.set;
+    }
+    return false;
+  }
+  defineProperty(attr, desc) {
+    if (!this.isAccessor(desc)) {
+      delete this.defines[attr];
+    } else {
+      this.defines[attr] = desc;
+      if (desc.get) {
+        this.object[attr] = desc.get();
       }
     }
   }
@@ -162,7 +167,7 @@ class ObjectDescriptor {
 
 function createVBProxy(object, desc) {
   let accessors = [],
-    props = [], i, bind;
+    props = ['__hash__', '__destory__'], i, bind;
   desc = desc || new ObjectDescriptor(object);
   for (name in object) {
     accessors.push(name);
@@ -178,7 +183,11 @@ function createVBProxy(object, desc) {
   proxy['hasOwnProperty'] = function hasOwnProperty(attr) {
     return attr !== DESC_BINDING && attr !== CONST_BINDING && coll.indexOf(props, attr) == -1;
   }
-
+  proxy.__destory__ = function() {
+    if (VBProxyLoop.get(object) === proxy) {
+      VBProxyLoop.delete(object);
+    }
+  }
   props.forEach(name => {
     if (typeof proxy[name] === 'undefined') {
       bind = object[name];
@@ -232,7 +241,6 @@ let VBProxy = {
 }
 
 if (isSupported()) {
-
   function fixPrototypeProp(Type, name) {
     let fn = Type.prototype[name];
     if (typeof fn === 'function') {

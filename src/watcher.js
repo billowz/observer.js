@@ -2,6 +2,9 @@ const _ = require('lodash'),
   observer = require('./observer'),
   rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
 
+let _watchers = new Map();
+
+
 function baseToString(val) {
   return (val === undefined || val === null) ? '' : (val + '');
 }
@@ -21,49 +24,153 @@ function toPath(value) {
 
 class Watcher {
   constructor(target, expression, handler) {
-    this.target = target;
+    if (!this.canObserve(target)) {
+      throw new TypeError('Invalid Param');
+    }
     this.expression = expression;
-    this.handler = handler;
+    this.handlers = [];
+    this.addListen(handler);
     this.path = toPath(expression);
     this.observers = [];
-    this._watchItem(this.target, 0);
+    this._observeHandlers = this._initObserveHandlers();
+    this.target = this._observe(target, 0);
+    _watchers[this.expression] = this;
   }
-  _watchItem(obj, idx) {
-    if (idx >= this.path.length) {
-      return;
-    }
-    let attr = this.path[idx];
-    if (_.isPlainObject(obj) || _.isArray(obj)) {
-      console.log('_watchItem ', _.slice(this.path, 0, idx + 1));
-      this._observe(obj, attr, idx);
-      this._watchItem(obj[attr], idx + 1);
+
+  addListen(handler) {
+    if (_.isArray(handler)) {
+      _.each(handler, h => {
+        if (_.isFunction(h) && !_.include(this.handlers, h)) {
+          this.handlers.push(h);
+        }
+      });
+    } else if (_.isFunction(handler) && !_.include(this.handlers, handler)) {
+      this.handlers.push(handler);
     }
   }
+
+  removeListen(handler) {
+    if (_.isArray(handler)) {
+      _.remove(this.handlers, (h) => {
+        return _.include(handler, h);
+      });
+    } else if (_.isFunction(handler)) {
+      _.remove(this.handlers, handler);
+    } else if (arguments.length == 0) {
+      this.handlers = [];
+    }
+  }
+
+  hasListen() {
+    return !!this.handlers.length;
+  }
+
   canObserve(obj) {
-    return _.isPlainObject(obj) || _.isArray(obj);
+    return obj && _.isObject(obj);
   }
-  _observe(obj, attr, idx) {
-    let handler = (attr, val, oldVal) => {
-      console.log('handler ', _.slice(this.path, 0, idx + 1));
-      if (idx < this.path.length - 1) {
-        if (this.canObserve(oldVal)) {
-          this._unobserve(oldVal, idx + 1);
-        }
-        if (this.canObserve(val)) {
-          this._observe(val, idx + 1);
-        }
-        let path = _.slice(idx);
-        oldVal = _.get(oldVal, path);
-        val = _.get(val, path);
-      }
-      this.handler(this.expression, val, oldVal, this.target);
+
+  destory() {
+    this.target = this._unobserve(this.target, 0);
+  }
+
+  _observe(obj, idx) {
+    if (idx < this.path.length && this.canObserve(obj)) {
+      let attr = this.path[idx];
+      obj[attr] = this._observe(obj[attr], idx + 1);
+      return observer.observe(obj, attr, this._observeHandlers[idx]);
     }
-    console.log('observe ', _.slice(this.path, 0, idx + 1));
-    observer.observe(obj, attr, handler);
+    return obj;
   }
-  _unobserve(obj, idx) {}
 
+  _unobserve(obj, idx) {
+    if (idx < this.path.length && this.canObserve(obj)) {
+      let attr = this.path[idx], ret;
+      ret = observer.unobserve(obj, attr, this._observeHandlers[idx]);
+      ret[attr] = this._unobserve(obj[attr], idx + 1);
+      return ret;
+    }
+    return obj;
+  }
 
+  _initObserveHandlers() {
+    return _.map(this.path, (val, idx) => {
+      return this._createObserveHandler(idx)
+    });
+  }
+
+  _createObserveHandler(idx) {
+    let path = _.slice(this.path, 0, idx + 1),
+      rpath = _.slice(this.path, idx + 1),
+      ridx = this.path.length - idx - 1;
+    return (attr, val, oldVal) => {
+      if (ridx > 0) {
+        this._unobserve(oldVal, idx + 1);
+        this._observe(val, idx + 1);
+        oldVal = _.get(oldVal, rpath);
+        val = _.get(val, rpath);
+      }
+      if (val !== oldVal && this.handlers) {
+        _.each(this.handlers, (h) => {
+          h(this.expression, val, oldVal, this.target);
+        })
+      }
+    }
+  }
 }
-Watcher.observer = observer;
-module.exports = Watcher;
+
+let watcherLookup = new Map(),
+  addWatcher = function(watcher) {
+    let obj = observer.checkObj(watcher.target),
+      map = watcherLookup.get(obj);
+    if (!map) {
+      map = {};
+      watcherLookup.set(obj, map)
+    }
+    map[watcher.expression] = watcher;
+  },
+  getWatcher = function(obj, expression) {
+    obj = observer.checkObj(obj);
+    let map = watcherLookup.get(obj);
+    if (map) {
+      return map[expression];
+    }
+    return undefined;
+  },
+  removeWatcher = function(watcher) {
+    let obj = observer.checkObj(watcher.target),
+      map = watcherLookup.get(obj);
+    if (map) {
+      delete map[watcher.expression];
+      if (!_.findKey(map)) {
+        watcherLookup.delete(obj);
+      }
+    }
+  };
+watcher = {
+  watch: function(object, expression, handler) {
+    let watcher = getWatcher(object, expression) || new Watcher(object, expression);
+    watcher.addListen.apply(watcher, _.slice(arguments, 2));
+    if (!watcher.hasListen()) {
+      removeWatcher(watcher);
+      watcher.destory();
+      return object;
+    }
+    return watcher.target;
+  },
+
+  unwatch: function(object, expression, handler) {
+    let watcher = getWatcher(object, expression);
+    if (watcher) {
+      watcher.removeListen.apply(watcher, _.slice(arguments, 2));
+      if (!watcher.hasListen()) {
+        removeWatcher(watcher);
+        watcher.destory();
+        return object;
+      }
+    }
+    return object;
+  },
+
+  observer: observer
+}
+module.exports = watcher;

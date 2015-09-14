@@ -21,15 +21,14 @@
         }
     };
     obj = watcher.observer.observe(obj, function(name, value, old) {
-        console.log(name + "__" + value + "__" + old);
+        console.log(name + "__" + value + "__" , old);
     });
     obj = watcher.observer.observe(obj, 'b', function(name, value, old) {
-        console.log(name + "__" + value + "__" + old);
+        console.log(name + "__" + value + "__" , old);
     });
     obj.b = 3;
 
-
-
+    watcher.watch(obj, 'a.b.c', function(express, val, oldVal){console.log(express, ' ', val,' ', oldVal)});
 
     var arr = [1, 2, 3];
     arr = watcher.observer.observe(arr, function(name, value, old) {
@@ -54,7 +53,7 @@
     complexObj.c[0].d = 100;
 
     var objs = [];
-    for(var i=0; i<100; i++){
+    for(var i=0; i<1000; i++){
       var o = {};
       for(var j=0;j <1; j++){
         o['key'+j] = j;

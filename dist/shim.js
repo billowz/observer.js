@@ -60,6 +60,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	__webpack_require__(2);
 	__webpack_require__(3);
 	__webpack_require__(4);
+	__webpack_require__(5);
 
 /***/ },
 /* 1 */
@@ -100,231 +101,148 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 	'use strict';
 	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	
 	__webpack_require__(1);
-	
-	var i = undefined;
-	//Polyfill global objects
-	if (!window.WeakMap) {
-	  window.WeakMap = createCollection({
-	    // WeakMap#delete(key:void*):boolean
-	    'delete': sharedDelete,
-	    // WeakMap#clear():
-	    clear: sharedClear,
-	    // WeakMap#get(key:void*):void*
-	    get: sharedGet,
-	    // WeakMap#has(key:void*):boolean
-	    has: mapHas,
-	    // WeakMap#set(key:void*, value:void*):void
-	    set: sharedSet
-	  }, true);
-	}
-	
 	if (!window.Map) {
-	  window.Map = createCollection({
-	    // WeakMap#delete(key:void*):boolean
-	    'delete': sharedDelete,
-	    //:was Map#get(key:void*[, d3fault:void*]):void*
-	    // Map#has(key:void*):boolean
-	    has: mapHas,
-	    // Map#get(key:void*):boolean
-	    get: sharedGet,
-	    // Map#set(key:void*, value:void*):void
-	    set: sharedSet,
-	    // Map#keys(void):Iterator
-	    keys: sharedKeys,
-	    // Map#values(void):Iterator
-	    values: sharedValues,
-	    // Map#entries(void):Iterator
-	    entries: mapEntries,
-	    // Map#forEach(callback:Function, context:void*):void ==> callback.call(context, key, value, mapObject) === not in specs`
-	    forEach: sharedForEach,
-	    // Map#clear():
-	    clear: sharedClear
-	  });
-	}
+	  (function () {
+	    var hash = function hash(value) {
+	      return typeof value + ' ' + (_.isObject(value) ? value[HASH_BIND] || (value[HASH_BIND] = ++objHashIdx) : value.toString());
+	    };
 	
-	if (!window.Set) {
-	  window.Set = createCollection({
-	    // Set#has(value:void*):boolean
-	    has: setHas,
-	    // Set#add(value:void*):boolean
-	    add: sharedAdd,
-	    // Set#delete(key:void*):boolean
-	    'delete': sharedDelete,
-	    // Set#clear():
-	    clear: sharedClear,
-	    // Set#keys(void):Iterator
-	    keys: sharedValues, // specs actually say "the same function object as the initial value of the values property"
-	    // Set#values(void):Iterator
-	    values: sharedValues,
-	    // Set#entries(void):Iterator
-	    entries: setEntries,
-	    // Set#forEach(callback:Function, context:void*):void ==> callback.call(context, value, index) === not in specs
-	    forEach: sharedForEach
-	  });
-	}
+	    var ITERATOR_TYPE = {
+	      KEY: 'key',
+	      VALUE: 'value',
+	      ENTRY: 'entry'
+	    },
+	        HASH_BIND = '__hash__',
+	        objHashIdx = 0;
 	
-	if (!window.WeakSet) {
-	  window.WeakSet = createCollection({
-	    // WeakSet#delete(key:void*):boolean
-	    'delete': sharedDelete,
-	    // WeakSet#add(value:void*):boolean
-	    add: sharedAdd,
-	    // WeakSet#clear():
-	    clear: sharedClear,
-	    // WeakSet#has(value:void*):boolean
-	    has: setHas
-	  }, true);
-	}
+	    var Map = (function () {
+	      function Map() {
+	        _classCallCheck(this, Map);
 	
-	/**
-	 * ES6 collection constructor
-	 * @return {Function} a collection class
-	 */
-	function createCollection(proto, objectOnly) {
-	  function Collection(a) {
-	    if (!this || this.constructor !== Collection) return new Collection(a);
-	    this._keys = [];
-	    this._values = [];
-	    this._itp = []; // iteration pointers
-	    this.objectOnly = objectOnly;
-	
-	    //parse initial iterable argument passed
-	    if (a) init.call(this, a);
-	  }
-	
-	  //define size for non object-only collections
-	  if (!objectOnly) {
-	    proto.size = sharedSize;
-	  }
-	
-	  //set prototype
-	  proto.constructor = Collection;
-	  Collection.prototype = proto;
-	
-	  return Collection;
-	}
-	
-	/** parse initial iterable argument passed */
-	function init(a) {
-	  var i;
-	  //init Set argument, like `[1,2,3,{}]`
-	  if (this.add) a.forEach(this.add, this);
-	  //init Map argument like `[[1,2], [{}, 4]]`
-	  else a.forEach(function (a) {
-	      this.set(a[0], a[1]);
-	    }, this);
-	}
-	
-	/** delete */
-	function sharedDelete(key) {
-	  if (this.has(key)) {
-	    this._keys.splice(i, 1);
-	    this._values.splice(i, 1);
-	    // update iteration pointers
-	    this._itp.forEach(function (p) {
-	      if (i < p[0]) p[0]--;
-	    });
-	  }
-	  // Aurora here does it while Canary doesn't
-	  return -1 < i;
-	}
-	;
-	
-	function sharedGet(key) {
-	  return this.has(key) ? this._values[i] : undefined;
-	}
-	
-	function has(list, key) {
-	  if (this.objectOnly && key !== Object(key)) throw new TypeError("Invalid value used as weak collection key");
-	  //NaN or 0 passed
-	  if (key != key || key === 0) for (i = list.length; i-- && !is(list[i], key);) {} else i = list.indexOf(key);
-	  return -1 < i;
-	}
-	
-	function setHas(value) {
-	  return has.call(this, this._values, value);
-	}
-	
-	function mapHas(value) {
-	  return has.call(this, this._keys, value);
-	}
-	
-	/** @chainable */
-	function sharedSet(key, value) {
-	  this.has(key) ? this._values[i] = value : this._values[this._keys.push(key) - 1] = value;
-	  return this;
-	}
-	
-	/** @chainable */
-	function sharedAdd(value) {
-	  if (!this.has(value)) this._values.push(value);
-	  return this;
-	}
-	
-	function sharedClear() {
-	  (this._keys || 0).length = this._values.length = 0;
-	}
-	
-	/** keys, values, and iterate related methods */
-	function sharedKeys() {
-	  return sharedIterator(this._itp, this._keys);
-	}
-	
-	function sharedValues() {
-	  return sharedIterator(this._itp, this._values);
-	}
-	
-	function mapEntries() {
-	  return sharedIterator(this._itp, this._keys, this._values);
-	}
-	
-	function setEntries() {
-	  return sharedIterator(this._itp, this._values, this._values);
-	}
-	
-	function sharedIterator(itp, array, array2) {
-	  var p = [0],
-	      done = false;
-	  itp.push(p);
-	  return {
-	    next: function next() {
-	      var v,
-	          k = p[0];
-	      if (!done && k < array.length) {
-	        v = array2 ? [array[k], array2[k]] : array[k];
-	        p[0]++;
-	      } else {
-	        done = true;
-	        itp.splice(itp.indexOf(p), 1);
+	        this._map = {};
+	        this._keyMap = {};
+	        this._size = 0;
 	      }
-	      return {
-	        done: done,
-	        value: v
+	
+	      Map.prototype.has = function has(key) {
+	        return hash(key) in this._keyMap;
 	      };
-	    }
-	  };
-	}
 	
-	function sharedSize() {
-	  return this._values.length;
-	}
+	      Map.prototype.get = function get(key) {
+	        var hcode = hash(key);
+	        if (hcode in this._keyMap) {
+	          return this._map[hcode];
+	        }
+	        return undefined;
+	      };
 	
-	function sharedForEach(callback, context) {
-	  var it = this.entries();
-	  for (;;) {
-	    var r = it.next();
-	    if (r.done) break;
-	    callback.call(context, r.value[1], r.value[0], this);
-	  }
-	}
+	      Map.prototype.set = function set(key, val) {
+	        var hcode = hash(key);
+	        this._keyMap[hcode] = key;
+	        this._map[hcode] = val;
+	        if (!(hcode in this._keyMap)) {
+	          this._size++;
+	        }
+	        return this;
+	      };
 	
-	module.exports = {
-	  Map: window.Map,
-	  Set: window.Set,
-	  WeakMap: window.WeakMap,
-	  WeakSet: window.WeakSet
-	};
+	      Map.prototype['delete'] = function _delete(key) {
+	        var hcode = hash(key);
+	        if (hcode in this._keyMap) {
+	          delete this._keyMap[hcode];
+	          delete this._map[hcode];
+	          this._size--;
+	          return true;
+	        }
+	        return false;
+	      };
+	
+	      Map.prototype.size = function size() {
+	        return this._size;
+	      };
+	
+	      Map.prototype.clear = function clear() {
+	        this._keyMap = {};
+	        this._map = {};
+	        this._size = 0;
+	      };
+	
+	      Map.prototype.forEach = function forEach(callback) {
+	        var _this = this;
+	
+	        _.each(this._map, function (val, key) {
+	          if (key in _this._keyMap) {
+	            callback(val, key, _this);
+	          }
+	        });
+	      };
+	
+	      Map.prototype.keys = function keys() {
+	        return new MapIterator(this, ITERATOR_TYPE.KEY);
+	      };
+	
+	      Map.prototype.values = function values() {
+	        return new MapIterator(this, ITERATOR_TYPE.VALUE);
+	      };
+	
+	      Map.prototype.entries = function entries() {
+	        return new MapIterator(this, ITERATOR_TYPE.ENTRY);
+	      };
+	
+	      Map.prototype.toString = function toString() {
+	        return '[Object Map]';
+	      };
+	
+	      return Map;
+	    })();
+	
+	    var MapIterator = (function () {
+	      function MapIterator(map, type) {
+	        _classCallCheck(this, MapIterator);
+	
+	        this._index = 0;
+	        this._map = map;
+	        this._type = type;
+	      }
+	
+	      MapIterator.prototype.next = function next() {
+	        if (!this._hashs) {
+	          this._hashs = _.keys(this._map._map);
+	        }
+	        var val = undefined;
+	        if (this._index < this._hashs.length) {
+	          var _hash = this._hashs[this.index++];
+	          switch (this._type) {
+	            case ITERATOR_TYPE.KEY:
+	              val = this._map._keyMap[_hash];
+	            case ITERATOR_TYPE.VALUE:
+	              val = this._map._map[_hash];
+	            case ITERATOR_TYPE.ENTRY:
+	              val = [this._map._keyMap[_hash], this._map._map[_hash]];
+	            default:
+	              throw new TypeError('Invalid iterator type');
+	          }
+	        }
+	        return {
+	          value: val,
+	          done: this._index >= this._keys.length
+	        };
+	      };
+	
+	      MapIterator.prototype.toString = function toString() {
+	        return '[object Map Iterator]';
+	      };
+	
+	      return MapIterator;
+	    })();
+	
+	    window.Map = Map;
+	  })();
+	}
+	module.exports = window;
 
 /***/ },
 /* 3 */
@@ -438,19 +356,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.defines = defines || {};
 	  }
 	
-	  ObjectDescriptor.prototype.defineProperty = function defineProperty(attr, desc) {
-	    this.defines[attr] = desc;
-	    if (!desc.get && !desc.set) {
-	      this.object[attr] = desc.value;
-	    } else {
-	      if (typeof desc.get !== 'function') {
-	        delete desc.get;
-	        this.object[attr] = desc.value;
-	      } else {
-	        this.object[attr] = desc.get();
+	  ObjectDescriptor.prototype.isAccessor = function isAccessor(desc) {
+	    return desc.get || desc.set;
+	  };
+	
+	  ObjectDescriptor.prototype.hasAccessor = function hasAccessor() {
+	    for (var attr in this.defines) {
+	      if (this.isAccessor(this.defines[attr])) {
+	        return true;
 	      }
-	      if (typeof desc.set !== 'function') {
-	        delete desc.set;
+	    }
+	    return false;
+	  };
+	
+	  ObjectDescriptor.prototype.defineProperty = function defineProperty(attr, desc) {
+	    if (!this.isAccessor(desc)) {
+	      delete this.defines[attr];
+	    } else {
+	      this.defines[attr] = desc;
+	      if (desc.get) {
+	        this.object[attr] = desc.get();
 	      }
 	    }
 	  };
@@ -481,7 +406,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	function _createVBProxy(object, desc) {
 	  var accessors = [],
-	      props = [],
+	      props = ['__hash__', '__destory__'],
 	      i = undefined,
 	      bind = undefined;
 	  desc = desc || new ObjectDescriptor(object);
@@ -499,7 +424,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  proxy['hasOwnProperty'] = function hasOwnProperty(attr) {
 	    return attr !== DESC_BINDING && attr !== CONST_BINDING && coll.indexOf(props, attr) == -1;
 	  };
-	
+	  proxy.__destory__ = function () {
+	    if (VBProxyLoop.get(object) === proxy) {
+	      VBProxyLoop['delete'](object);
+	    }
+	  };
 	  props.forEach(function (name) {
 	    if (typeof proxy[name] === 'undefined') {
 	      bind = object[name];
@@ -554,25 +483,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	};
 	
-	function fixPrototypeProp(Type, name) {
-	  var fn = Type.prototype[name];
-	  if (typeof fn === 'function') {
-	    Type.prototype[name] = function () {
-	      if (VBProxy.isVBProxy(this)) {
-	        return fn.apply(this[DESC_BINDING].object, arguments);
+	if (isSupported()) {
+	  (function () {
+	    var fixPrototypeProp = function fixPrototypeProp(Type, name) {
+	      var fn = Type.prototype[name];
+	      if (typeof fn === 'function') {
+	        Type.prototype[name] = function () {
+	          if (VBProxy.isVBProxy(this)) {
+	            return fn.apply(this[DESC_BINDING].object, arguments);
+	          }
+	          return fn.apply(this, arguments);
+	        };
 	      }
-	      return fn.apply(this, arguments);
 	    };
-	  }
-	}
-	function fixPrototypeProps(Type, props) {
-	  for (var i = 0; i < props.length; i++) {
-	    fixPrototypeProp(Type, props[i]);
-	  }
-	}
 	
-	fixPrototypeProps(Object, OBJECT_PROTO_PROPS);
-	fixPrototypeProps(Array, ARRAY_PROTO_PROPS);
+	    var fixPrototypeProps = function fixPrototypeProps(Type, props) {
+	      for (var i = 0; i < props.length; i++) {
+	        fixPrototypeProp(Type, props[i]);
+	      }
+	    };
+	
+	    fixPrototypeProps(Object, OBJECT_PROTO_PROPS);
+	    fixPrototypeProps(Array, ARRAY_PROTO_PROPS);
+	  })();
+	}
 	
 	window.VBProxy = VBProxy;
 	module.exports = VBProxy;
@@ -650,22 +584,43 @@ return /******/ (function(modules) { // webpackBootstrap
 	        fixObject('defineProperties', function (object, descs) {
 	          var proxy = undefined,
 	              prop = undefined,
-	              proxyDesc = undefined;
+	              proxyDesc = undefined,
+	              hasAccessor = false,
+	              desc = undefined;
 	          if (VBProxy.isVBProxy(object)) {
 	            proxy = object;
 	            object = VBProxy.getVBProxyDesc(proxy).object;
 	          }
 	          for (prop in descs) {
-	            if (!(prop in object)) {
-	              object[prop] = undefined;
+	            desc = descs[prop];
+	            if (desc.get || desc.set) {
+	              hasAccessor = true;
+	              break;
 	            }
 	          }
-	          proxy = VBProxy.createVBProxy(proxy || object);
-	          proxyDesc = VBProxy.getVBProxyDesc(proxy);
-	          for (prop in descs) {
-	            proxyDesc.defineProperty(prop, descs[prop]);
+	          if (!proxy && !hasAccessor) {
+	            for (prop in descs) {
+	              object[prop] = descs[prop].value;
+	            }
+	            return object;
+	          } else {
+	            // fill non-props
+	            for (prop in descs) {
+	              if (!(prop in object)) {
+	                object[prop] = undefined;
+	              }
+	            }
+	            proxy = VBProxy.createVBProxy(proxy || object);
+	            proxyDesc = VBProxy.getVBProxyDesc(proxy);
+	            for (prop in descs) {
+	              proxyDesc.defineProperty(prop, descs[prop]);
+	            }
+	            if (!proxyDesc.hasAccessor()) {
+	              proxy.__destory__();
+	              return object;
+	            }
+	            return proxy;
 	          }
-	          return proxy;
 	        }, supportDefinePropertyOnDom ? Object.defineProperties : null);
 	
 	        fixObject('getOwnPropertyDescriptor', function (object, attr) {
@@ -690,6 +645,32 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }, supportDefinePropertyOnDom ? Object.getOwnPropertyDescriptor : null);
 	      })();
 	    }
+	  })();
+	}
+	module.exports = Object;
+
+/***/ },
+/* 5 */
+/***/ function(module, exports) {
+
+	"use strict";
+	
+	if (!window.requestAnimationFrame) {
+	  (function () {
+	    var lastTime = 0;
+	    window.requestAnimationFrame = window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || function requestTimeoutFrame(callback) {
+	      var currTime = new Date().getTime(),
+	          timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+	          reqId = setTimeout(function () {
+	        callback(currTime + timeToCall);
+	      }, timeToCall);
+	      lastTime = currTime + timeToCall;
+	      return reqId;
+	    };
+	
+	    window.cancelAnimationFrame = window.webkitCancelAnimationFrame || window.mozCancelAnimationFrame || window.oCancelAnimationFrame || window.msCancelAnimationFrame || function cancelAnimationFrame(reqId) {
+	      clearTimeout(reqId);
+	    };
 	  })();
 	}
 

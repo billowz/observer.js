@@ -57,22 +57,42 @@ if (!window.supportDefinePropertyOnObject) {
     }, supportDefinePropertyOnDom ? Object.defineProperty : null);
 
     fixObject('defineProperties', function(object, descs) {
-      let proxy, prop, proxyDesc;
+      let proxy, prop, proxyDesc,
+        hasAccessor = false, desc;
       if (VBProxy.isVBProxy(object)) {
         proxy = object;
         object = VBProxy.getVBProxyDesc(proxy).object;
       }
       for (prop in descs) {
-        if (!(prop in object)) {
-          object[prop] = undefined;
+        desc = descs[prop];
+        if (desc.get || desc.set) {
+          hasAccessor = true;
+          break;
         }
       }
-      proxy = VBProxy.createVBProxy(proxy || object);
-      proxyDesc = VBProxy.getVBProxyDesc(proxy);
-      for (prop in descs) {
-        proxyDesc.defineProperty(prop, descs[prop]);
+      if (!proxy && !hasAccessor) {
+        for (prop in descs) {
+          object[prop] = descs[prop].value;
+        }
+        return object;
+      } else {
+        // fill non-props
+        for (prop in descs) {
+          if (!(prop in object)) {
+            object[prop] = undefined;
+          }
+        }
+        proxy = VBProxy.createVBProxy(proxy || object);
+        proxyDesc = VBProxy.getVBProxyDesc(proxy);
+        for (prop in descs) {
+          proxyDesc.defineProperty(prop, descs[prop]);
+        }
+        if (!proxyDesc.hasAccessor()) {
+          proxy.__destory__();
+          return object;
+        }
+        return proxy;
       }
-      return proxy;
     }, supportDefinePropertyOnDom ? Object.defineProperties : null);
 
     fixObject('getOwnPropertyDescriptor', function(object, attr) {
@@ -96,3 +116,4 @@ if (!window.supportDefinePropertyOnObject) {
     }, supportDefinePropertyOnDom ? Object.getOwnPropertyDescriptor : null);
   }
 }
+module.exports = Object;

@@ -15,14 +15,9 @@ const _ = require('lodash'),
     lastTime = currTime + timeToCall;
     return reqId;
   },
-  requestAnimationFrame = window.requestAnimationFrame ||
-    window.webkitRequestAnimationFrame ||
-    window.mozRequestAnimationFrame ||
-    window.oRequestAnimationFrame ||
-    window.msRequestAnimationFrame,
   requestFrame = function requestFrame(callback) {
-    if (requestAnimationFrame && cfg.useAnimationFrame) {
-      return requestAnimationFrame(callback);
+    if (window.requestAnimationFrame && cfg.useAnimationFrame) {
+      return window.requestAnimationFrame(callback);
     } else {
       return requestTimeoutFrame(callback);
     }
@@ -74,7 +69,10 @@ class Observer {
     _.map(this.changeRecords, (oldVal, attr) => {
       let handlers = this.listens[attr];
       _.each(handlers, h => {
-        h(attr, this.target[attr], oldVal, this.target);
+        let val = this.target[attr];
+        if (checkObj(val) !== checkObj(oldVal)) {
+          h(attr, this.target[attr], oldVal, this.target);
+        }
       })
     });
     this.__request_frame = null;
@@ -131,22 +129,22 @@ class Observer {
       this._onStateChanged(change.name, change.oldValue);
     });
   }
+
   _defineProperty(attr, value) {
-    this.target = Object.defineProperty(this.target, this.attr, {
+    this.target = Object.defineProperty(this.target, attr, {
       enumerable: true,
       configurable: true,
       get: function() {
         return value;
       },
-      set: function(val) {
-        if (value !== val) {
-          let oldVal = value;
-          value = val;
-          this._onStateChanged(attr, oldVal);
-        }
+      set: (val) => {
+        let oldVal = value;
+        value = val;
+        this._onStateChanged(attr, oldVal);
       }
     });
   }
+
   _undefineProperty(attr, value) {
     this.target = Object.defineProperty(this.target, this.attr, {
       enumerable: true,
@@ -154,6 +152,7 @@ class Observer {
       value: value
     });
   }
+
   _watch(attr) {
     if (Object.observe && cfg.useES7Observe) {
       if (!this._es7observe) {
@@ -245,16 +244,18 @@ class Observer {
     unbindObserver(this);
   }
 }
+
+//处理 VBProxy对象(IE 6,7,8)
 function checkObj(obj) {
-  if (window.VBProxy && window.VBProxy.isVBProxy(obj)) {
+  if (_.isObject(obj) && window.VBProxy && window.VBProxy.isVBProxy(obj)) {
     obj = window.VBProxy.getVBProxyDesc(obj).object;
   }
   return obj;
 }
+
 module.exports = {
+  checkObj: checkObj,
   observe(obj) {
-    // VB Proxy
-    //
     obj = checkObj(obj);
     let observer = getBindObserver(obj);
     if (!observer) {
