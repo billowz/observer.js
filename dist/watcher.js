@@ -215,8 +215,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      watcherLookup['delete'](obj);
 	    }
 	  }
-	};
-	watcher = {
+	},
+	    watcher = {
 	  watch: function watch(object, expression, handler) {
 	    var watcher = getWatcher(object, expression) || new Watcher(object, expression);
 	    watcher.addListen.apply(watcher, _.slice(arguments, 2));

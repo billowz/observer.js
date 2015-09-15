@@ -145,32 +145,32 @@ let watcherLookup = new Map(),
         watcherLookup.delete(obj);
       }
     }
-  };
-watcher = {
-  watch: function(object, expression, handler) {
-    let watcher = getWatcher(object, expression) || new Watcher(object, expression);
-    watcher.addListen.apply(watcher, _.slice(arguments, 2));
-    if (!watcher.hasListen()) {
-      removeWatcher(watcher);
-      watcher.destory();
-      return object;
-    }
-    return watcher.target;
   },
-
-  unwatch: function(object, expression, handler) {
-    let watcher = getWatcher(object, expression);
-    if (watcher) {
-      watcher.removeListen.apply(watcher, _.slice(arguments, 2));
+  watcher = {
+    watch: function(object, expression, handler) {
+      let watcher = getWatcher(object, expression) || new Watcher(object, expression);
+      watcher.addListen.apply(watcher, _.slice(arguments, 2));
       if (!watcher.hasListen()) {
         removeWatcher(watcher);
         watcher.destory();
         return object;
       }
-    }
-    return object;
-  },
+      return watcher.target;
+    },
 
-  observer: observer
-}
+    unwatch: function(object, expression, handler) {
+      let watcher = getWatcher(object, expression);
+      if (watcher) {
+        watcher.removeListen.apply(watcher, _.slice(arguments, 2));
+        if (!watcher.hasListen()) {
+          removeWatcher(watcher);
+          watcher.destory();
+          return object;
+        }
+      }
+      return object;
+    },
+
+    observer: observer
+  }
 module.exports = watcher;
