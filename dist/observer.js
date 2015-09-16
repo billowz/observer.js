@@ -56,7 +56,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	module.exports = __webpack_require__(1).assignIf({}, __webpack_require__(2), __webpack_require__(3));
+	module.exports = __webpack_require__(1).assign({}, __webpack_require__(2), __webpack_require__(3));
 
 /***/ },
 /* 1 */
@@ -214,14 +214,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  map[watcher.expression] = watcher;
 	}
 	
-	getWatcher = function getWatcher(obj, expression) {
+	function getWatcher(obj, expression) {
 	  obj = observer.checkObj(obj);
 	  var map = watcherLookup.get(obj);
 	  if (map) {
 	    return map[expression];
 	  }
 	  return undefined;
-	};
+	}
 	
 	function removeWatcher(watcher) {
 	  var obj = observer.checkObj(watcher.target),
