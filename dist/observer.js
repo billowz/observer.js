@@ -4,9 +4,9 @@
 	else if(typeof define === 'function' && define.amd)
 		define(["_"], factory);
 	else if(typeof exports === 'object')
-		exports["watcher"] = factory(require("_"));
+		exports["observer"] = factory(require("_"));
 	else
-		root["watcher"] = factory(root["_"]);
+		root["observer"] = factory(root["_"]);
 })(this, function(__WEBPACK_EXTERNAL_MODULE_1__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
@@ -56,10 +56,24 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
+	module.exports = __webpack_require__(1).assignIf({}, __webpack_require__(2), __webpack_require__(3));
+
+/***/ },
+/* 1 */
+/***/ function(module, exports) {
+
+	module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
+
+/***/ },
+/* 2 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 	
 	var _ = __webpack_require__(1),
-	    observer = __webpack_require__(2),
+	    observer = __webpack_require__(3),
 	    rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
 	
 	var _watchers = new Map();
@@ -188,8 +202,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Watcher;
 	})();
 	
-	var watcherLookup = new Map(),
-	    addWatcher = function addWatcher(watcher) {
+	var watcherLookup = new Map();
+	
+	function addWatcher(watcher) {
 	  var obj = observer.checkObj(watcher.target),
 	      map = watcherLookup.get(obj);
 	  if (!map) {
@@ -197,16 +212,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    watcherLookup.set(obj, map);
 	  }
 	  map[watcher.expression] = watcher;
-	},
-	    getWatcher = function getWatcher(obj, expression) {
+	}
+	
+	getWatcher = function getWatcher(obj, expression) {
 	  obj = observer.checkObj(obj);
 	  var map = watcherLookup.get(obj);
 	  if (map) {
 	    return map[expression];
 	  }
 	  return undefined;
-	},
-	    removeWatcher = function removeWatcher(watcher) {
+	};
+	
+	function removeWatcher(watcher) {
 	  var obj = observer.checkObj(watcher.target),
 	      map = watcherLookup.get(obj);
 	  if (map) {
@@ -215,44 +232,49 @@ return /******/ (function(modules) { // webpackBootstrap
 	      watcherLookup['delete'](obj);
 	    }
 	  }
-	},
-	    watcher = {
-	  watch: function watch(object, expression, handler) {
-	    var watcher = getWatcher(object, expression) || new Watcher(object, expression);
-	    watcher.addListen.apply(watcher, _.slice(arguments, 2));
+	}
+	
+	function watch(object, expression, handler) {
+	  if (_.isArray(expression)) {
+	    _.each(expression, function (exp) {
+	      watch(object, exp, handler);
+	    });
+	  }
+	  var watcher = getWatcher(object, expression) || new Watcher(object, expression);
+	  watcher.addListen.apply(watcher, _.slice(arguments, 2));
+	  if (!watcher.hasListen()) {
+	    removeWatcher(watcher);
+	    watcher.destory();
+	    return object;
+	  }
+	  return watcher.target;
+	}
+	
+	function unwatch(object, expression, handler) {
+	  if (_.isArray(expression)) {
+	    _.each(expression, function (exp) {
+	      unwatch(object, exp, handler);
+	    });
+	  }
+	  var watcher = getWatcher(object, expression);
+	  if (watcher) {
+	    watcher.removeListen.apply(watcher, _.slice(arguments, 2));
 	    if (!watcher.hasListen()) {
 	      removeWatcher(watcher);
 	      watcher.destory();
 	      return object;
 	    }
-	    return watcher.target;
-	  },
+	  }
+	  return object;
+	}
 	
-	  unwatch: function unwatch(object, expression, handler) {
-	    var watcher = getWatcher(object, expression);
-	    if (watcher) {
-	      watcher.removeListen.apply(watcher, _.slice(arguments, 2));
-	      if (!watcher.hasListen()) {
-	        removeWatcher(watcher);
-	        watcher.destory();
-	        return object;
-	      }
-	    }
-	    return object;
-	  },
-	
-	  observer: observer
+	module.exports = {
+	  watch: watch,
+	  unwatch: unwatch
 	};
-	module.exports = watcher;
 
 /***/ },
-/* 1 */
-/***/ function(module, exports) {
-
-	module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
-
-/***/ },
-/* 2 */
+/* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -312,6 +334,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return _observers.get(target);
 	}
 	
+	//处理 VBProxy对象(IE 6,7,8)
+	function checkObj(obj) {
+	  if (_.isObject(obj) && window.VBProxy && window.VBProxy.isVBProxy(obj)) {
+	    obj = window.VBProxy.getVBProxyDesc(obj).object;
+	  }
+	  return obj;
+	}
+	
 	var Observer = (function () {
 	  function Observer(target) {
 	    _classCallCheck(this, Observer);
@@ -327,8 +357,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.changeRecords = {};
 	    bindObserver(this);
 	  }
-	
-	  //处理 VBProxy对象(IE 6,7,8)
 	
 	  Observer.prototype._notify = function _notify() {
 	    var _this = this;
@@ -438,7 +466,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  Observer.prototype._unwatch = function _unwatch(attr) {
 	    if (Object.observe && cfg.useES7Observe) {
-	      if (this._es7observe && this.hasListen()) {
+	      if (this._es7observe && !this.hasListen()) {
 	        Object.unobserve(this.target, this._onObserveChanged);
 	        _es7observe = false;
 	      }
@@ -523,46 +551,37 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Observer;
 	})();
 	
-	function checkObj(obj) {
-	  if (_.isObject(obj) && window.VBProxy && window.VBProxy.isVBProxy(obj)) {
-	    obj = window.VBProxy.getVBProxyDesc(obj).object;
+	function observe(obj) {
+	  var target = checkObj(obj),
+	      observer = getBindObserver(target),
+	      ret = undefined;
+	  if (!observer) {
+	    observer = new Observer(target);
 	  }
-	  return obj;
+	  ret = observer.on.apply(observer, _.slice(arguments, 1));
+	  if (!observer.hasListen()) {
+	    observer.destory();
+	  }
+	  return ret;
 	}
 	
-	module.exports = {
-	  checkObj: checkObj,
-	  observe: function observe(obj) {
-	    obj = checkObj(obj);
-	    var observer = getBindObserver(obj);
-	    if (!observer) {
-	      observer = new Observer(obj);
-	    }
-	    var ret = observer.on.apply(observer, _.slice(arguments, 1));
+	function unobserve(obj) {
+	  var target = checkObj(obj);
+	  var observer = getBindObserver(target);
+	  if (observer) {
+	    var ret = observer.un.apply(observer, _.slice(arguments, 1));
 	    if (!observer.hasListen()) {
 	      observer.destory();
 	    }
 	    return ret;
-	  },
+	  }
+	}
 	
-	  unobserve: function unobserve(obj) {
-	    obj = checkObj(obj);
-	    var observer = getBindObserver(obj);
-	    if (observer) {
-	      var ret = observer.un.apply(observer, _.slice(arguments, 1));
-	      if (!observer.hasListen()) {
-	        observer.destory();
-	      }
-	      return ret;
-	    }
-	  },
-	
-	  _getObserver: function _getObserver(obj) {
-	    return getBindObserver(obj);
-	  },
-	
+	module.exports = {
+	  checkObj: checkObj,
+	  observe: observe,
+	  unobserve: unobserve,
 	  cfg: cfg,
-	
 	  support: !!Object.observe || (window.supportDefinePropertyOnObject !== undefined ? window.supportDefinePropertyOnObject : (function () {
 	    if (!Object.defineProperty) {
 	      return false;
@@ -595,4 +614,4 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ ])
 });
 ;
-//# sourceMappingURL=watcher.js.map
+//# sourceMappingURL=observer.js.map

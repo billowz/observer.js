@@ -118,59 +118,74 @@ class Watcher {
   }
 }
 
-let watcherLookup = new Map(),
-  addWatcher = function(watcher) {
-    let obj = observer.checkObj(watcher.target),
-      map = watcherLookup.get(obj);
-    if (!map) {
-      map = {};
-      watcherLookup.set(obj, map)
-    }
-    map[watcher.expression] = watcher;
-  },
-  getWatcher = function(obj, expression) {
-    obj = observer.checkObj(obj);
-    let map = watcherLookup.get(obj);
-    if (map) {
-      return map[expression];
-    }
-    return undefined;
-  },
-  removeWatcher = function(watcher) {
-    let obj = observer.checkObj(watcher.target),
-      map = watcherLookup.get(obj);
-    if (map) {
-      delete map[watcher.expression];
-      if (!_.findKey(map)) {
-        watcherLookup.delete(obj);
-      }
-    }
-  },
-  watcher = {
-    watch: function(object, expression, handler) {
-      let watcher = getWatcher(object, expression) || new Watcher(object, expression);
-      watcher.addListen.apply(watcher, _.slice(arguments, 2));
-      if (!watcher.hasListen()) {
-        removeWatcher(watcher);
-        watcher.destory();
-        return object;
-      }
-      return watcher.target;
-    },
 
-    unwatch: function(object, expression, handler) {
-      let watcher = getWatcher(object, expression);
-      if (watcher) {
-        watcher.removeListen.apply(watcher, _.slice(arguments, 2));
-        if (!watcher.hasListen()) {
-          removeWatcher(watcher);
-          watcher.destory();
-          return object;
-        }
-      }
-      return object;
-    },
+let watcherLookup = new Map();
 
-    observer: observer
+function addWatcher(watcher) {
+  let obj = observer.checkObj(watcher.target),
+    map = watcherLookup.get(obj);
+  if (!map) {
+    map = {};
+    watcherLookup.set(obj, map)
   }
-module.exports = watcher;
+  map[watcher.expression] = watcher;
+}
+
+function getWatcher(obj, expression) {
+  obj = observer.checkObj(obj);
+  let map = watcherLookup.get(obj);
+  if (map) {
+    return map[expression];
+  }
+  return undefined;
+}
+
+function removeWatcher(watcher) {
+  let obj = observer.checkObj(watcher.target),
+    map = watcherLookup.get(obj);
+  if (map) {
+    delete map[watcher.expression];
+    if (!_.findKey(map)) {
+      watcherLookup.delete(obj);
+    }
+  }
+}
+
+function watch(object, expression, handler) {
+  if (_.isArray(expression)) {
+    _.each(expression, exp => {
+      watch(object, exp, handler);
+    });
+  }
+  let watcher = getWatcher(object, expression) || new Watcher(object, expression);
+  watcher.addListen.apply(watcher, _.slice(arguments, 2));
+  if (!watcher.hasListen()) {
+    removeWatcher(watcher);
+    watcher.destory();
+    return object;
+  }
+  return watcher.target;
+}
+
+function unwatch(object, expression, handler) {
+  if (_.isArray(expression)) {
+    _.each(expression, exp => {
+      unwatch(object, exp, handler);
+    });
+  }
+  let watcher = getWatcher(object, expression);
+  if (watcher) {
+    watcher.removeListen.apply(watcher, _.slice(arguments, 2));
+    if (!watcher.hasListen()) {
+      removeWatcher(watcher);
+      watcher.destory();
+      return object;
+    }
+  }
+  return object;
+}
+
+module.exports = {
+  watch: watch,
+  unwatch: unwatch
+};

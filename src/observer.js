@@ -51,6 +51,14 @@ function getBindObserver(target) {
   return _observers.get(target);
 }
 
+//处理 VBProxy对象(IE 6,7,8)
+function checkObj(obj) {
+  if (_.isObject(obj) && window.VBProxy && window.VBProxy.isVBProxy(obj)) {
+    obj = window.VBProxy.getVBProxyDesc(obj).object;
+  }
+  return obj;
+}
+
 class Observer {
   constructor(target) {
     if (!_.isArray(target) && !_.isObject(target)) {
@@ -167,7 +175,7 @@ class Observer {
 
   _unwatch(attr) {
     if (Object.observe && cfg.useES7Observe) {
-      if (this._es7observe && this.hasListen()) {
+      if (this._es7observe && !this.hasListen()) {
         Object.unobserve(this.target, this._onObserveChanged);
         _es7observe = false;
       }
@@ -230,7 +238,6 @@ class Observer {
     return this.target;
   }
 
-
   destory() {
     if (Object.observe && cfg.useES7Observe) {
       Object.unobserve(this.target, this._onObserveChanged);
@@ -245,47 +252,37 @@ class Observer {
   }
 }
 
-//处理 VBProxy对象(IE 6,7,8)
-function checkObj(obj) {
-  if (_.isObject(obj) && window.VBProxy && window.VBProxy.isVBProxy(obj)) {
-    obj = window.VBProxy.getVBProxyDesc(obj).object;
+function observe(obj) {
+  let target = checkObj(obj),
+    observer = getBindObserver(target),
+    ret;
+  if (!observer) {
+    observer = new Observer(target);
   }
-  return obj;
+  ret = observer.on.apply(observer, _.slice(arguments, 1));
+  if (!observer.hasListen()) {
+    observer.destory();
+  }
+  return ret;
 }
 
-module.exports = {
-  checkObj: checkObj,
-  observe(obj) {
-    obj = checkObj(obj);
-    let observer = getBindObserver(obj);
-    if (!observer) {
-      observer = new Observer(obj);
-    }
-    let ret = observer.on.apply(observer, _.slice(arguments, 1));
+function unobserve(obj) {
+  let target = checkObj(obj);
+  let observer = getBindObserver(target);
+  if (observer) {
+    let ret = observer.un.apply(observer, _.slice(arguments, 1));
     if (!observer.hasListen()) {
       observer.destory();
     }
     return ret;
-  },
+  }
+}
 
-  unobserve(obj) {
-    obj = checkObj(obj);
-    let observer = getBindObserver(obj);
-    if (observer) {
-      let ret = observer.un.apply(observer, _.slice(arguments, 1));
-      if (!observer.hasListen()) {
-        observer.destory();
-      }
-      return ret;
-    }
-  },
-
-  _getObserver(obj) {
-    return getBindObserver(obj);
-  },
-
+module.exports = {
+  checkObj: checkObj,
+  observe: observe,
+  unobserve: unobserve,
   cfg: cfg,
-
   support: !!Object.observe || (window.supportDefinePropertyOnObject !== undefined ? window.supportDefinePropertyOnObject : (function() {
       if (!Object.defineProperty) {
         return false;
