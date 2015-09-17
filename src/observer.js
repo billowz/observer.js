@@ -177,7 +177,7 @@ class Observer {
     if (Object.observe && cfg.useES7Observe) {
       if (this._es7observe && !this.hasListen()) {
         Object.unobserve(this.target, this._onObserveChanged);
-        _es7observe = false;
+        this._es7observe = false;
       }
     } else if (this.watchers[attr]) {
       this._undefineProperty(attr, this.target[attr]);

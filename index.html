@@ -28,7 +28,7 @@
     });
     obj.b = 3;
 
-    observer.watch(obj, 'a.b.c', function(express, val, oldVal){console.log(express, ' ', val,' ', oldVal)});
+    observer.observe(obj, 'a.b.c', function(express, val, oldVal){console.log(express, ' ', val,' ', oldVal)});
 
     var arr = [1, 2, 3];
     arr = observer.observe(arr, function(name, value, old) {

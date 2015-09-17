@@ -10,10 +10,8 @@ function baseToString(val) {
 }
 
 function toPath(value) {
-  if (_.isArray(value)) {
-    return value.map(val => {
-      return val + '';
-    });
+  if (!_.isString(value)) {
+    return [];
   }
   var result = [];
   baseToString(value).replace(rePropName, function(match, number, quote, string) {
@@ -23,14 +21,13 @@ function toPath(value) {
 }
 
 class Watcher {
-  constructor(target, expression, handler) {
+  constructor(target, expression, path) {
     if (!this.canObserve(target)) {
       throw new TypeError('Invalid Param');
     }
     this.expression = expression;
     this.handlers = [];
-    this.addListen(handler);
-    this.path = toPath(expression);
+    this.path = path || toPath(expression);
     this.observers = [];
     this._observeHandlers = this._initObserveHandlers();
     this.target = this._observe(target, 0);
@@ -151,41 +148,63 @@ function removeWatcher(watcher) {
   }
 }
 
-function watch(object, expression, handler) {
-  if (_.isArray(expression)) {
-    _.each(expression, exp => {
-      watch(object, exp, handler);
-    });
+function doObserve(object, expression, handler, cascade, nonPath, signPath, multipath) {
+  if (expression && _.isArray(expression)) {
+    if (!expression.length) {
+      expression = undefined;
+    } else {
+      let ret = object;
+      _.each(expression, exp => {
+        ret = cascade(object, exp, handler);
+      });
+      return ret;
+    }
   }
-  let watcher = getWatcher(object, expression) || new Watcher(object, expression);
-  watcher.addListen.apply(watcher, _.slice(arguments, 2));
-  if (!watcher.hasListen()) {
-    removeWatcher(watcher);
-    watcher.destory();
-    return object;
+  let path = toPath(expression);
+  if (!path.length) {
+    return nonPath(object, handler);
+  } else if (path.length == 1) {
+    return signPath(object, expression, handler);
+  } else {
+    return multipath(object, expression, handler, path);
   }
-  return watcher.target;
 }
-
-function unwatch(object, expression, handler) {
-  if (_.isArray(expression)) {
-    _.each(expression, exp => {
-      unwatch(object, exp, handler);
-    });
+function observe(object, expression, handler) {
+  if (arguments.length == 2) {
+    handler = expression;
+    expression = undefined;
   }
-  let watcher = getWatcher(object, expression);
-  if (watcher) {
-    watcher.removeListen.apply(watcher, _.slice(arguments, 2));
+  return doObserve(object, expression, handler, observe, observer.observe, observer.observe, (object, expression, handler, path) => {
+    let watcher = getWatcher(object, expression) || new Watcher(object, expression, path);
+    watcher.addListen.apply(watcher, _.slice(arguments, 2));
     if (!watcher.hasListen()) {
       removeWatcher(watcher);
       watcher.destory();
       return object;
     }
+    return watcher.target;
+  });
+}
+function unobserve(object, expression, handler) {
+  if (arguments.length == 2) {
+    handler = expression;
+    expression = undefined;
   }
-  return object;
+  return doObserve(object, expression, handler, unobserve, observer.unobserve, observer.unobserve, (object, expression, handler, path) => {
+    let watcher = getWatcher(object, expression);
+    if (watcher) {
+      watcher.removeListen.apply(watcher, _.slice(arguments, 2));
+      if (!watcher.hasListen()) {
+        removeWatcher(watcher);
+        watcher.destory();
+      }
+      return watcher.target;
+    }
+    return object;
+  });
 }
 
 module.exports = {
-  watch: watch,
-  unwatch: unwatch
+  observe: observe,
+  unobserve: unobserve
 };
