@@ -203,7 +203,7 @@ function createVBProxy(object, desc) {
 let VBProxy = {
   isSupport: isSupported,
   isVBProxy(object) {
-    return CONST_BINDING in object;
+    return object && (typeof object == 'object') && (CONST_BINDING in object);
   },
   getVBProxy(object, justInPool) {
     if (VBProxy.isVBProxy(object)) {

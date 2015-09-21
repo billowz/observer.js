@@ -444,7 +444,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var VBProxy = {
 	  isSupport: isSupported,
 	  isVBProxy: function isVBProxy(object) {
-	    return CONST_BINDING in object;
+	    return object && typeof object == 'object' && CONST_BINDING in object;
 	  },
 	  getVBProxy: function getVBProxy(object, justInPool) {
 	    if (VBProxy.isVBProxy(object)) {
