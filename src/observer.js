@@ -74,7 +74,7 @@ class Observer {
   }
 
   _notify() {
-    _.map(this.changeRecords, (oldVal, attr) => {
+    _.each(this.changeRecords, (oldVal, attr) => {
       let handlers = this.listens[attr];
       _.each(handlers, h => {
         let val = this.target[attr];
