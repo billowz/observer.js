@@ -27,7 +27,7 @@ var fs = require('fs'),
   },
   devserver = {
     host: 'localhost',
-    port: 8088
+    port: 8089
   };
 
 function _buildCompontent(config, rebuild) {

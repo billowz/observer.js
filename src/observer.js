@@ -4,7 +4,7 @@
  * 基于浏览器使用 Object.defineProperty实现
  * IE 6,7,8使用VBScript实现Object.defineProperty
  */
-const _ = require('lodash'),
+const _ = require('./util'),
   ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
   requestTimeoutFrame = function requestTimeoutFrame(callback) {
     let currTime = new Date().getTime(),
@@ -51,13 +51,6 @@ function getBindObserver(target) {
   return _observers.get(target);
 }
 
-//处理 VBProxy对象(IE 6,7,8)
-function checkObj(obj) {
-  if (_.isObject(obj) && window.VBProxy && window.VBProxy.isVBProxy(obj)) {
-    obj = window.VBProxy.getVBProxyDesc(obj).object;
-  }
-  return obj;
-}
 
 class Observer {
   constructor(target) {
@@ -78,7 +71,7 @@ class Observer {
       let handlers = this.listens[attr];
       _.each(handlers, h => {
         let val = this.target[attr];
-        if (checkObj(val) !== checkObj(oldVal)) {
+        if (!_.eq(val, oldVal)) {
           h(attr, this.target[attr], oldVal, this.target);
         }
       })
@@ -177,7 +170,7 @@ class Observer {
     if (Object.observe && cfg.useES7Observe) {
       if (this._es7observe && !this.hasListen()) {
         Object.unobserve(this.target, this._onObserveChanged);
-        this._es7observe = false;
+        _es7observe = false;
       }
     } else if (this.watchers[attr]) {
       this._undefineProperty(attr, this.target[attr]);
@@ -209,13 +202,16 @@ class Observer {
   }
 
   hasListen() {
-    return _.findKey(this.listens);
+    for (let attr in this.listens) {
+      return true;
+    }
+    return false;
   }
 
   on() {
     let arg = this._parseBindArg.apply(this, arguments);
     if (arg.attrs.length && arg.handlers.length) {
-      let obj = checkObj(this.target);
+      let obj = _.checkObj(this.target);
       _.each(arg.attrs, attr => {
         if (!(attr in obj)) {
           obj[attr] = undefined;
@@ -253,7 +249,7 @@ class Observer {
 }
 
 function observe(obj) {
-  let target = checkObj(obj),
+  let target = _.checkObj(obj),
     observer = getBindObserver(target),
     ret;
   if (!observer) {
@@ -267,7 +263,7 @@ function observe(obj) {
 }
 
 function unobserve(obj) {
-  let target = checkObj(obj);
+  let target = _.checkObj(obj);
   let observer = getBindObserver(target);
   if (observer) {
     let ret = observer.un.apply(observer, _.slice(arguments, 1));
@@ -279,7 +275,6 @@ function unobserve(obj) {
 }
 
 module.exports = {
-  checkObj: checkObj,
   observe: observe,
   unobserve: unobserve,
   cfg: cfg,
@@ -289,7 +284,7 @@ module.exports = {
       }
       try {
         let val;
-        Object.defineProperty(object, 'sentinel', {
+        object = Object.defineProperty(object, 'sentinel', {
           get() {
             return val;
           },

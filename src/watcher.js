@@ -1,4 +1,4 @@
-const _ = require('lodash'),
+const _ = require('./util'),
   observer = require('./observer'),
   rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
 
@@ -119,7 +119,7 @@ class Watcher {
 let watcherLookup = new Map();
 
 function addWatcher(watcher) {
-  let obj = observer.checkObj(watcher.target),
+  let obj = _.checkObj(watcher.target),
     map = watcherLookup.get(obj);
   if (!map) {
     map = {};
@@ -129,7 +129,7 @@ function addWatcher(watcher) {
 }
 
 function getWatcher(obj, expression) {
-  obj = observer.checkObj(obj);
+  obj = _.checkObj(obj);
   let map = watcherLookup.get(obj);
   if (map) {
     return map[expression];
@@ -138,7 +138,7 @@ function getWatcher(obj, expression) {
 }
 
 function removeWatcher(watcher) {
-  let obj = observer.checkObj(watcher.target),
+  let obj = _.checkObj(watcher.target),
     map = watcherLookup.get(obj);
   if (map) {
     delete map[watcher.expression];
@@ -174,9 +174,10 @@ function observe(object, expression, handler) {
     handler = expression;
     expression = undefined;
   }
+  let args = arguments;
   return doObserve(object, expression, handler, observe, observer.observe, observer.observe, (object, expression, handler, path) => {
     let watcher = getWatcher(object, expression) || new Watcher(object, expression, path);
-    watcher.addListen.apply(watcher, _.slice(arguments, 2));
+    watcher.addListen.apply(watcher, _.slice(args, 2));
     if (!watcher.hasListen()) {
       removeWatcher(watcher);
       watcher.destory();
@@ -190,10 +191,11 @@ function unobserve(object, expression, handler) {
     handler = expression;
     expression = undefined;
   }
+  let args = arguments;
   return doObserve(object, expression, handler, unobserve, observer.unobserve, observer.unobserve, (object, expression, handler, path) => {
     let watcher = getWatcher(object, expression);
     if (watcher) {
-      watcher.removeListen.apply(watcher, _.slice(arguments, 2));
+      watcher.removeListen.apply(watcher, _.slice(args, 2));
       if (!watcher.hasListen()) {
         removeWatcher(watcher);
         watcher.destory();

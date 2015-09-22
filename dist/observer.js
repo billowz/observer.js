@@ -56,7 +56,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	module.exports = __webpack_require__(1).assign({}, __webpack_require__(2), __webpack_require__(3));
+	module.exports = __webpack_require__(1).assign({}, __webpack_require__(2), __webpack_require__(4));
 
 /***/ },
 /* 1 */
@@ -78,7 +78,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 	
-	var _ = __webpack_require__(1),
+	var _ = __webpack_require__(3),
 	    ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
 	    requestTimeoutFrame = function requestTimeoutFrame(callback) {
 	  var currTime = new Date().getTime(),
@@ -125,14 +125,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return _observers.get(target);
 	}
 	
-	//处理 VBProxy对象(IE 6,7,8)
-	function checkObj(obj) {
-	  if (_.isObject(obj) && window.VBProxy && window.VBProxy.isVBProxy(obj)) {
-	    obj = window.VBProxy.getVBProxyDesc(obj).object;
-	  }
-	  return obj;
-	}
-	
 	var Observer = (function () {
 	  function Observer(target) {
 	    _classCallCheck(this, Observer);
@@ -152,11 +144,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  Observer.prototype._notify = function _notify() {
 	    var _this = this;
 	
-	    _.map(this.changeRecords, function (oldVal, attr) {
+	    _.each(this.changeRecords, function (oldVal, attr) {
 	      var handlers = _this.listens[attr];
 	      _.each(handlers, function (h) {
 	        var val = _this.target[attr];
-	        if (checkObj(val) !== checkObj(oldVal)) {
+	        if (!_.eq(val, oldVal)) {
 	          h(attr, _this.target[attr], oldVal, _this.target);
 	        }
 	      });
@@ -259,7 +251,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (Object.observe && cfg.useES7Observe) {
 	      if (this._es7observe && !this.hasListen()) {
 	        Object.unobserve(this.target, this._onObserveChanged);
-	        this._es7observe = false;
+	        _es7observe = false;
 	      }
 	    } else if (this.watchers[attr]) {
 	      this._undefineProperty(attr, this.target[attr]);
@@ -291,7 +283,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  Observer.prototype.hasListen = function hasListen() {
-	    return _.findKey(this.listens);
+	    for (var attr in this.listens) {
+	      return true;
+	    }
+	    return false;
 	  };
 	
 	  Observer.prototype.on = function on() {
@@ -300,7 +295,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var arg = this._parseBindArg.apply(this, arguments);
 	    if (arg.attrs.length && arg.handlers.length) {
 	      (function () {
-	        var obj = checkObj(_this4.target);
+	        var obj = _.checkObj(_this4.target);
 	        _.each(arg.attrs, function (attr) {
 	          if (!(attr in obj)) {
 	            obj[attr] = undefined;
@@ -343,7 +338,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	})();
 	
 	function observe(obj) {
-	  var target = checkObj(obj),
+	  var target = _.checkObj(obj),
 	      observer = getBindObserver(target),
 	      ret = undefined;
 	  if (!observer) {
@@ -357,7 +352,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function unobserve(obj) {
-	  var target = checkObj(obj);
+	  var target = _.checkObj(obj);
 	  var observer = getBindObserver(target);
 	  if (observer) {
 	    var ret = observer.un.apply(observer, _.slice(arguments, 1));
@@ -369,7 +364,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	module.exports = {
-	  checkObj: checkObj,
 	  observe: observe,
 	  unobserve: unobserve,
 	  cfg: cfg,
@@ -380,7 +374,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    try {
 	      var _ret2 = (function () {
 	        var val = undefined;
-	        Object.defineProperty(object, 'sentinel', {
+	        object = Object.defineProperty(object, 'sentinel', {
 	          get: function get() {
 	            return val;
 	          },
@@ -403,13 +397,76 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 3 */
+/***/ function(module, exports) {
+
+	'use strict';
+	
+	var Util = {
+	  isObject: function isObject(obj) {
+	    return typeof obj == 'object';
+	  },
+	  isArray: function isArray(obj) {
+	    return obj && obj instanceof Array;
+	  },
+	  isFunction: function isFunction(fn) {
+	    return typeof fn == 'function';
+	  },
+	  isString: function isString(str) {
+	    return typeof str == 'string';
+	  },
+	  each: function each(obj, callback) {
+	    if (Util.isArray(obj)) {
+	      obj.forEach(callback);
+	    } else if (Util.isObject(obj)) {
+	      for (var key in obj) {
+	        callback(obj[key], key);
+	      }
+	    }
+	  },
+	  map: function map(arr, callback) {
+	    return arr.map(callback);
+	  },
+	  filter: function filter(arr, callback) {
+	    return arr.filter(callback);
+	  },
+	  keys: function keys(obj) {
+	    return Object.keys(obj);
+	  },
+	  include: function include(arr, val) {
+	    return arr.indexOf(val) != -1;
+	  },
+	  remove: function remove(arr, pred) {
+	    for (var i = arr.length - 1; i >= 0; i--) {
+	      if (pred(arr[i], i)) {
+	        arr.splice(i, 1);
+	      }
+	    }
+	  },
+	  slice: function slice(arr, s, e) {
+	    return Array.prototype.slice.call(arr, s, e);
+	  },
+	  //处理 VBProxy对象(IE 6,7,8)
+	  checkObj: function checkObj(obj) {
+	    if (window.VBProxy && window.VBProxy.isVBProxy(obj)) {
+	      return window.VBProxy.getVBProxyDesc(obj).object;
+	    }
+	    return obj;
+	  },
+	  eq: function eq(obj, obj2) {
+	    return Util.checkObj(obj) === Util.checkObj(obj2);
+	  }
+	};
+	module.exports = Util;
+
+/***/ },
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 	
-	var _ = __webpack_require__(1),
+	var _ = __webpack_require__(3),
 	    observer = __webpack_require__(2),
 	    rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
 	
@@ -539,7 +596,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var watcherLookup = new Map();
 	
 	function addWatcher(watcher) {
-	  var obj = observer.checkObj(watcher.target),
+	  var obj = _.checkObj(watcher.target),
 	      map = watcherLookup.get(obj);
 	  if (!map) {
 	    map = {};
@@ -549,7 +606,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function getWatcher(obj, expression) {
-	  obj = observer.checkObj(obj);
+	  obj = _.checkObj(obj);
 	  var map = watcherLookup.get(obj);
 	  if (map) {
 	    return map[expression];
@@ -558,7 +615,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function removeWatcher(watcher) {
-	  var obj = observer.checkObj(watcher.target),
+	  var obj = _.checkObj(watcher.target),
 	      map = watcherLookup.get(obj);
 	  if (map) {
 	    delete map[watcher.expression];
@@ -590,15 +647,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 	function observe(object, expression, handler) {
-	  var _arguments = arguments;
-	
 	  if (arguments.length == 2) {
 	    handler = expression;
 	    expression = undefined;
 	  }
+	  var args = arguments;
 	  return doObserve(object, expression, handler, observe, observer.observe, observer.observe, function (object, expression, handler, path) {
 	    var watcher = getWatcher(object, expression) || new Watcher(object, expression, path);
-	    watcher.addListen.apply(watcher, _.slice(_arguments, 2));
+	    watcher.addListen.apply(watcher, _.slice(args, 2));
 	    if (!watcher.hasListen()) {
 	      removeWatcher(watcher);
 	      watcher.destory();
@@ -608,16 +664,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	}
 	function unobserve(object, expression, handler) {
-	  var _arguments2 = arguments;
-	
 	  if (arguments.length == 2) {
 	    handler = expression;
 	    expression = undefined;
 	  }
+	  var args = arguments;
 	  return doObserve(object, expression, handler, unobserve, observer.unobserve, observer.unobserve, function (object, expression, handler, path) {
 	    var watcher = getWatcher(object, expression);
 	    if (watcher) {
-	      watcher.removeListen.apply(watcher, _.slice(_arguments2, 2));
+	      watcher.removeListen.apply(watcher, _.slice(args, 2));
 	      if (!watcher.hasListen()) {
 	        removeWatcher(watcher);
 	        watcher.destory();
