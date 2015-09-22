@@ -1,6 +1,5 @@
 {
   "name": "observer",
-  "version": "0.0.3",
   "description": "observer tool",
   "main": "src/index.js",
   "scripts": {
