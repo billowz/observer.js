@@ -181,7 +181,7 @@ function createVBProxy(object, desc) {
   proxy = window[genVBClass(props, accessors)](desc);
 
   proxy['hasOwnProperty'] = function hasOwnProperty(attr) {
-    return attr !== DESC_BINDING && attr !== CONST_BINDING && coll.indexOf(props, attr) == -1;
+    return attr !== DESC_BINDING && attr !== CONST_BINDING && props.indexOf(attr) == -1;
   }
   proxy.__destory__ = function() {
     if (VBProxyLoop.get(object) === proxy) {
@@ -240,7 +240,9 @@ let VBProxy = {
   }
 }
 
+/*
 if (isSupported()) {
+
   function fixPrototypeProp(Type, name) {
     let fn = Type.prototype[name];
     if (typeof fn === 'function') {
@@ -262,6 +264,7 @@ if (isSupported()) {
   fixPrototypeProps(Array, ARRAY_PROTO_PROPS);
 
 }
+*/
 
 window.VBProxy = VBProxy;
 module.exports = VBProxy;

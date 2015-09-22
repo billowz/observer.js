@@ -132,11 +132,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return arr && arr instanceof Array;
 	});
 	
-	fixProtoFn(Function, 'bind', function (fn, scope) {
-	  var bindArgs = [];
-	  for (var i = 2; i < arguments.length; i++) {
-	    bindArgs.push(arguments[i]);
+	fixProtoFn(Function, 'bind', function (scope) {
+	  if (arguments.length < 2 && scope === undefined) {
+	    return this;
 	  }
+	  var fn = this,
+	      bindArgs = [];
+	  bindArgs.push.apply(bindArgs, arguments);
 	  return function () {
 	    var args = [];
 	    args.push.apply(args, bindArgs);
@@ -509,7 +511,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  proxy = window[genVBClass(props, accessors)](desc);
 	
 	  proxy['hasOwnProperty'] = function hasOwnProperty(attr) {
-	    return attr !== DESC_BINDING && attr !== CONST_BINDING && coll.indexOf(props, attr) == -1;
+	    return attr !== DESC_BINDING && attr !== CONST_BINDING && props.indexOf(attr) == -1;
 	  };
 	  proxy.__destory__ = function () {
 	    if (VBProxyLoop.get(object) === proxy) {
@@ -570,30 +572,31 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	};
 	
+	/*
 	if (isSupported()) {
-	  (function () {
-	    var fixPrototypeProp = function fixPrototypeProp(Type, name) {
-	      var fn = Type.prototype[name];
-	      if (typeof fn === 'function') {
-	        Type.prototype[name] = function () {
-	          if (VBProxy.isVBProxy(this)) {
-	            return fn.apply(this[DESC_BINDING].object, arguments);
-	          }
-	          return fn.apply(this, arguments);
-	        };
-	      }
-	    };
 	
-	    var fixPrototypeProps = function fixPrototypeProps(Type, props) {
-	      for (var i = 0; i < props.length; i++) {
-	        fixPrototypeProp(Type, props[i]);
+	  function fixPrototypeProp(Type, name) {
+	    let fn = Type.prototype[name];
+	    if (typeof fn === 'function') {
+	      Type.prototype[name] = function() {
+	        if (VBProxy.isVBProxy(this)) {
+	          return fn.apply(this[DESC_BINDING].object, arguments);
+	        }
+	        return fn.apply(this, arguments);
 	      }
-	    };
+	    }
+	  }
+	  function fixPrototypeProps(Type, props) {
+	    for (let i = 0; i < props.length; i++) {
+	      fixPrototypeProp(Type, props[i]);
+	    }
+	  }
 	
-	    fixPrototypeProps(Object, OBJECT_PROTO_PROPS);
-	    fixPrototypeProps(Array, ARRAY_PROTO_PROPS);
-	  })();
+	  fixPrototypeProps(Object, OBJECT_PROTO_PROPS);
+	  fixPrototypeProps(Array, ARRAY_PROTO_PROPS);
+	
 	}
+	*/
 	
 	window.VBProxy = VBProxy;
 	module.exports = VBProxy;

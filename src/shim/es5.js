@@ -62,16 +62,19 @@ fixFn(Array, 'isArray', function(arr) {
   return arr && arr instanceof Array;
 });
 
-fixProtoFn(Function, 'bind', function(fn, scope) {
-  let bindArgs = [];
-  for (let i = 2; i < arguments.length; i++) {
-    bindArgs.push(arguments[i]);
+fixProtoFn(Function, 'bind', function(scope) {
+  if (arguments.length < 2 && scope === undefined) {
+    return this
   }
+  let fn = this,
+    bindArgs = [];
+  bindArgs.push.apply(bindArgs, arguments);
   return function() {
     let args = [];
     args.push.apply(args, bindArgs);
     args.push.apply(args, arguments);
     fn.apply(scope, args);
+
   }
 });
 

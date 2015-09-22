@@ -251,7 +251,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (Object.observe && cfg.useES7Observe) {
 	      if (this._es7observe && !this.hasListen()) {
 	        Object.unobserve(this.target, this._onObserveChanged);
-	        _es7observe = false;
+	        this._es7observe = false;
 	      }
 	    } else if (this.watchers[attr]) {
 	      this._undefineProperty(attr, this.target[attr]);
@@ -361,6 +361,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    return ret;
 	  }
+	  return obj;
 	}
 	
 	module.exports = {
@@ -397,11 +398,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 3 */
-/***/ function(module, exports) {
+/***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var Util = {
+	var _ = __webpack_require__(1),
+	    Util = {
 	  isObject: function isObject(obj) {
 	    return typeof obj == 'object';
 	  },
@@ -443,7 +445,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  slice: function slice(arr, s, e) {
-	    return Array.prototype.slice.call(arr, s, e);
+	    return Array.prototype.slice.call(arr, s || 0, e || arr.length);
 	  },
 	  //处理 VBProxy对象(IE 6,7,8)
 	  checkObj: function checkObj(obj) {
@@ -454,7 +456,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  },
 	  eq: function eq(obj, obj2) {
 	    return Util.checkObj(obj) === Util.checkObj(obj2);
-	  }
+	  },
+	  get: _.get
 	};
 	module.exports = Util;
 
