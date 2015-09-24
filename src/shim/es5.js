@@ -48,7 +48,7 @@ function fixProtoFn(Type, name, lodash, fn) {
 
 fixFn(Object, 'create');
 
-fixFn(Object, 'keys', function() {
+fixFn(Object, 'keys', function keys() {
   let ret = [];
   for (let key in this) {
     if (Object.hasOwnProperty.call(this, key)) {
@@ -58,11 +58,26 @@ fixFn(Object, 'keys', function() {
   return ret;
 });
 
-fixFn(Array, 'isArray', function(arr) {
+if (!Object.setPrototypeOf) {
+  Object.getPrototypeOf = function getPrototypeOf(object) {
+    var proto = object.__proto__;
+    if (proto || proto === null) {
+      return proto;
+    } else if (typeof object.constructor == 'function') {
+      return object.constructor.prototype;
+    }
+    return null;
+  }
+  Object.setPrototypeOf = function setPrototypeOf(object, proto) {
+    object.__proto__ = proto;
+  }
+}
+
+fixFn(Array, 'isArray', function isArray(arr) {
   return arr && arr instanceof Array;
 });
 
-fixProtoFn(Function, 'bind', function(scope) {
+fixProtoFn(Function, 'bind', function bind(scope) {
   if (arguments.length < 2 && scope === undefined) {
     return this
   }
@@ -78,14 +93,14 @@ fixProtoFn(Function, 'bind', function(scope) {
   }
 });
 
-fixProtoFn(Array, 'forEach', function(callback) {
+fixProtoFn(Array, 'forEach', function forEach(callback) {
   for (let i = 0; i < this.length; i++) {
     callback(this[i], i);
   }
   return this;
 });
 
-fixProtoFn(Array, 'map', function(callback) {
+fixProtoFn(Array, 'map', function map(callback) {
   let ret = [];
   for (let i = 0; i < this.length; i++) {
     ret.push(callback(this[i], i));
@@ -93,7 +108,7 @@ fixProtoFn(Array, 'map', function(callback) {
   return ret;
 });
 
-fixProtoFn(Array, 'filter', function(callback) {
+fixProtoFn(Array, 'filter', function filter(callback) {
   let ret = [];
   for (let i = 0; i < this.length; i++) {
     if (callback(this[i], i)) {
@@ -103,7 +118,7 @@ fixProtoFn(Array, 'filter', function(callback) {
   return ret;
 });
 
-fixProtoFn(Array, 'indexOf', function(val) {
+fixProtoFn(Array, 'indexOf', function indexOf(val) {
   for (let i = 0; i < this.length; i++) {
     if (this[i] === val) {
       return i;

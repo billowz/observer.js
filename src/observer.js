@@ -58,6 +58,7 @@ class Observer {
       throw TypeError('can not observe object[' + (typeof target) + ']');
     }
     this.target = target;
+    this._isArray = target instanceof Array;
     this.watchers = {};
     this.listens = {};
     this._onObserveChanged = this._onObserveChanged.bind(this);
@@ -153,7 +154,6 @@ class Observer {
       value: value
     });
   }
-
   _watch(attr) {
     if (Object.observe && cfg.useES7Observe) {
       if (!this._es7observe) {
@@ -161,7 +161,21 @@ class Observer {
         this._es7observe = true;
       }
     } else if (!this.watchers[attr]) {
-      this._defineProperty(attr, this.target[attr]);
+      if (this._isArray && attr === 'length') {
+        this._arrayhocks = ARRAY_METHODS.map(method => {
+          let fn = this.target[method];
+          this.target[method] = () => {
+            let oldLen = this.target.length;
+            fn.apply(this.target, arguments);
+            if (this.target.length !== oldLen) {
+              this._onStateChanged(attr, oldLen)
+            }
+          }
+          return fn;
+        });
+      } else {
+        this._defineProperty(attr, this.target[attr]);
+      }
       this.watchers[attr] = true;
     }
   }
@@ -173,7 +187,15 @@ class Observer {
         this._es7observe = false;
       }
     } else if (this.watchers[attr]) {
-      this._undefineProperty(attr, this.target[attr]);
+      if (this._isArray && attr === 'length') {
+        ARRAY_METHODS.forEach((method, idx) => {
+          if (this._arrayhocks[idx])
+            this.target[method] = this._arrayhocks[idx];
+        })
+        this._arrayhocks == [];
+      } else {
+        this._undefineProperty(attr, this.target[attr]);
+      }
       delete this.watchers[attr];
     }
   }

@@ -133,6 +133,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      throw TypeError('can not observe object[' + typeof target + ']');
 	    }
 	    this.target = target;
+	    this._isArray = target instanceof Array;
 	    this.watchers = {};
 	    this.listens = {};
 	    this._onObserveChanged = this._onObserveChanged.bind(this);
@@ -236,25 +237,51 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  Observer.prototype._watch = function _watch(attr) {
+	    var _this4 = this,
+	        _arguments = arguments;
+	
 	    if (Object.observe && cfg.useES7Observe) {
 	      if (!this._es7observe) {
 	        Object.observe(this.target, this._onObserveChanged);
 	        this._es7observe = true;
 	      }
 	    } else if (!this.watchers[attr]) {
-	      this._defineProperty(attr, this.target[attr]);
+	      if (this._isArray && attr === 'length') {
+	        this._arrayhocks = ARRAY_METHODS.map(function (method) {
+	          var fn = _this4.target[method];
+	          _this4.target[method] = function () {
+	            var oldLen = _this4.target.length;
+	            fn.apply(_this4.target, _arguments);
+	            if (_this4.target.length !== oldLen) {
+	              _this4._onStateChanged(attr, oldLen);
+	            }
+	          };
+	          return fn;
+	        });
+	      } else {
+	        this._defineProperty(attr, this.target[attr]);
+	      }
 	      this.watchers[attr] = true;
 	    }
 	  };
 	
 	  Observer.prototype._unwatch = function _unwatch(attr) {
+	    var _this5 = this;
+	
 	    if (Object.observe && cfg.useES7Observe) {
 	      if (this._es7observe && !this.hasListen()) {
 	        Object.unobserve(this.target, this._onObserveChanged);
 	        this._es7observe = false;
 	      }
 	    } else if (this.watchers[attr]) {
-	      this._undefineProperty(attr, this.target[attr]);
+	      if (this._isArray && attr === 'length') {
+	        ARRAY_METHODS.forEach(function (method, idx) {
+	          if (_this5._arrayhocks[idx]) _this5.target[method] = _this5._arrayhocks[idx];
+	        });
+	        this._arrayhocks == [];
+	      } else {
+	        this._undefineProperty(attr, this.target[attr]);
+	      }
 	      delete this.watchers[attr];
 	    }
 	  };
@@ -290,19 +317,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  Observer.prototype.on = function on() {
-	    var _this4 = this;
+	    var _this6 = this;
 	
 	    var arg = this._parseBindArg.apply(this, arguments);
 	    if (arg.attrs.length && arg.handlers.length) {
 	      (function () {
-	        var obj = _.checkObj(_this4.target);
+	        var obj = _.checkObj(_this6.target);
 	        _.each(arg.attrs, function (attr) {
 	          if (!(attr in obj)) {
 	            obj[attr] = undefined;
 	          }
 	        });
 	        _.each(arg.attrs, function (attr) {
-	          _this4._addListen(attr, arg.handlers);
+	          _this6._addListen(attr, arg.handlers);
 	        });
 	      })();
 	    }
@@ -310,12 +337,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  Observer.prototype.un = function un() {
-	    var _this5 = this;
+	    var _this7 = this;
 	
 	    var arg = this._parseBindArg.apply(this, arguments);
 	    if (arg.attrs.length) {
 	      _.each(arg.attrs, function (attr) {
-	        _this5._removeListen(attr, arg.handlers);
+	        _this7._removeListen(attr, arg.handlers);
 	      });
 	    }
 	    return this.target;

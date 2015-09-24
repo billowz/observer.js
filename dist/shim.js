@@ -118,7 +118,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	fixFn(Object, 'create');
 	
-	fixFn(Object, 'keys', function () {
+	fixFn(Object, 'keys', function keys() {
 	  var ret = [];
 	  for (var key in this) {
 	    if (Object.hasOwnProperty.call(this, key)) {
@@ -128,11 +128,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return ret;
 	});
 	
-	fixFn(Array, 'isArray', function (arr) {
+	if (!Object.setPrototypeOf) {
+	  Object.getPrototypeOf = function getPrototypeOf(object) {
+	    var proto = object.__proto__;
+	    if (proto || proto === null) {
+	      return proto;
+	    } else if (typeof object.constructor == 'function') {
+	      return object.constructor.prototype;
+	    }
+	    return null;
+	  };
+	  Object.setPrototypeOf = function setPrototypeOf(object, proto) {
+	    object.__proto__ = proto;
+	  };
+	}
+	
+	fixFn(Array, 'isArray', function isArray(arr) {
 	  return arr && arr instanceof Array;
 	});
 	
-	fixProtoFn(Function, 'bind', function (scope) {
+	fixProtoFn(Function, 'bind', function bind(scope) {
 	  if (arguments.length < 2 && scope === undefined) {
 	    return this;
 	  }
@@ -147,14 +162,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	});
 	
-	fixProtoFn(Array, 'forEach', function (callback) {
+	fixProtoFn(Array, 'forEach', function forEach(callback) {
 	  for (var i = 0; i < this.length; i++) {
 	    callback(this[i], i);
 	  }
 	  return this;
 	});
 	
-	fixProtoFn(Array, 'map', function (callback) {
+	fixProtoFn(Array, 'map', function map(callback) {
 	  var ret = [];
 	  for (var i = 0; i < this.length; i++) {
 	    ret.push(callback(this[i], i));
@@ -162,7 +177,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return ret;
 	});
 	
-	fixProtoFn(Array, 'filter', function (callback) {
+	fixProtoFn(Array, 'filter', function filter(callback) {
 	  var ret = [];
 	  for (var i = 0; i < this.length; i++) {
 	    if (callback(this[i], i)) {
@@ -172,7 +187,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return ret;
 	});
 	
-	fixProtoFn(Array, 'indexOf', function (val) {
+	fixProtoFn(Array, 'indexOf', function indexOf(val) {
 	  for (var i = 0; i < this.length; i++) {
 	    if (this[i] === val) {
 	      return i;
