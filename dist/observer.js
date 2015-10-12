@@ -681,8 +681,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    handler = expression;
 	    expression = undefined;
 	  }
-	  var args = arguments;
-	  return doObserve(object, expression, handler, observe, observer.observe, observer.observe, function (object, expression, handler, path) {
+	  var args = arguments,
+	      ret = doObserve(object, expression, handler, observe, observer.observe, observer.observe, function (object, expression, handler, path) {
 	    var watcher = getWatcher(object, expression) || new Watcher(object, expression, path);
 	    watcher.addListen.apply(watcher, _.slice(args, 2));
 	    if (!watcher.hasListen()) {
@@ -692,6 +692,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    return watcher.target;
 	  });
+	  if (window.useProxyDefineProperty) {
+	    fireTargetChange(ret);
+	  }
+	  return ret;
 	}
 	function unobserve(object, expression, handler) {
 	  if (arguments.length == 2) {
@@ -713,9 +717,27 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	}
 	
+	var proxyObserveCallbacks = new Map();
+	function fireTargetChange(object) {
+	  var obj = _.checkObj(object);
+	  if (obj !== object) {
+	    proxyObserveCallbacks.forEach(function (callback) {
+	      callback(obj, object);
+	    });
+	  }
+	}
 	module.exports = {
 	  observe: observe,
-	  unobserve: unobserve
+	  unobserve: unobserve,
+	  onProxyObserve: function onProxyObserve(callback) {
+	    if (window.useProxyDefineProperty && !proxyObserveCallbacks.has(callback)) {
+	      proxyObserveCallbacks.set(callback, callback);
+	    }
+	  },
+	  unProxyObserve: function unProxyObserve(callback) {
+	    proxyObserveCallbacks['delete'](callback);
+	  },
+	  getObserveObject: _.checkObj
 	};
 
 /***/ }

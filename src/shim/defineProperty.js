@@ -26,6 +26,7 @@ if (!window.supportDefinePropertyOnObject) {
   let VBProxy = require('./VBProxy');
   if (VBProxy.isSupport()) {
     window.supportDefinePropertyOnObject = true;
+    window.useProxyDefineProperty = true;
     function isElement(value) {
       return value !== undefined
         && typeof HTMLElement !== 'undefined'

@@ -174,17 +174,21 @@ function observe(object, expression, handler) {
     handler = expression;
     expression = undefined;
   }
-  let args = arguments;
-  return doObserve(object, expression, handler, observe, observer.observe, observer.observe, (object, expression, handler, path) => {
-    let watcher = getWatcher(object, expression) || new Watcher(object, expression, path);
-    watcher.addListen.apply(watcher, _.slice(args, 2));
-    if (!watcher.hasListen()) {
-      removeWatcher(watcher);
-      watcher.destory();
-      return object;
-    }
-    return watcher.target;
-  });
+  let args = arguments,
+    ret = doObserve(object, expression, handler, observe, observer.observe, observer.observe, (object, expression, handler, path) => {
+      let watcher = getWatcher(object, expression) || new Watcher(object, expression, path);
+      watcher.addListen.apply(watcher, _.slice(args, 2));
+      if (!watcher.hasListen()) {
+        removeWatcher(watcher);
+        watcher.destory();
+        return object;
+      }
+      return watcher.target;
+    });
+  if (window.useProxyDefineProperty) {
+    fireTargetChange(ret);
+  }
+  return ret;
 }
 function unobserve(object, expression, handler) {
   if (arguments.length == 2) {
@@ -206,7 +210,25 @@ function unobserve(object, expression, handler) {
   });
 }
 
+const proxyObserveCallbacks = new Map();
+function fireTargetChange(object) {
+  let obj = _.checkObj(object);
+  if (obj !== object) {
+    proxyObserveCallbacks.forEach(callback => {
+      callback(obj, object);
+    });
+  }
+}
 module.exports = {
   observe: observe,
-  unobserve: unobserve
+  unobserve: unobserve,
+  onProxyObserve(callback) {
+    if (window.useProxyDefineProperty && !proxyObserveCallbacks.has(callback)) {
+      proxyObserveCallbacks.set(callback, callback);
+    }
+  },
+  unProxyObserve(callback) {
+    proxyObserveCallbacks.delete(callback);
+  },
+  getObserveObject: _.checkObj
 };

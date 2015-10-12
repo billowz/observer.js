@@ -679,6 +679,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        };
 	
 	        window.supportDefinePropertyOnObject = true;
+	        window.useProxyDefineProperty = true;
 	
 	        fixObject('defineProperty', function (object, prop, desc) {
 	          var descs = {};
