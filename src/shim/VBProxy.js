@@ -240,31 +240,5 @@ let VBProxy = {
   }
 }
 
-/*
-if (isSupported()) {
-
-  function fixPrototypeProp(Type, name) {
-    let fn = Type.prototype[name];
-    if (typeof fn === 'function') {
-      Type.prototype[name] = function() {
-        if (VBProxy.isVBProxy(this)) {
-          return fn.apply(this[DESC_BINDING].object, arguments);
-        }
-        return fn.apply(this, arguments);
-      }
-    }
-  }
-  function fixPrototypeProps(Type, props) {
-    for (let i = 0; i < props.length; i++) {
-      fixPrototypeProp(Type, props[i]);
-    }
-  }
-
-  fixPrototypeProps(Object, OBJECT_PROTO_PROPS);
-  fixPrototypeProps(Array, ARRAY_PROTO_PROPS);
-
-}
-*/
-
 window.VBProxy = VBProxy;
 module.exports = VBProxy;

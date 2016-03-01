@@ -6,6 +6,8 @@ var fs = require('fs'),
   gulpWebpack = require('gulp-webpack'),
   WebpackDevServer = require('webpack-dev-server'),
   mkcfg = require('./tool/make.webpack.js'),
+  jasmine = require('gulp-jasmine'),
+  karma = require('karma').Server,
   main = {
     src: './src',
     dist: './dist',
@@ -101,4 +103,18 @@ gulp.task('server', ['build'], function() {
       console.log('Listening at port ' + devserver.port);
     }
   });
+});
+
+gulp.task('test', function(done) {
+  new karma({
+    configFile: __dirname + '/karma.conf.js',
+    singleRun: true
+  }).start();
+});
+
+gulp.task('tdd', function(done) {
+  new karma({
+    configFile: __dirname + '/karma.conf.js',
+    singleRun: false
+  }).start();
 });
