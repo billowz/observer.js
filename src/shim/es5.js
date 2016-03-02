@@ -1,47 +1,52 @@
+const _ = window._;
+
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function bind(scope) {
+    if (arguments.length < 2 && (scope === undefined || scope === null)) {
+      return this;
+    }
+    let fn = this,
+      bindArgs = [];
+
+    bindArgs.push.apply(bindArgs, arguments);
+    return function() {
+      let args = [];
+      args.push.apply(args, bindArgs);
+      args.push.apply(args, arguments);
+      fn.apply(scope, args);
+    }
+  }
+}
+
 function fixFn(Type, name, lodash, fn) {
   if (typeof Type[name] != 'function') {
     if (typeof lodash == 'function') {
       fn = lodash;
-      lodash = false;
+      lodash = name;
     }
-    if (typeof fn == 'function' && lodash === false) {
-      Type[name] = fn;
+    if (lodash && _) {
+      Type[name] = _[lodash].bind(_);
     } else {
-      if (!(typeof lodash == 'string')) {
-        lodash = name;
-      }
-      Type[name] = function() {
-        if (window._) {
-          return window._[lodash].apply(window._, arguments);
-        } else {
-          fn.apply(this, arguments);
-        }
-      }
+      Type[name] = fn;
     }
   }
 }
+
 function fixProtoFn(Type, name, lodash, fn) {
   Type = Type.prototype;
   if (typeof Type[name] != 'function') {
     if (typeof lodash == 'function') {
       fn = lodash;
-      lodash = false;
+      lodash = name;
     }
-    if (typeof fn == 'function' && lodash === false) {
-      Type[name] = fn;
-    } else {
-      if (!(typeof lodash == 'string')) {
-        lodash = name;
-      }
+    if (lodash && _) {
       Type[name] = function() {
-        if (window._) {
-          let arg = [this];
-          arg.push.apply(arg, arguments);
-          return window._[lodash].apply(window._, arguments);
-        } else {
-          fn.apply(this, arguments);
-        }
-      }
+        let arg = [this];
+        arg.push.apply(arg, arguments);
+        return _[lodash].apply(_, arguments);
+      };
+    } else {
+      Type[name] = fn;
     }
   }
 }
@@ -51,46 +56,29 @@ fixFn(Object, 'create');
 fixFn(Object, 'keys', function keys() {
   let ret = [];
   for (let key in this) {
-    if (Object.hasOwnProperty.call(this, key)) {
+    if (Object.prototype.hasOwnProperty.call(this, key))
       ret.push(key);
-    }
   }
   return ret;
 });
 
-if (!Object.setPrototypeOf) {
-  Object.getPrototypeOf = function getPrototypeOf(object) {
-    var proto = object.__proto__;
-    if (proto || proto === null) {
-      return proto;
-    } else if (typeof object.constructor == 'function') {
-      return object.constructor.prototype;
-    }
-    return null;
+fixFn(Object, 'getPrototypeOf', false, function getPrototypeOf(object) {
+  var proto = object.__proto__;
+  if (proto || proto === null) {
+    return proto;
+  } else if (typeof object.constructor == 'function') {
+    return object.constructor.prototype;
   }
-  Object.setPrototypeOf = function setPrototypeOf(object, proto) {
-    object.__proto__ = proto;
-  }
-}
-
-fixFn(Array, 'isArray', function isArray(arr) {
-  return arr && arr instanceof Array;
+  return null;
 });
 
-fixProtoFn(Function, 'bind', function bind(scope) {
-  if (arguments.length < 2 && scope === undefined) {
-    return this
-  }
-  let fn = this,
-    bindArgs = [];
-  bindArgs.push.apply(bindArgs, arguments);
-  return function() {
-    let args = [];
-    args.push.apply(args, bindArgs);
-    args.push.apply(args, arguments);
-    fn.apply(scope, args);
+fixFn(Object, 'setPrototypeOf', false, function setPrototypeOf(object, proto) {
+  object.__proto__ = proto;
+});
 
-  }
+
+fixFn(Array, 'isArray', function isArray(arr) {
+  return arr instanceof Array;
 });
 
 fixProtoFn(Array, 'forEach', function forEach(callback) {
@@ -103,7 +91,7 @@ fixProtoFn(Array, 'forEach', function forEach(callback) {
 fixProtoFn(Array, 'map', function map(callback) {
   let ret = [];
   for (let i = 0; i < this.length; i++) {
-    ret.push(callback(this[i], i));
+    ret[i] = callback(this[i], i);
   }
   return ret;
 });
@@ -111,17 +99,53 @@ fixProtoFn(Array, 'map', function map(callback) {
 fixProtoFn(Array, 'filter', function filter(callback) {
   let ret = [];
   for (let i = 0; i < this.length; i++) {
-    if (callback(this[i], i)) {
+    if (callback(this[i], i))
       ret.push(this[i]);
-    }
   }
   return ret;
+});
+
+fixProtoFn(Array, 'every', function every(callback) {
+  for (let i = 0; i < this.length; i++) {
+    if (!callback(this[i], i))
+      return false;
+  }
+  return true;
+});
+
+fixProtoFn(Array, 'some', function every(callback) {
+  for (let i = 0; i < this.length; i++) {
+    if (callback(this[i], i))
+      return true;
+  }
+  return false;
+});
+
+fixProtoFn(Array, 'fill', function every(value, start, end) {
+  start = typeof start === 'undefined' ? 0 : parseInt(start);
+  end = typeof end === 'undefined' ? 0 : parseInt(end);
+
+  for (let i = start; i < end; i++) {
+    this[i] = value;
+  }
+  return this;
 });
 
 fixProtoFn(Array, 'indexOf', function indexOf(val) {
   for (let i = 0; i < this.length; i++) {
     if (this[i] === val) {
       return i;
+    }
+  }
+  return -1;
+});
+
+fixProtoFn(Array, 'lastIndexOf', function lastIndexOf(val) {
+  if (this.length) {
+    for (let i = this.length - 1; i >= 0; i--) {
+      if (this[i] === val) {
+        return i;
+      }
     }
   }
   return -1;

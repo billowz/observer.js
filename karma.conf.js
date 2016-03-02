@@ -4,6 +4,8 @@
 module.exports = function(config) {
   config.set({
 
+    transports: ['websocket', 'polling', 'jsonp-polling'],
+
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
 
@@ -41,7 +43,7 @@ module.exports = function(config) {
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['kjhtml'],
+    reporters: ['progress', 'kjhtml'],
 
     specReporter: {
       maxLogLines: 5, // limit number of lines logged per test
@@ -53,7 +55,7 @@ module.exports = function(config) {
     jasmineRunnerReporter: {
       outputFile: 'jasmine-runner.html',
       includes: [
-        "node_modules/jasmine-expect/dist/jasmine-matchers.js"
+        'node_modules/jasmine-expect/dist/jasmine-matchers.js'
       ]
     },
 
@@ -65,8 +67,30 @@ module.exports = function(config) {
       require('karma-sourcemap-loader'),
       require('karma-spec-reporter'),
       require('karma-chrome-launcher'),
-      require('karma-phantomjs-launcher')
+      require('karma-phantomjs-launcher'),
+      require('karma-browserstack-launcher')
     ],
+
+    browserStack: {
+      startTunnel: true,
+      username: 'zengtao1',
+      accessKey: 'zHfsL9fBGjiXmux7mj1M'
+    },
+
+    // define browsers
+    customLaunchers: {
+      BS_IE10: {
+        base: 'BrowserStack',
+        browser_version: '10.0',
+        os_version: '8',
+        browser: 'ie',
+        os: 'Windows'
+      }
+    },
+
+    // start these browsers
+    // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
+    browsers: ['Chrome'],
 
     // web server port
     port: 9876,
@@ -83,11 +107,6 @@ module.exports = function(config) {
 
     // enable / disable watching file and executing tests whenever any file changes
     autoWatch: true,
-
-
-    // start these browsers
-    // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['Chrome'],
 
 
     // Continuous Integration mode

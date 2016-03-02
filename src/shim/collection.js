@@ -1,7 +1,9 @@
 /**
  * Map & Set & WeakMap & WeakSet
  */
-require('./es5')
+
+import './es5'
+
 if (!window.Map) {
   let ITERATOR_TYPE = {
       KEY: 'key',
@@ -11,18 +13,22 @@ if (!window.Map) {
     HASH_BIND = '__hash__',
     objHashIdx = 0;
   function hash(value) {
-    return (typeof value) + ' ' + (_.isObject(value) ? (value[HASH_BIND] || (value[HASH_BIND] = ++objHashIdx)) : value.toString());
+    return (typeof value) + ' ' + ((value && (typeof value == 'object' || typeof value == 'function')) ?
+        (value[HASH_BIND] || (value[HASH_BIND] = ++objHashIdx)) : value + '');
   }
 
   class Map {
+
     constructor() {
       this._map = {};
       this._keyMap = {};
       this._size = 0;
     }
+
     has(key) {
       return hash(key) in this._keyMap;
     }
+
     get(key) {
       let hcode = hash(key);
       if (hcode in this._keyMap) {
@@ -30,6 +36,7 @@ if (!window.Map) {
       }
       return undefined;
     }
+
     set(key, val) {
       let hcode = hash(key);
       this._keyMap[hcode] = key;
@@ -39,6 +46,7 @@ if (!window.Map) {
       }
       return this;
     }
+
     delete(key) {
       let hcode = hash(key);
       if (hcode in this._keyMap) {
@@ -49,20 +57,22 @@ if (!window.Map) {
       }
       return false;
     }
+
     size() {
       return this._size;
     }
+
     clear() {
       this._keyMap = {};
       this._map = {};
       this._size = 0;
     }
+
     forEach(callback) {
-      _.each(this._map, (val, key) => {
-        if (key in this._keyMap) {
-          callback(val, key, this);
-        }
-      });
+      for (let key in this._map) {
+        if (key in this._keyMap)
+          callback(this._map[key], key, this);
+      }
     }
     keys() {
       return new MapIterator(this, ITERATOR_TYPE.KEY);
@@ -86,7 +96,7 @@ if (!window.Map) {
     }
     next() {
       if (!this._hashs) {
-        this._hashs = _.keys(this._map._map);
+        this._hashs = Object.keys(this._map._map);
       }
       let val = undefined;
       if (this._index < this._hashs.length) {
@@ -114,4 +124,3 @@ if (!window.Map) {
 
   window.Map = Map;
 }
-module.exports = window;

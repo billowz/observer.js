@@ -205,6 +205,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 */
 	'use strict';
 	
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 	
 	__webpack_require__(1);
@@ -231,74 +233,87 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this._size = 0;
 	      }
 	
-	      Map.prototype.has = function has(key) {
-	        return hash(key) in this._keyMap;
-	      };
-	
-	      Map.prototype.get = function get(key) {
-	        var hcode = hash(key);
-	        if (hcode in this._keyMap) {
-	          return this._map[hcode];
+	      _createClass(Map, [{
+	        key: 'has',
+	        value: function has(key) {
+	          return hash(key) in this._keyMap;
 	        }
-	        return undefined;
-	      };
-	
-	      Map.prototype.set = function set(key, val) {
-	        var hcode = hash(key);
-	        this._keyMap[hcode] = key;
-	        this._map[hcode] = val;
-	        if (!(hcode in this._keyMap)) {
-	          this._size++;
-	        }
-	        return this;
-	      };
-	
-	      Map.prototype['delete'] = function _delete(key) {
-	        var hcode = hash(key);
-	        if (hcode in this._keyMap) {
-	          delete this._keyMap[hcode];
-	          delete this._map[hcode];
-	          this._size--;
-	          return true;
-	        }
-	        return false;
-	      };
-	
-	      Map.prototype.size = function size() {
-	        return this._size;
-	      };
-	
-	      Map.prototype.clear = function clear() {
-	        this._keyMap = {};
-	        this._map = {};
-	        this._size = 0;
-	      };
-	
-	      Map.prototype.forEach = function forEach(callback) {
-	        var _this = this;
-	
-	        _.each(this._map, function (val, key) {
-	          if (key in _this._keyMap) {
-	            callback(val, key, _this);
+	      }, {
+	        key: 'get',
+	        value: function get(key) {
+	          var hcode = hash(key);
+	          if (hcode in this._keyMap) {
+	            return this._map[hcode];
 	          }
-	        });
-	      };
+	          return undefined;
+	        }
+	      }, {
+	        key: 'set',
+	        value: function set(key, val) {
+	          var hcode = hash(key);
+	          this._keyMap[hcode] = key;
+	          this._map[hcode] = val;
+	          if (!(hcode in this._keyMap)) {
+	            this._size++;
+	          }
+	          return this;
+	        }
+	      }, {
+	        key: 'delete',
+	        value: function _delete(key) {
+	          var hcode = hash(key);
+	          if (hcode in this._keyMap) {
+	            delete this._keyMap[hcode];
+	            delete this._map[hcode];
+	            this._size--;
+	            return true;
+	          }
+	          return false;
+	        }
+	      }, {
+	        key: 'size',
+	        value: function size() {
+	          return this._size;
+	        }
+	      }, {
+	        key: 'clear',
+	        value: function clear() {
+	          this._keyMap = {};
+	          this._map = {};
+	          this._size = 0;
+	        }
+	      }, {
+	        key: 'forEach',
+	        value: function forEach(callback) {
+	          var _this = this;
 	
-	      Map.prototype.keys = function keys() {
-	        return new MapIterator(this, ITERATOR_TYPE.KEY);
-	      };
-	
-	      Map.prototype.values = function values() {
-	        return new MapIterator(this, ITERATOR_TYPE.VALUE);
-	      };
-	
-	      Map.prototype.entries = function entries() {
-	        return new MapIterator(this, ITERATOR_TYPE.ENTRY);
-	      };
-	
-	      Map.prototype.toString = function toString() {
-	        return '[Object Map]';
-	      };
+	          _.each(this._map, function (val, key) {
+	            if (key in _this._keyMap) {
+	              callback(val, key, _this);
+	            }
+	          });
+	        }
+	      }, {
+	        key: 'keys',
+	        value: function keys() {
+	          return new MapIterator(this, ITERATOR_TYPE.KEY);
+	        }
+	      }, {
+	        key: 'values',
+	        value: function values() {
+	          return new MapIterator(this, ITERATOR_TYPE.VALUE);
+	        }
+	      }, {
+	        key: 'entries',
+	        value: function entries() {
+	          return new MapIterator(this, ITERATOR_TYPE.ENTRY);
+	        }
+	      }, {
+	        key: 'toString',
+	        value: function toString() {
+	          return '[Object Map]';
+	        }
+	      }]);
 	
 	      return Map;
 	    })();
@@ -312,33 +327,37 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this._type = type;
 	      }
 	
-	      MapIterator.prototype.next = function next() {
-	        if (!this._hashs) {
-	          this._hashs = _.keys(this._map._map);
-	        }
-	        var val = undefined;
-	        if (this._index < this._hashs.length) {
-	          var _hash = this._hashs[this.index++];
-	          switch (this._type) {
-	            case ITERATOR_TYPE.KEY:
-	              val = this._map._keyMap[_hash];
-	            case ITERATOR_TYPE.VALUE:
-	              val = this._map._map[_hash];
-	            case ITERATOR_TYPE.ENTRY:
-	              val = [this._map._keyMap[_hash], this._map._map[_hash]];
-	            default:
-	              throw new TypeError('Invalid iterator type');
+	      _createClass(MapIterator, [{
+	        key: 'next',
+	        value: function next() {
+	          if (!this._hashs) {
+	            this._hashs = _.keys(this._map._map);
 	          }
+	          var val = undefined;
+	          if (this._index < this._hashs.length) {
+	            var _hash = this._hashs[this.index++];
+	            switch (this._type) {
+	              case ITERATOR_TYPE.KEY:
+	                val = this._map._keyMap[_hash];
+	              case ITERATOR_TYPE.VALUE:
+	                val = this._map._map[_hash];
+	              case ITERATOR_TYPE.ENTRY:
+	                val = [this._map._keyMap[_hash], this._map._map[_hash]];
+	              default:
+	                throw new TypeError('Invalid iterator type');
+	            }
+	          }
+	          return {
+	            value: val,
+	            done: this._index >= this._keys.length
+	          };
 	        }
-	        return {
-	          value: val,
-	          done: this._index >= this._keys.length
-	        };
-	      };
-	
-	      MapIterator.prototype.toString = function toString() {
-	        return '[object Map Iterator]';
-	      };
+	      }, {
+	        key: 'toString',
+	        value: function toString() {
+	          return '[object Map Iterator]';
+	        }
+	      }]);
 	
 	      return MapIterator;
 	    })();
@@ -357,6 +376,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	 * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
 	 */
 	'use strict';
+	
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 	
@@ -460,50 +481,58 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.defines = defines || {};
 	  }
 	
-	  ObjectDescriptor.prototype.isAccessor = function isAccessor(desc) {
-	    return desc.get || desc.set;
-	  };
-	
-	  ObjectDescriptor.prototype.hasAccessor = function hasAccessor() {
-	    for (var attr in this.defines) {
-	      if (this.isAccessor(this.defines[attr])) {
-	        return true;
+	  _createClass(ObjectDescriptor, [{
+	    key: 'isAccessor',
+	    value: function isAccessor(desc) {
+	      return desc.get || desc.set;
+	    }
+	  }, {
+	    key: 'hasAccessor',
+	    value: function hasAccessor() {
+	      for (var attr in this.defines) {
+	        if (this.isAccessor(this.defines[attr])) {
+	          return true;
+	        }
+	      }
+	      return false;
+	    }
+	  }, {
+	    key: 'defineProperty',
+	    value: function defineProperty(attr, desc) {
+	      if (!this.isAccessor(desc)) {
+	        delete this.defines[attr];
+	      } else {
+	        this.defines[attr] = desc;
+	        if (desc.get) {
+	          this.object[attr] = desc.get();
+	        }
 	      }
 	    }
-	    return false;
-	  };
-	
-	  ObjectDescriptor.prototype.defineProperty = function defineProperty(attr, desc) {
-	    if (!this.isAccessor(desc)) {
-	      delete this.defines[attr];
-	    } else {
-	      this.defines[attr] = desc;
-	      if (desc.get) {
-	        this.object[attr] = desc.get();
+	  }, {
+	    key: 'getPropertyDefine',
+	    value: function getPropertyDefine(attr) {
+	      return this.defines[attr];
+	    }
+	  }, {
+	    key: 'get',
+	    value: function get(instance, attr) {
+	      var define = this.defines[attr];
+	      if (define && define.get) {
+	        return define.get.call(instance);
+	      } else {
+	        return this.object[attr];
 	      }
 	    }
-	  };
-	
-	  ObjectDescriptor.prototype.getPropertyDefine = function getPropertyDefine(attr) {
-	    return this.defines[attr];
-	  };
-	
-	  ObjectDescriptor.prototype.get = function get(instance, attr) {
-	    var define = this.defines[attr];
-	    if (define && define.get) {
-	      return define.get.call(instance);
-	    } else {
-	      return this.object[attr];
+	  }, {
+	    key: 'set',
+	    value: function set(instance, attr, value) {
+	      var define = this.defines[attr];
+	      if (define && define.set) {
+	        define.set.call(instance, value);
+	      }
+	      this.object[attr] = value;
 	    }
-	  };
-	
-	  ObjectDescriptor.prototype.set = function set(instance, attr, value) {
-	    var define = this.defines[attr];
-	    if (define && define.set) {
-	      define.set.call(instance, value);
-	    }
-	    this.object[attr] = value;
-	  };
+	  }]);
 	
 	  return ObjectDescriptor;
 	})();
@@ -586,32 +615,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return proxy;
 	  }
 	};
-	
-	/*
-	if (isSupported()) {
-	
-	  function fixPrototypeProp(Type, name) {
-	    let fn = Type.prototype[name];
-	    if (typeof fn === 'function') {
-	      Type.prototype[name] = function() {
-	        if (VBProxy.isVBProxy(this)) {
-	          return fn.apply(this[DESC_BINDING].object, arguments);
-	        }
-	        return fn.apply(this, arguments);
-	      }
-	    }
-	  }
-	  function fixPrototypeProps(Type, props) {
-	    for (let i = 0; i < props.length; i++) {
-	      fixPrototypeProp(Type, props[i]);
-	    }
-	  }
-	
-	  fixPrototypeProps(Object, OBJECT_PROTO_PROPS);
-	  fixPrototypeProps(Array, ARRAY_PROTO_PROPS);
-	
-	}
-	*/
 	
 	window.VBProxy = VBProxy;
 	module.exports = VBProxy;

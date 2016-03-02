@@ -1,15 +1,11 @@
+import proxy from './proxyEvent'
+
 const arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
 
 export default class Observer {
 
-  static obj(obj) {
-    if (window.VBProxy && window.VBProxy.isVBProxy(obj))
-      return window.VBProxy.getVBProxyDesc(obj).object;
-    return obj;
-  }
-
   static eq(obj, obj2) {
-    return Observer.obj(obj) === Observer.obj(obj2);
+    return proxy.obj(obj) === proxy.obj(obj2);
   }
 
   constructor(target) {
@@ -26,6 +22,7 @@ export default class Observer {
     this.changeRecords = {};
     this._notify = this._notify.bind(this);
     this._onObserveChanged = this._onObserveChanged.bind(this);
+    this._onStateChanged = this._onStateChanged.bind(this);
   }
 
   _notify() {
@@ -77,6 +74,7 @@ export default class Observer {
         this._onStateChanged(attr, oldVal);
       }
     });
+    proxy._fire(this.target);
   }
 
   _undefineProperty(attr, value) {
@@ -94,7 +92,7 @@ export default class Observer {
 
       fn.apply(this.target, arguments);
       if (this.target.length !== len)
-        this._onStateChanged(attr, len);
+        this._onStateChanged('length', len);
     }
     return fn;
   }
@@ -141,7 +139,7 @@ export default class Observer {
     let _handlers = this.listens[attr];
 
     if (typeof handler !== 'function') {
-      throw TypeError("Invalid Observer Handler ", handler);
+      throw TypeError("Invalid Observer Handler", handler);
     }
 
     if (!_handlers)
@@ -179,41 +177,45 @@ export default class Observer {
 
   on(attrs, handler) {
     if (arguments.length == 1) {
-      if (!attrs) {
-        throw Error('Invalid Parameter ', arguments);
-      } else if (typeof attrs === 'function') {
+      if (typeof attrs === 'function') {
         for (let attr in this.target) {
           this._addListen(attr, attrs);
         }
-      } else {
-        let str, _attrs;
-
-        for (str in attrs) {
-          handler = attrs[str];
+      } else if (attrs && typeof attrs === 'object') {
+        for (let attr in attrs) {
+          handler = attrs[attr];
           if (typeof handler !== 'function') {
-            throw TypeError("Invalid Observer Handler ", handler);
+            throw TypeError("Invalid Observer Handler", handler);
           }
-          if (!str) {
-            for (let attr in this.target) {
-              this._addListen(attr, handler);
-            }
-          } else {
-            this._addListen(str, handler);
-          }
+          this._addListen(attr, handler);
         }
+      } else {
+        throw TypeError('Invalid Parameter', arguments);
       }
     } else if (arguments.length >= 2) {
-      if (!(attrs instanceof Array)) {
-        attrs = [attrs + ''];
+      let i;
+
+      attrs = [];
+      handler = undefined;
+      for (i = 0; i < arguments.length; i++) {
+        if (typeof arguments[i] === 'function') {
+          handler = arguments[i];
+          break;
+        }
+        if (arguments[i] instanceof Array) {
+          attrs.push.apply(attrs, arguments[i]);
+        } else {
+          attrs.push(arguments[i]);
+        }
       }
-      if (typeof handler !== 'function') {
-        throw TypeError("Invalid Observer Handler ", handler);
+      if (!handler) {
+        throw TypeError("Invalid Observer Handler", handler);
       }
-      for (let i = 0; i < attrs.length; i++) {
-        this._addListen(attrs[i], handler);
+      for (i = 0; i < attrs.length; i++) {
+        this._addListen(attrs[i] + '', handler);
       }
     } else {
-      throw Error('Invalid Parameter ', arguments);
+      throw TypeError('Invalid Parameter', arguments);
     }
     return this.target;
   }
@@ -224,46 +226,54 @@ export default class Observer {
         this._removeListen(attr);
       }
     } else if (arguments.length == 1) {
-      if (!attrs) {
-        for (let attr in this.target) {
-          this._removeListen(attr);
+      if (attrs instanceof Array) {
+        for (let i = 0; i < attrs.length; i++) {
+          this._removeListen(attrs[i] + '');
         }
-      } else if (typeof attrs === 'string') {
-        this._removeListen(attrs);
-      } else if (attrs instanceof Array) {
-        for (let attr in this.target) {
-          this._removeListen(attr, attrs);
+      } else if (attrs && typeof attrs === 'object') {
+        for (let attr in attrs) {
+          this._removeListen(attr, attrs[attr]);
         }
       } else {
-        let str, _attrs;
-
-        for (str in attrs) {
-          handler = attrs[str];
-          if (!str) {
-            for (let attr in this.target) {
-              this._removeListen(attr, handler);
-            }
-          } else {
-            this._removeListen(str, handler);
-          }
-        }
+        this._removeListen(attrs + '');
       }
     } else if (arguments.length >= 2) {
-      if (!(attrs instanceof Array)) {
-        attrs = [attrs + ''];
+      let i;
+
+      attrs = [];
+      handler = undefined;
+      for (i = 0; i < arguments.length; i++) {
+        if (typeof arguments[i] === 'function') {
+          handler = arguments[i];
+          break;
+        }
+        if (arguments[i] instanceof Array) {
+          attrs.push.apply(attrs, arguments[i]);
+        } else {
+          attrs.push(arguments[i]);
+        }
       }
-      for (let i = 0; i < attrs.length; i++) {
-        this._removeListen(attrs[i], handler);
+      for (i = 0; i < attrs.length; i++) {
+        this._removeListen(attrs[i] + '', handler);
       }
     } else {
-      throw Error('Invalid Parameter ', arguments);
+      throw TypeError('Invalid Parameter', arguments);
     }
     return this.target;
   }
 
-  destory() {
+  destroy() {
     for (let attr in this.listens) {
       this._removeListen(attr);
     }
+    if (this.request_frame) {
+      cancelAnimationFrame(this.request_frame);
+      this.request_frame = undefined;
+    }
+    this.target = undefined;
+    this.watchers = undefined;
+    this.listens = undefined;
+    this.changeRecords = undefined;
   }
 }
+Observer.obj = proxy.obj;

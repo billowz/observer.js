@@ -6,18 +6,12 @@ class ObserverFactory {
   }
 
   _bind(observer) {
-    if (observer.__factory_binded !== true) {
-      this.observers.set(observer.target, observer);
-      observer.__factory_binded = true;
-    }
+    this.observers.set(observer.target, observer);
   }
 
   _unbind(observer) {
-    if (observer.__factory_binded === true) {
-      if (this.observers.get(observer.target) === observer) {
-        this.observers.delete(observer.target);
-      }
-      observer.__factory_binded = false;
+    if (this.observers.get(observer.target) === observer) {
+      this.observers.delete(observer.target);
     }
   }
 
@@ -36,7 +30,7 @@ class ObserverFactory {
     target = observer.on.apply(observer, Array.prototype.slice.call(arguments, 1));
     if (!observer.hasListen()) {
       this._unbind(observer);
-      observer.destory();
+      observer.destroy();
     }
     return target;
   }
@@ -49,14 +43,14 @@ class ObserverFactory {
       target = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1));
       if (!observer.hasListen()) {
         this._unbind(observer);
-        observer.destory();
+        observer.destroy();
       }
     }
     return target;
   }
 }
 
-ObserverFactory.obj = Observer.obj;
-ObserverFactory.eq = Observer.eq;
+ObserverFactory.prototype.obj = Observer.obj;
+ObserverFactory.prototype.eq = Observer.eq;
 
 export default new ObserverFactory();

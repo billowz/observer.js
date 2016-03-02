@@ -2,7 +2,7 @@
  * 使用VBScript对象代理js对象的get/set方法, 参考Avalon实现
  * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
  */
-const coll = require('./collection');
+import './collection'
 
 let OBJECT_PROTO_PROPS = ['hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
   ARRAY_PROTO_PROPS = ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'indexOf', 'lastIndexOf', 'length', 'map', 'keys', 'join', 'pop', 'push', 'reverse', 'reverseRight', 'some', 'shift', 'slice', 'sort', 'splice', 'toSource', 'unshift'],
@@ -240,5 +240,6 @@ let VBProxy = {
   }
 }
 
-window.VBProxy = VBProxy;
-module.exports = VBProxy;
+if (isSupported())
+  window.VBProxy = VBProxy;
+

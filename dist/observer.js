@@ -1,13 +1,13 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("_"));
+		module.exports = factory();
 	else if(typeof define === 'function' && define.amd)
-		define(["_"], factory);
+		define([], factory);
 	else if(typeof exports === 'object')
-		exports["observer"] = factory(require("_"));
+		exports["observer"] = factory();
 	else
-		root["observer"] = factory(root["_"]);
-})(this, function(__WEBPACK_EXTERNAL_MODULE_1__) {
+		root["observer"] = factory();
+})(this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -56,372 +56,325 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	module.exports = __webpack_require__(1).assign({}, __webpack_require__(2), __webpack_require__(4));
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+	
+	var _proxyEvent = __webpack_require__(1);
+	
+	var _proxyEvent2 = _interopRequireDefault(_proxyEvent);
+	
+	var _expFactory = __webpack_require__(2);
+	
+	var _expFactory2 = _interopRequireDefault(_expFactory);
+	
+	_expFactory2['default'].proxy = _proxyEvent2['default'];
+	exports['default'] = _expFactory2['default'];
+	module.exports = exports['default'];
 
 /***/ },
 /* 1 */
 /***/ function(module, exports) {
 
-	module.exports = __WEBPACK_EXTERNAL_MODULE_1__;
+	'use strict';
+	
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	
+	var ProxyEventFactory = (function () {
+	  _createClass(ProxyEventFactory, [{
+	    key: 'isEnable',
+	    value: function isEnable() {
+	      return window.VBProxy;
+	    }
+	  }, {
+	    key: 'obj',
+	    value: function obj(_obj) {
+	      if (window.VBProxy && window.VBProxy.isVBProxy(_obj)) return window.VBProxy.getVBProxyDesc(_obj).object;
+	      return _obj;
+	    }
+	  }]);
+	
+	  function ProxyEventFactory() {
+	    _classCallCheck(this, ProxyEventFactory);
+	
+	    this.proxyEvents = new Map();
+	  }
+	
+	  _createClass(ProxyEventFactory, [{
+	    key: 'onProxy',
+	    value: function onProxy(obj, handler) {
+	      var handlers = undefined;
+	
+	      if (!window.VBProxy) {
+	        return;
+	      }
+	      if (typeof handler !== 'function') {
+	        throw TypeError('Invalid Proxy Event Handler');
+	      }
+	      obj = this.obj(obj);
+	      handlers = this.proxyEvents.get(obj);
+	      if (!handlers) {
+	        handlers = [];
+	        this.proxyEvents.set(obj, handlers);
+	      }
+	      handlers.push(handler);
+	    }
+	  }, {
+	    key: 'unProxy',
+	    value: function unProxy(obj, handler) {
+	      var handlers = undefined;
+	
+	      if (!window.VBProxy) {
+	        return;
+	      }
+	      obj = this.obj(obj);
+	      handlers = this.proxyEvents.get(obj);
+	      if (handlers) {
+	        if (arguments.length > 1) {
+	          if (typeof handler === 'function') {
+	            var idx = handlers.indexOf(handler);
+	            if (idx != -1) {
+	              handlers.splice(idx, 1);
+	            }
+	          }
+	        } else {
+	          this.proxyEvents['delete'](obj);
+	        }
+	      }
+	    }
+	  }, {
+	    key: '_fire',
+	    value: function _fire(proxy) {
+	      if (window.VBProxy && window.VBProxy.isVBProxy(proxy)) {
+	        var obj = window.VBProxy.getVBProxyDesc(obj).object,
+	            handlers = this.proxyEvents.get(obj);
+	
+	        if (handlers) {
+	          for (var i = 0; i < handlers.length; i++) {
+	            handlers[i](obj, proxy);
+	          }
+	        }
+	      }
+	    }
+	  }]);
+	
+	  return ProxyEventFactory;
+	})();
+	
+	exports['default'] = new ProxyEventFactory();
+	module.exports = exports['default'];
 
 /***/ },
 /* 2 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/**
-	 * 监控对象属性变化
-	 * 高版本浏览器(Chrome 36+, Opera 23+)基于 Object.observe(ES7)实现
-	 * 基于浏览器使用 Object.defineProperty实现
-	 * IE 6,7,8使用VBScript实现Object.defineProperty
-	 */
 	'use strict';
+	
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 	
-	var _ = __webpack_require__(3),
-	    ARRAY_METHODS = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
-	    requestTimeoutFrame = function requestTimeoutFrame(callback) {
-	  var currTime = new Date().getTime(),
-	      timeToCall = Math.max(0, cfg.timeoutFrameInterval - (currTime - lastTime)),
-	      reqId = setTimeout(function () {
-	    callback(currTime + timeToCall);
-	  }, timeToCall);
-	  lastTime = currTime + timeToCall;
-	  return reqId;
-	},
-	    requestFrame = function requestFrame(callback) {
-	  if (window.requestAnimationFrame && cfg.useAnimationFrame) {
-	    return window.requestAnimationFrame(callback);
-	  } else {
-	    return requestTimeoutFrame(callback);
+	var _exp3 = __webpack_require__(3);
+	
+	var _exp4 = _interopRequireDefault(_exp3);
+	
+	var _factory = __webpack_require__(4);
+	
+	var _factory2 = _interopRequireDefault(_factory);
+	
+	var ExpressionFactory = (function () {
+	  function ExpressionFactory() {
+	    _classCallCheck(this, ExpressionFactory);
+	
+	    this.exps = new Map();
 	  }
-	};
 	
-	var _observers = new Map(),
-	    lastTime = 0,
-	    cfg = {
-	  useES7Observe: true,
-	  useAnimationFrame: false,
-	  timeoutFrameInterval: 16
-	};
+	  _createClass(ExpressionFactory, [{
+	    key: '_bind',
+	    value: function _bind(exp) {
+	      var obj = _factory2['default'].obj(exp.target),
+	          map = this.exps.get(obj);
 	
-	function bindObserver(observer) {
-	  if (observer._binded !== true) {
-	    _observers.set(observer.target, observer);
-	    observer._binded = true;
-	  }
-	}
-	
-	function unbindObserver(observer) {
-	  if (observer._binded === true) {
-	    if (_observers.get(observer.target) === observer) {
-	      _observers['delete'](observer.target);
+	      if (!map) {
+	        map = {};
+	        this.exps.set(obj, map);
+	      }
+	      map[exp.expression] = exp;
 	    }
-	    observer._binded = false;
-	  }
-	}
+	  }, {
+	    key: '_unbind',
+	    value: function _unbind(exp) {
+	      var obj = _factory2['default'].obj(exp.target),
+	          map = this.exps.get(obj);
 	
-	function getBindObserver(target) {
-	  return _observers.get(target);
-	}
+	      if (map && map[exp.expression] === exp) {
+	        delete map[exp.expression];
 	
-	var Observer = (function () {
-	  function Observer(target) {
-	    _classCallCheck(this, Observer);
-	
-	    if (!_.isArray(target) && !_.isObject(target)) {
-	      throw TypeError('can not observe object[' + typeof target + ']');
-	    }
-	    this.target = target;
-	    this._isArray = target instanceof Array;
-	    this.watchers = {};
-	    this.listens = {};
-	    this._onObserveChanged = this._onObserveChanged.bind(this);
-	    this._notify = this._notify.bind(this);
-	    this.changeRecords = {};
-	    bindObserver(this);
-	  }
-	
-	  Observer.prototype._notify = function _notify() {
-	    var _this = this;
-	
-	    _.each(this.changeRecords, function (oldVal, attr) {
-	      var handlers = _this.listens[attr];
-	      _.each(handlers, function (h) {
-	        var val = _this.target[attr];
-	        if (!_.eq(val, oldVal)) {
-	          h(attr, _this.target[attr], oldVal, _this.target);
+	        for (var key in map) {
+	          return;
 	        }
-	      });
-	    });
-	    this.__request_frame = null;
-	    this.changeRecords = {};
-	  };
-	
-	  Observer.prototype._addChangeRecord = function _addChangeRecord(attr, oldVal) {
-	    if (!(attr in this.changeRecords)) {
-	      this.changeRecords[attr] = oldVal;
-	      if (!this.__request_frame) {
-	        this.__request_frame = requestFrame(this._notify);
+	        this.exps['delete'](obj);
 	      }
 	    }
-	  };
+	  }, {
+	    key: '_get',
+	    value: function _get(obj, exp) {
+	      var map = undefined;
 	
-	  Observer.prototype._addListen = function _addListen(attr, handlers) {
-	    var attrHandlers = this.listens[attr];
-	    if (!attrHandlers) {
-	      attrHandlers = this.listens[attr] = [];
+	      obj = _factory2['default'].obj(exp.target);
+	      map = this.exps.get(obj);
+	      if (map) return map[exp];
+	      return undefined;
 	    }
-	    _.each(handlers, function (h) {
-	      if (!_.include(attrHandlers, h)) {
-	        attrHandlers.push(h);
-	      }
-	    });
-	    if (attrHandlers.length) {
-	      this._watch(attr);
-	    }
-	  };
+	  }, {
+	    key: '_on',
+	    value: function _on(obj, exp, handler) {
+	      var path = toPath(exp);
 	
-	  Observer.prototype._removeListen = function _removeListen(attr, handlers) {
-	    var attrHandlers = this.listens[attr];
-	    if (attrHandlers) {
-	      if (handlers.length) {
-	        _.remove(attrHandlers, function (h) {
-	          return _.include(handlers, h);
-	        });
-	      }
-	      if (!handlers.length || !attrHandlers.length) {
-	        delete this.listens[attr];
-	        this._unwatch(attr);
+	      if (path.length > 1) {
+	        var _exp = this._get(obj, _exp);
+	
+	        if (!_exp) {
+	          _exp = new _exp4['default'](obj, _exp, path);
+	          this._bind(_exp);
+	        }
+	        _exp.addListen(handler);
+	        return _exp.target;
+	      } else {
+	        return _factory2['default'].on(obj, exp, handler);
 	      }
 	    }
-	  };
+	  }, {
+	    key: '_un',
+	    value: function _un(obj, exp, handler) {
+	      var path = toPath(exp);
 	
-	  Observer.prototype._onStateChanged = function _onStateChanged(attr, oldVal) {
-	    if (attr in this.listens) {
-	      this._addChangeRecord(attr, oldVal);
+	      if (path.length > 1) {
+	        var _exp2 = this._get(obj, _exp2);
+	
+	        if (_exp2) {
+	          _exp2.removeListen(handler);
+	        }
+	        if (!_exp2.hashListen()) {
+	          this._unbind(_exp2);
+	          return _exp2.destory();
+	        }
+	        return _exp2.target;
+	      } else {
+	        return _factory2['default'].un(obj, exp, handler);
+	      }
 	    }
-	  };
-	
-	  Observer.prototype._onObserveChanged = function _onObserveChanged(changes) {
-	    var _this2 = this;
-	
-	    _.each(changes, function (change) {
-	      _this2._onStateChanged(change.name, change.oldValue);
-	    });
-	  };
-	
-	  Observer.prototype._defineProperty = function _defineProperty(attr, value) {
-	    var _this3 = this;
-	
-	    this.target = Object.defineProperty(this.target, attr, {
-	      enumerable: true,
-	      configurable: true,
-	      get: function get() {
-	        return value;
-	      },
-	      set: function set(val) {
-	        var oldVal = value;
-	        value = val;
-	        _this3._onStateChanged(attr, oldVal);
-	      }
-	    });
-	  };
-	
-	  Observer.prototype._undefineProperty = function _undefineProperty(attr, value) {
-	    this.target = Object.defineProperty(this.target, this.attr, {
-	      enumerable: true,
-	      configurable: true,
-	      value: value
-	    });
-	  };
-	
-	  Observer.prototype._watch = function _watch(attr) {
-	    var _this4 = this,
-	        _arguments = arguments;
-	
-	    if (Object.observe && cfg.useES7Observe) {
-	      if (!this._es7observe) {
-	        Object.observe(this.target, this._onObserveChanged);
-	        this._es7observe = true;
-	      }
-	    } else if (!this.watchers[attr]) {
-	      if (this._isArray && attr === 'length') {
-	        this._arrayhocks = ARRAY_METHODS.map(function (method) {
-	          var fn = _this4.target[method];
-	          _this4.target[method] = function () {
-	            var oldLen = _this4.target.length;
-	            fn.apply(_this4.target, _arguments);
-	            if (_this4.target.length !== oldLen) {
-	              _this4._onStateChanged(attr, oldLen);
+	  }, {
+	    key: 'on',
+	    value: function on(obj) {
+	      if (arguments.length < 2) {
+	        throw TypeError('Invalid Parameter');
+	      } else if (arguments.length === 2) {
+	        var p1 = arguments[1];
+	        if (typeof p1 === 'function') {
+	          return _factory2['default'].on(obj, p1);
+	        } else if (p1 && typeof p1 === 'object') {
+	          for (var exp in p1) {
+	            if (typeof p1[exp] !== 'function') {
+	              throw TypeError('Invalid Observer Handler');
 	            }
-	          };
-	          return fn;
-	        });
-	      } else {
-	        this._defineProperty(attr, this.target[attr]);
-	      }
-	      this.watchers[attr] = true;
-	    }
-	  };
-	
-	  Observer.prototype._unwatch = function _unwatch(attr) {
-	    var _this5 = this;
-	
-	    if (Object.observe && cfg.useES7Observe) {
-	      if (this._es7observe && !this.hasListen()) {
-	        Object.unobserve(this.target, this._onObserveChanged);
-	        this._es7observe = false;
-	      }
-	    } else if (this.watchers[attr]) {
-	      if (this._isArray && attr === 'length') {
-	        ARRAY_METHODS.forEach(function (method, idx) {
-	          if (_this5._arrayhocks[idx]) _this5.target[method] = _this5._arrayhocks[idx];
-	        });
-	        this._arrayhocks == [];
-	      } else {
-	        this._undefineProperty(attr, this.target[attr]);
-	      }
-	      delete this.watchers[attr];
-	    }
-	  };
-	
-	  Observer.prototype._parseBindArg = function _parseBindArg(attrs, handlers) {
-	    if (arguments.length == 1) {
-	      handlers = attrs;
-	      attrs = _.keys(this.target);
-	    } else if (!_.isArray(attrs)) {
-	      attrs = [attrs + ''];
-	    } else {
-	      attrs = _.map(attrs, function (attr) {
-	        return attr + '';
-	      });
-	    }
-	    if (!_.isArray(handlers)) {
-	      handlers = [handlers];
-	    }
-	    handlers = _.filter(handlers, function (h) {
-	      return _.isFunction(h);
-	    });
-	    return {
-	      attrs: attrs,
-	      handlers: handlers
-	    };
-	  };
-	
-	  Observer.prototype.hasListen = function hasListen() {
-	    for (var attr in this.listens) {
-	      return true;
-	    }
-	    return false;
-	  };
-	
-	  Observer.prototype.on = function on() {
-	    var _this6 = this;
-	
-	    var arg = this._parseBindArg.apply(this, arguments);
-	    if (arg.attrs.length && arg.handlers.length) {
-	      (function () {
-	        var obj = _.checkObj(_this6.target);
-	        _.each(arg.attrs, function (attr) {
-	          if (!(attr in obj)) {
-	            obj[attr] = undefined;
+	            obj = this._on(obj, exp, p1[exp]);
 	          }
-	        });
-	        _.each(arg.attrs, function (attr) {
-	          _this6._addListen(attr, arg.handlers);
-	        });
-	      })();
+	        } else {
+	          throw TypeError('Invalid Parameter');
+	        }
+	      } else if (arguments.length >= 3) {
+	        var i = undefined,
+	            _exps = [],
+	            _handler = undefined;
+	
+	        for (i = 0; i < arguments.length; i++) {
+	          if (typeof arguments[i] === 'function') {
+	            _handler = arguments[i];
+	            break;
+	          }
+	          if (arguments[i] instanceof Array) {
+	            _exps.push.apply(_exps, arguments[i]);
+	          } else {
+	            _exps.push(arguments[i]);
+	          }
+	        }
+	        if (!_handler) {
+	          throw TypeError("Invalid Observer Handler", _handler);
+	        }
+	        for (i = 0; i < _exps.length; i++) {
+	          obj = this._on(obj, _exps[i] + '', _handler);
+	        }
+	      }
+	      return obj;
 	    }
-	    return this.target;
-	  };
+	  }, {
+	    key: 'un',
+	    value: function un(obj) {
+	      if (arguments.length < 1) {
+	        throw TypeError('Invalid Parameter');
+	      } else if (arguments.length === 1) {
+	        return _factory2['default'].un(obj);
+	      } else if (arguments.length === 2) {
+	        var p1 = arguments[1];
 	
-	  Observer.prototype.un = function un() {
-	    var _this7 = this;
+	        if (p1 instanceof Array) {
+	          for (var i = 0; i < p1.length; i++) {
+	            obj = this._on(obj, p1);
+	          }
+	        } else if (p1 && typeof p1 === 'object') {
+	          for (var exp in p1) {
+	            obj = this._un(obj, exp, p1[exp]);
+	          }
+	        } else {
+	          obj = this._un(obj, p1 + '');
+	        }
+	      } else if (arguments.length >= 3) {
+	        var i = undefined;
 	
-	    var arg = this._parseBindArg.apply(this, arguments);
-	    if (arg.attrs.length) {
-	      _.each(arg.attrs, function (attr) {
-	        _this7._removeListen(attr, arg.handlers);
-	      });
+	        exps = [];
+	        handler = undefined;
+	        for (i = 0; i < arguments.length; i++) {
+	          if (typeof arguments[i] === 'function') {
+	            handler = arguments[i];
+	            break;
+	          }
+	          if (arguments[i] instanceof Array) {
+	            exps.push.apply(exps, arguments[i]);
+	          } else {
+	            exps.push(arguments[i]);
+	          }
+	        }
+	        for (i = 0; i < exps.length; i++) {
+	          obj = this._un(obj, exps[i] + '', handler);
+	        }
+	      }
+	      return obj;
 	    }
-	    return this.target;
-	  };
+	  }]);
 	
-	  Observer.prototype.destory = function destory() {
-	    if (Object.observe && cfg.useES7Observe) {
-	      Object.unobserve(this.target, this._onObserveChanged);
-	      this.listens = {};
-	    } else {
-	      _.each(this.watchers, function (state) {
-	        state.unbind();
-	      });
-	      this.watchers = {};
-	    }
-	    unbindObserver(this);
-	  };
-	
-	  return Observer;
+	  return ExpressionFactory;
 	})();
 	
-	function observe(obj) {
-	  var target = _.checkObj(obj),
-	      observer = getBindObserver(target),
-	      ret = undefined;
-	  if (!observer) {
-	    observer = new Observer(target);
-	  }
-	  ret = observer.on.apply(observer, _.slice(arguments, 1));
-	  if (!observer.hasListen()) {
-	    observer.destory();
-	  }
-	  return ret;
-	}
+	ExpressionFactory.prototype.obj = _factory2['default'].obj;
+	ExpressionFactory.prototype.eq = _factory2['default'].eq;
 	
-	function unobserve(obj) {
-	  var target = _.checkObj(obj);
-	  var observer = getBindObserver(target);
-	  if (observer) {
-	    var ret = observer.un.apply(observer, _.slice(arguments, 1));
-	    if (!observer.hasListen()) {
-	      observer.destory();
-	    }
-	    return ret;
-	  }
-	  return obj;
-	}
-	
-	module.exports = {
-	  observe: observe,
-	  unobserve: unobserve,
-	  cfg: cfg,
-	  support: !!Object.observe || (window.supportDefinePropertyOnObject !== undefined ? window.supportDefinePropertyOnObject : (function () {
-	    if (!Object.defineProperty) {
-	      return false;
-	    }
-	    try {
-	      var _ret2 = (function () {
-	        var val = undefined;
-	        object = Object.defineProperty(object, 'sentinel', {
-	          get: function get() {
-	            return val;
-	          },
-	          set: function set(value) {
-	            val = value;
-	          }
-	        });
-	        object.sentinel = 1;
-	        return {
-	          v: object.sentinel === val
-	        };
-	      })();
-	
-	      if (typeof _ret2 === 'object') return _ret2.v;
-	    } catch (exception) {
-	      return false;
-	    }
-	  })())
-	};
+	exports['default'] = new ExpressionFactory();
+	module.exports = exports['default'];
 
 /***/ },
 /* 3 */
@@ -429,64 +382,152 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	var _ = __webpack_require__(1),
-	    Util = {
-	  isObject: function isObject(obj) {
-	    return typeof obj == 'object';
-	  },
-	  isArray: function isArray(obj) {
-	    return obj && obj instanceof Array;
-	  },
-	  isFunction: function isFunction(fn) {
-	    return typeof fn == 'function';
-	  },
-	  isString: function isString(str) {
-	    return typeof str == 'string';
-	  },
-	  each: function each(obj, callback) {
-	    if (Util.isArray(obj)) {
-	      obj.forEach(callback);
-	    } else if (Util.isObject(obj)) {
-	      for (var key in obj) {
-	        callback(obj[key], key);
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	
+	var _factory = __webpack_require__(4);
+	
+	var _factory2 = _interopRequireDefault(_factory);
+	
+	var rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
+	
+	function baseToString(val) {
+	  return val === undefined || val === null ? '' : val + '';
+	}
+	
+	function toPath(value) {
+	  var result = [];
+	  if (typeof value === 'string') {
+	    baseToString(value).replace(rePropName, function (match, number, quote, string) {
+	      result.push(quote ? string.replace(reEscapeChar, '$1') : number || match);
+	    });
+	  }
+	  return result;
+	}
+	
+	var Expression = (function () {
+	  function Expression(target, expression, path) {
+	    _classCallCheck(this, Expression);
+	
+	    this.expression = expression;
+	    this.handlers = [];
+	    this.path = path || toPath(expression);
+	    this.observers = [];
+	    this.observeHandlers = this._initObserveHandlers();
+	    this.target = this._observe(target, 0);
+	  }
+	
+	  _createClass(Expression, [{
+	    key: '_observe',
+	    value: function _observe(obj, idx) {
+	      var attr = this.path[idx];
+	
+	      if (idx + 1 < this.path.length) obj[attr] = this._observe(obj[attr], idx + 1);
+	      return _factory2['default'].on(obj, attr, this.observeHandlers[idx]);
+	    }
+	  }, {
+	    key: '_unobserve',
+	    value: function _unobserve(obj, idx) {
+	      var attr = this.path[idx];
+	
+	      obj = _factory2['default'].un(obj, attr, this.observeHandlers[idx]);
+	      if (idx + 1 < this.path.length) obj[attr] = this._unobserve(obj[attr], idx + 1);
+	      return obj;
+	    }
+	  }, {
+	    key: '_initObserveHandlers',
+	    value: function _initObserveHandlers() {
+	      var handlers = [],
+	          i = undefined;
+	
+	      for (i = 0; i < this.path; i++) {
+	        handlers[i] = this._createObserveHandler(i);
+	      }
+	      return handlers;
+	    }
+	  }, {
+	    key: '_createObserveHandler',
+	    value: function _createObserveHandler(idx) {
+	      var _this = this;
+	
+	      var path = this.path.slice(0, idx + 1),
+	          rpath = this.path.slice(idx + 1),
+	          ridx = this.path.length - idx - 1;
+	
+	      return function (attr, val, oldVal) {
+	        if (ridx > 0) {
+	          _this._unobserve(oldVal, idx + 1);
+	          _this._observe(val, idx + 1);
+	          oldVal = Expression.get(oldVal, rpath);
+	          val = Expression.get(val, rpath);
+	        }
+	        if (val !== oldVal && _this.handlers) {
+	          for (var i = 0; i < _this.handlers.length; i++) {
+	            _this.handlers[i](_this.expression, val, oldVal, _this.target);
+	          }
+	        }
+	      };
+	    }
+	  }, {
+	    key: 'addListen',
+	    value: function addListen() {
+	      for (var i = 0; i < arguments.length; i++) {
+	        if (typeof arguments[i] === 'function') {
+	          this.handlers.push(arguments[i]);
+	        }
 	      }
 	    }
-	  },
-	  map: function map(arr, callback) {
-	    return arr.map(callback);
-	  },
-	  filter: function filter(arr, callback) {
-	    return arr.filter(callback);
-	  },
-	  keys: function keys(obj) {
-	    return Object.keys(obj);
-	  },
-	  include: function include(arr, val) {
-	    return arr.indexOf(val) != -1;
-	  },
-	  remove: function remove(arr, pred) {
-	    for (var i = arr.length - 1; i >= 0; i--) {
-	      if (pred(arr[i], i)) {
-	        arr.splice(i, 1);
+	  }, {
+	    key: 'removeListen',
+	    value: function removeListen() {
+	      if (arguments.length == 0) {
+	        this.handlers = [];
+	      } else {
+	        for (var i = 0; i < arguments.length; i++) {
+	          if (typeof arguments[i] === 'function') {
+	            var idx = this.handlers.indexOf(arguments[i]);
+	            if (idx !== -1) {
+	              this.handlers.splice(idx, 1);
+	            }
+	          }
+	        }
 	      }
 	    }
-	  },
-	  slice: function slice(arr, s, e) {
-	    return Array.prototype.slice.call(arr, s || 0, e || arr.length);
-	  },
-	  //处理 VBProxy对象(IE 6,7,8)
-	  checkObj: function checkObj(obj) {
-	    if (window.VBProxy && window.VBProxy.isVBProxy(obj)) {
-	      return window.VBProxy.getVBProxyDesc(obj).object;
+	  }, {
+	    key: 'hasListen',
+	    value: function hasListen() {
+	      return !!this.handlers.length;
 	    }
-	    return obj;
-	  },
-	  eq: function eq(obj, obj2) {
-	    return Util.checkObj(obj) === Util.checkObj(obj2);
-	  },
-	  get: _.get
-	};
-	module.exports = Util;
+	  }, {
+	    key: 'destory',
+	    value: function destory() {
+	      var obj = this._unobserve(this.target, 0);
+	      this.target = undefined;
+	      this.expression = undefined;
+	      this.handlers = undefined;
+	      this.path = undefined;
+	      this.observers = undefined;
+	      this.observeHandlers = undefined;
+	      this.target = undefined;
+	      return obj;
+	    }
+	  }], [{
+	    key: 'get',
+	    value: function get() {}
+	  }]);
+	
+	  return Expression;
+	})();
+	
+	exports['default'] = Expression;
+	module.exports = exports['default'];
 
 /***/ },
 /* 4 */
@@ -494,251 +535,417 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
+	
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 	
-	var _ = __webpack_require__(3),
-	    observer = __webpack_require__(2),
-	    rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
+	var _core = __webpack_require__(5);
 	
-	var _watchers = new Map();
+	var _core2 = _interopRequireDefault(_core);
 	
-	function baseToString(val) {
-	  return val === undefined || val === null ? '' : val + '';
-	}
+	var ObserverFactory = (function () {
+	  function ObserverFactory() {
+	    _classCallCheck(this, ObserverFactory);
 	
-	function toPath(value) {
-	  if (!_.isString(value)) {
-	    return [];
+	    this.observers = new Map();
 	  }
-	  var result = [];
-	  baseToString(value).replace(rePropName, function (match, number, quote, string) {
-	    result.push(quote ? string.replace(reEscapeChar, '$1') : number || match);
-	  });
-	  return result;
-	}
 	
-	var Watcher = (function () {
-	  function Watcher(target, expression, path) {
-	    _classCallCheck(this, Watcher);
-	
-	    if (!this.canObserve(target)) {
-	      throw new TypeError('Invalid Param');
+	  _createClass(ObserverFactory, [{
+	    key: '_bind',
+	    value: function _bind(observer) {
+	      this.observers.set(observer.target, observer);
 	    }
-	    this.expression = expression;
-	    this.handlers = [];
-	    this.path = path || toPath(expression);
-	    this.observers = [];
-	    this._observeHandlers = this._initObserveHandlers();
-	    this.target = this._observe(target, 0);
-	    _watchers[this.expression] = this;
-	  }
+	  }, {
+	    key: '_unbind',
+	    value: function _unbind(observer) {
+	      if (this.observers.get(observer.target) === observer) {
+	        this.observers['delete'](observer.target);
+	      }
+	    }
+	  }, {
+	    key: '_get',
+	    value: function _get(target) {
+	      return this.observers.get(target);
+	    }
+	  }, {
+	    key: 'on',
+	    value: function on(obj) {
+	      var target = _core2['default'].obj(obj),
+	          observer = this._get(target);
 	
-	  Watcher.prototype.addListen = function addListen(handler) {
-	    var _this = this;
+	      if (!observer) {
+	        observer = new _core2['default'](target);
+	        this._bind(observer);
+	      }
+	      target = observer.on.apply(observer, Array.prototype.slice.call(arguments, 1));
+	      if (!observer.hasListen()) {
+	        this._unbind(observer);
+	        observer.destroy();
+	      }
+	      return target;
+	    }
+	  }, {
+	    key: 'un',
+	    value: function un(obj) {
+	      var target = _core2['default'].obj(obj),
+	          observer = this._get(target);
 	
-	    if (_.isArray(handler)) {
-	      _.each(handler, function (h) {
-	        if (_.isFunction(h) && !_.include(_this.handlers, h)) {
-	          _this.handlers.push(h);
+	      if (observer) {
+	        target = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1));
+	        if (!observer.hasListen()) {
+	          this._unbind(observer);
+	          observer.destroy();
 	        }
-	      });
-	    } else if (_.isFunction(handler) && !_.include(this.handlers, handler)) {
-	      this.handlers.push(handler);
-	    }
-	  };
-	
-	  Watcher.prototype.removeListen = function removeListen(handler) {
-	    if (_.isArray(handler)) {
-	      _.remove(this.handlers, function (h) {
-	        return _.include(handler, h);
-	      });
-	    } else if (_.isFunction(handler)) {
-	      _.remove(this.handlers, handler);
-	    } else if (arguments.length == 0) {
-	      this.handlers = [];
-	    }
-	  };
-	
-	  Watcher.prototype.hasListen = function hasListen() {
-	    return !!this.handlers.length;
-	  };
-	
-	  Watcher.prototype.canObserve = function canObserve(obj) {
-	    return obj && _.isObject(obj);
-	  };
-	
-	  Watcher.prototype.destory = function destory() {
-	    this.target = this._unobserve(this.target, 0);
-	  };
-	
-	  Watcher.prototype._observe = function _observe(obj, idx) {
-	    if (idx < this.path.length && this.canObserve(obj)) {
-	      var attr = this.path[idx];
-	      obj[attr] = this._observe(obj[attr], idx + 1);
-	      return observer.observe(obj, attr, this._observeHandlers[idx]);
-	    }
-	    return obj;
-	  };
-	
-	  Watcher.prototype._unobserve = function _unobserve(obj, idx) {
-	    if (idx < this.path.length && this.canObserve(obj)) {
-	      var attr = this.path[idx],
-	          ret = undefined;
-	      ret = observer.unobserve(obj, attr, this._observeHandlers[idx]);
-	      ret[attr] = this._unobserve(obj[attr], idx + 1);
-	      return ret;
-	    }
-	    return obj;
-	  };
-	
-	  Watcher.prototype._initObserveHandlers = function _initObserveHandlers() {
-	    var _this2 = this;
-	
-	    return _.map(this.path, function (val, idx) {
-	      return _this2._createObserveHandler(idx);
-	    });
-	  };
-	
-	  Watcher.prototype._createObserveHandler = function _createObserveHandler(idx) {
-	    var _this3 = this;
-	
-	    var path = _.slice(this.path, 0, idx + 1),
-	        rpath = _.slice(this.path, idx + 1),
-	        ridx = this.path.length - idx - 1;
-	    return function (attr, val, oldVal) {
-	      if (ridx > 0) {
-	        _this3._unobserve(oldVal, idx + 1);
-	        _this3._observe(val, idx + 1);
-	        oldVal = _.get(oldVal, rpath);
-	        val = _.get(val, rpath);
 	      }
-	      if (val !== oldVal && _this3.handlers) {
-	        _.each(_this3.handlers, function (h) {
-	          h(_this3.expression, val, oldVal, _this3.target);
-	        });
-	      }
-	    };
-	  };
+	      return target;
+	    }
+	  }]);
 	
-	  return Watcher;
+	  return ObserverFactory;
 	})();
 	
-	var watcherLookup = new Map();
+	ObserverFactory.prototype.obj = _core2['default'].obj;
+	ObserverFactory.prototype.eq = _core2['default'].eq;
 	
-	function addWatcher(watcher) {
-	  var obj = _.checkObj(watcher.target),
-	      map = watcherLookup.get(obj);
-	  if (!map) {
-	    map = {};
-	    watcherLookup.set(obj, map);
-	  }
-	  map[watcher.expression] = watcher;
-	}
+	exports['default'] = new ObserverFactory();
+	module.exports = exports['default'];
+
+/***/ },
+/* 5 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
 	
-	function getWatcher(obj, expression) {
-	  obj = _.checkObj(obj);
-	  var map = watcherLookup.get(obj);
-	  if (map) {
-	    return map[expression];
-	  }
-	  return undefined;
-	}
+	Object.defineProperty(exports, '__esModule', {
+	  value: true
+	});
 	
-	function removeWatcher(watcher) {
-	  var obj = _.checkObj(watcher.target),
-	      map = watcherLookup.get(obj);
-	  if (map) {
-	    delete map[watcher.expression];
-	    if (!_.findKey(map)) {
-	      watcherLookup['delete'](obj);
+	var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+	
+	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+	
+	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+	
+	var _proxyEvent = __webpack_require__(1);
+	
+	var _proxyEvent2 = _interopRequireDefault(_proxyEvent);
+	
+	var arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
+	
+	var Observer = (function () {
+	  _createClass(Observer, null, [{
+	    key: 'eq',
+	    value: function eq(obj, obj2) {
+	      return _proxyEvent2['default'].obj(obj) === _proxyEvent2['default'].obj(obj2);
 	    }
-	  }
-	}
+	  }]);
 	
-	function doObserve(object, expression, handler, cascade, nonPath, signPath, multipath) {
-	  if (expression && _.isArray(expression)) {
-	    if (!expression.length) {
-	      expression = undefined;
+	  function Observer(target) {
+	    _classCallCheck(this, Observer);
+	
+	    if (target instanceof Array) {
+	      this.isArray = true;
+	    } else if (target && typeof target === 'object') {
+	      this.isArray = false;
 	    } else {
-	      var ret = object;
-	      _.each(expression, function (exp) {
-	        ret = cascade(object, exp, handler);
-	      });
-	      return ret;
+	      throw TypeError('can not observe object[' + typeof target + ']');
 	    }
+	    this.target = target;
+	    this.watchers = {};
+	    this.listens = {};
+	    this.changeRecords = {};
+	    this._notify = this._notify.bind(this);
+	    this._onObserveChanged = this._onObserveChanged.bind(this);
+	    this._onStateChanged = this._onStateChanged.bind(this);
 	  }
-	  var path = toPath(expression);
-	  if (!path.length) {
-	    return nonPath(object, handler);
-	  } else if (path.length == 1) {
-	    return signPath(object, expression, handler);
-	  } else {
-	    return multipath(object, expression, handler, path);
-	  }
-	}
-	function observe(object, expression, handler) {
-	  if (arguments.length == 2) {
-	    handler = expression;
-	    expression = undefined;
-	  }
-	  var args = arguments,
-	      ret = doObserve(object, expression, handler, observe, observer.observe, observer.observe, function (object, expression, handler, path) {
-	    var watcher = getWatcher(object, expression) || new Watcher(object, expression, path);
-	    watcher.addListen.apply(watcher, _.slice(args, 2));
-	    if (!watcher.hasListen()) {
-	      removeWatcher(watcher);
-	      watcher.destory();
-	      return object;
-	    }
-	    return watcher.target;
-	  });
-	  if (window.useProxyDefineProperty) {
-	    fireTargetChange(ret);
-	  }
-	  return ret;
-	}
-	function unobserve(object, expression, handler) {
-	  if (arguments.length == 2) {
-	    handler = expression;
-	    expression = undefined;
-	  }
-	  var args = arguments;
-	  return doObserve(object, expression, handler, unobserve, observer.unobserve, observer.unobserve, function (object, expression, handler, path) {
-	    var watcher = getWatcher(object, expression);
-	    if (watcher) {
-	      watcher.removeListen.apply(watcher, _.slice(args, 2));
-	      if (!watcher.hasListen()) {
-	        removeWatcher(watcher);
-	        watcher.destory();
-	      }
-	      return watcher.target;
-	    }
-	    return object;
-	  });
-	}
 	
-	var proxyObserveCallbacks = new Map();
-	function fireTargetChange(object) {
-	  var obj = _.checkObj(object);
-	  if (obj !== object) {
-	    proxyObserveCallbacks.forEach(function (callback) {
-	      callback(obj, object);
-	    });
-	  }
-	}
-	module.exports = {
-	  observe: observe,
-	  unobserve: unobserve,
-	  onProxyObserve: function onProxyObserve(callback) {
-	    if (window.useProxyDefineProperty && !proxyObserveCallbacks.has(callback)) {
-	      proxyObserveCallbacks.set(callback, callback);
+	  _createClass(Observer, [{
+	    key: '_notify',
+	    value: function _notify() {
+	      var attr = undefined,
+	          val = undefined,
+	          oldVal = undefined,
+	          handlers = undefined,
+	          i = undefined;
+	
+	      for (attr in this.changeRecords) {
+	        val = this.target[attr];
+	        oldVal = this.changeRecords[attr];
+	        if (!Observer.eq(val, oldVal)) {
+	          handlers = this.listens[attr];
+	          for (i = 0; i < handlers.length; i++) {
+	            handlers[i](attr, val, oldVal, this.target);
+	          }
+	        }
+	      }
+	      this.request_frame = null;
+	      this.changeRecords = {};
 	    }
-	  },
-	  unProxyObserve: function unProxyObserve(callback) {
-	    proxyObserveCallbacks['delete'](callback);
-	  },
-	  getObserveObject: _.checkObj
-	};
+	  }, {
+	    key: '_addChangeRecord',
+	    value: function _addChangeRecord(attr, oldVal) {
+	      if (!(attr in this.changeRecords)) {
+	        this.changeRecords[attr] = oldVal;
+	        if (!this.request_frame) this.request_frame = requestAnimationFrame(this._notify);
+	      }
+	    }
+	  }, {
+	    key: '_onStateChanged',
+	    value: function _onStateChanged(attr, oldVal) {
+	      this._addChangeRecord(attr, oldVal);
+	    }
+	  }, {
+	    key: '_onObserveChanged',
+	    value: function _onObserveChanged(changes) {
+	      for (var i = 0; i < changes.length; i++) {
+	        if (this.listens[changes[i].name]) this._onStateChanged(changes[i].name, changes[i].oldValue);
+	      }
+	    }
+	  }, {
+	    key: '_defineProperty',
+	    value: function _defineProperty(attr, value) {
+	      var _this = this;
+	
+	      this.target = Object.defineProperty(this.target, attr, {
+	        enumerable: true,
+	        configurable: true,
+	        get: function get() {
+	          return value;
+	        },
+	        set: function set(val) {
+	          var oldVal = value;
+	          value = val;
+	          _this._onStateChanged(attr, oldVal);
+	        }
+	      });
+	      _proxyEvent2['default']._fire(this.target);
+	    }
+	  }, {
+	    key: '_undefineProperty',
+	    value: function _undefineProperty(attr, value) {
+	      this.target = Object.defineProperty(this.target, this.attr, {
+	        enumerable: true,
+	        configurable: true,
+	        value: value
+	      });
+	    }
+	  }, {
+	    key: '_hockArrayLength',
+	    value: function _hockArrayLength(method) {
+	      var _this2 = this,
+	          _arguments = arguments;
+	
+	      var fn = this.target[method];
+	      this.target[method] = function () {
+	        var len = _this2.target.length;
+	
+	        fn.apply(_this2.target, _arguments);
+	        if (_this2.target.length !== len) _this2._onStateChanged(attr, len);
+	      };
+	      return fn;
+	    }
+	  }, {
+	    key: '_watch',
+	    value: function _watch(attr) {
+	      if (Object.observe) {
+	        if (!this.es7observe) {
+	          Object.observe(this.target, this._onObserveChanged);
+	          this.es7observe = true;
+	        }
+	      } else if (!this.watchers[attr]) {
+	        if (this.isArray && attr === 'length') {
+	          this.arrayhocks = [];
+	          for (var i = 0; i < arrayHockMethods.length; i++) {
+	            this.arrayhocks[i] = this._hockArrayLength(arrayHockMethods[i]);
+	          }
+	        } else {
+	          this._defineProperty(attr, this.target[attr]);
+	        }
+	        this.watchers[attr] = true;
+	      }
+	    }
+	  }, {
+	    key: '_unwatch',
+	    value: function _unwatch(attr) {
+	      if (Object.observe) {
+	        if (this.es7observe && !this.hasListen()) {
+	          Object.unobserve(this.target, this._onObserveChanged);
+	          this.es7observe = false;
+	        }
+	      } else if (this.watchers[attr]) {
+	        if (this._isArray && attr === 'length') {
+	          for (var i = 0; i < arrayHockMethods.length; i++) {
+	            this.target[method] = this.arrayhocks[i];
+	          }
+	          this.arrayhocks == [];
+	        } else {
+	          this._undefineProperty(attr, this.target[attr]);
+	        }
+	        delete this.watchers[attr];
+	      }
+	    }
+	  }, {
+	    key: '_addListen',
+	    value: function _addListen(attr, handler) {
+	      var _handlers = this.listens[attr];
+	
+	      if (typeof handler !== 'function') {
+	        throw TypeError("Invalid Observer Handler", handler);
+	      }
+	
+	      if (!_handlers) _handlers = this.listens[attr] = [];
+	
+	      _handlers.push(handler);
+	
+	      this._watch(attr);
+	    }
+	  }, {
+	    key: '_removeListen',
+	    value: function _removeListen(attr, handler) {
+	      var _handlers = undefined,
+	          idx = undefined,
+	          i = undefined;
+	
+	      if (attr in this.listens) {
+	        _handlers = this.listens[attr] || [];
+	        if (!handler) {
+	          _handlers = [];
+	        } else if ((idx = _handlers.indexOf(handler)) !== -1) {
+	          _handlers.splice(idx, 1);
+	        }
+	        if (!_handlers.length) {
+	          delete this.listens[attr];
+	          this._unwatch(attr);
+	        }
+	      }
+	    }
+	  }, {
+	    key: 'hasListen',
+	    value: function hasListen() {
+	      for (var _attr in this.listens) {
+	        return true;
+	      }
+	      return false;
+	    }
+	  }, {
+	    key: 'on',
+	    value: function on(attrs, handler) {
+	      if (arguments.length == 1) {
+	        if (typeof attrs === 'function') {
+	          for (var _attr2 in this.target) {
+	            this._addListen(_attr2, attrs);
+	          }
+	        } else if (attrs && typeof attrs === 'object') {
+	          for (var _attr3 in attrs) {
+	            handler = attrs[_attr3];
+	            if (typeof handler !== 'function') {
+	              throw TypeError("Invalid Observer Handler", handler);
+	            }
+	            this._addListen(_attr3, handler);
+	          }
+	        } else {
+	          throw TypeError('Invalid Parameter', arguments);
+	        }
+	      } else if (arguments.length >= 2) {
+	        var i = undefined;
+	
+	        attrs = [];
+	        handler = undefined;
+	        for (i = 0; i < arguments.length; i++) {
+	          if (typeof arguments[i] === 'function') {
+	            handler = arguments[i];
+	            break;
+	          }
+	          if (arguments[i] instanceof Array) {
+	            attrs.push.apply(attrs, arguments[i]);
+	          } else {
+	            attrs.push(arguments[i]);
+	          }
+	        }
+	        if (!handler) {
+	          throw TypeError("Invalid Observer Handler", handler);
+	        }
+	        for (i = 0; i < attrs.length; i++) {
+	          this._addListen(attrs[i] + '', handler);
+	        }
+	      } else {
+	        throw TypeError('Invalid Parameter', arguments);
+	      }
+	      return this.target;
+	    }
+	  }, {
+	    key: 'un',
+	    value: function un(attrs, handler) {
+	      if (arguments.length == 0) {
+	        for (var _attr4 in this.target) {
+	          this._removeListen(_attr4);
+	        }
+	      } else if (arguments.length == 1) {
+	        if (attrs instanceof Array) {
+	          for (var i = 0; i < attrs.length; i++) {
+	            this._removeListen(attrs[i] + '');
+	          }
+	        } else if (attrs && typeof attrs === 'object') {
+	          for (var _attr5 in attrs) {
+	            this._removeListen(_attr5, attrs[_attr5]);
+	          }
+	        } else {
+	          this._removeListen(attrs + '');
+	        }
+	      } else if (arguments.length >= 2) {
+	        var i = undefined;
+	
+	        attrs = [];
+	        handler = undefined;
+	        for (i = 0; i < arguments.length; i++) {
+	          if (typeof arguments[i] === 'function') {
+	            handler = arguments[i];
+	            break;
+	          }
+	          if (arguments[i] instanceof Array) {
+	            attrs.push.apply(attrs, arguments[i]);
+	          } else {
+	            attrs.push(arguments[i]);
+	          }
+	        }
+	        for (i = 0; i < attrs.length; i++) {
+	          this._removeListen(attrs[i] + '', handler);
+	        }
+	      } else {
+	        throw TypeError('Invalid Parameter', arguments);
+	      }
+	      return this.target;
+	    }
+	  }, {
+	    key: 'destroy',
+	    value: function destroy() {
+	      for (var _attr6 in this.listens) {
+	        this._removeListen(_attr6);
+	      }
+	      if (this.request_frame) {
+	        cancelAnimationFrame(this.request_frame);
+	        this.request_frame = undefined;
+	      }
+	      this.target = undefined;
+	      this.watchers = undefined;
+	      this.listens = undefined;
+	      this.changeRecords = undefined;
+	    }
+	  }]);
+	
+	  return Observer;
+	})();
+	
+	exports['default'] = Observer;
+	
+	Observer.obj = _proxyEvent2['default'].obj;
+	module.exports = exports['default'];
 
 /***/ }
 /******/ ])

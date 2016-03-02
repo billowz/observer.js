@@ -23,8 +23,9 @@ function doesDefinePropertyWork(object) {
 window.supportDefinePropertyOnObject = Object.defineProperty && doesDefinePropertyWork({}),
 window.supportDefinePropertyOnDom = Object.defineProperty && doesDefinePropertyWork(document.createElement('div'));
 if (!window.supportDefinePropertyOnObject) {
-  let VBProxy = require('./VBProxy');
-  if (VBProxy.isSupport()) {
+
+  require('./VBProxy');
+  if (VBProxy) {
     window.supportDefinePropertyOnObject = true;
     window.useProxyDefineProperty = true;
     function isElement(value) {
@@ -117,4 +118,3 @@ if (!window.supportDefinePropertyOnObject) {
     }, supportDefinePropertyOnDom ? Object.getOwnPropertyDescriptor : null);
   }
 }
-module.exports = Object;
