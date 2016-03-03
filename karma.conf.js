@@ -12,12 +12,12 @@ module.exports = function(config) {
 
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-    frameworks: ['jasmine', 'commonjs'],
+    frameworks: ['mocha', 'expect', 'commonjs'],
 
 
     // list of files / patterns to load in the browser
     files: [
-      './src/**/*.js'
+      'src/**/*.js'
     ],
 
 
@@ -43,7 +43,7 @@ module.exports = function(config) {
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['progress', 'kjhtml'],
+    reporters: ['progress'],
 
     specReporter: {
       maxLogLines: 5, // limit number of lines logged per test
@@ -52,17 +52,11 @@ module.exports = function(config) {
       suppressPassed: false, // do not print information about passed tests
       suppressSkipped: true // do not print information about skipped tests
     },
-    jasmineRunnerReporter: {
-      outputFile: 'jasmine-runner.html',
-      includes: [
-        'node_modules/jasmine-expect/dist/jasmine-matchers.js'
-      ]
-    },
 
     plugins: [
+      require('karma-mocha'),
+      require('karma-expect'),
       require('karma-commonjs'),
-      require('karma-jasmine'),
-      require('karma-jasmine-html-reporter'),
       require('karma-babel-preprocessor'),
       require('karma-sourcemap-loader'),
       require('karma-spec-reporter'),
@@ -119,7 +113,11 @@ module.exports = function(config) {
 
     client: {
       clearContext: false,
-      captureConsole: false
+      captureConsole: false,
+      mocha: {
+        reporter: 'html', // change Karma's debug.html to the mocha web reporter
+        ui: 'bdd'
+      }
     }
   })
 }

@@ -1,10 +1,5 @@
-/**
- * Map & Set & WeakMap & WeakSet
- */
-
-import './es5'
-
-if (!window.Map) {
+let Map = window.Map;
+if (!Map) {
   let ITERATOR_TYPE = {
       KEY: 'key',
       VALUE: 'value',
@@ -17,7 +12,7 @@ if (!window.Map) {
         (value[HASH_BIND] || (value[HASH_BIND] = ++objHashIdx)) : value + '');
   }
 
-  class Map {
+  class _Map {
 
     constructor() {
       this._map = {};
@@ -121,6 +116,6 @@ if (!window.Map) {
       return '[object Map Iterator]';
     }
   }
-
-  window.Map = Map;
+  Map = _Map;
 }
+export default Map;

@@ -1,4 +1,3 @@
-import '../shim'
 import Observer from '../core'
 
 class AsyncDone {
@@ -36,39 +35,40 @@ describe("Observer", () => {
     });
 
     afterEach(() => {
-      expect(observe.hasListen()).toEqual(false);
+      expect(observe.hasListen()).equal(false);
       observe.destroy();
       observe = undefined;
     });
 
     function assertName(attr, val, oldVal, target) {
-      expect(attr).toEqual('name');
-      expect(val).toEqual('Tao.Zeng');
-      expect(obj.name).toEqual(val);
-      expect(oldVal).toEqual('Mary');
+      expect(attr).equal('name');
+      expect(val).equal('Tao.Zeng');
+      expect(obj.name).equal(val);
+      expect(oldVal).equal('Mary');
       observe.un('name');
     }
 
     function assertEmail(attr, val, oldVal, target) {
-      expect(attr).toEqual('email');
-      expect(val).toEqual('tao.zeng.zt@gmail.com');
-      expect(obj.email).toEqual(val);
-      expect(oldVal).toEqual('mary@domain.com');
+      expect(attr).equal('email');
+      expect(val).equal('tao.zeng.zt@gmail.com');
+      expect(obj.email).equal(val);
+      expect(oldVal).equal('mary@domain.com');
       observe.un('email');
     }
 
     it("Observe non-changes on an object property", function(done) {
-      let handler = jasmine.createSpy('handler');
+      let handler = () => {
+        expect.fail();
+      };
 
       obj.name = 'Tao.Zeng';
 
       obj = observe.on('name', handler);
       obj.name = 'Tao.Zeng';
       setTimeout(() => {
-        expect(handler).not.toHaveBeenCalled();
         observe.un();
         done();
-      }, 100);
+      }, 800);
     }, 1000);
 
     it("Observe changes on an object property", function(done) {
@@ -86,12 +86,14 @@ describe("Observer", () => {
       });
       obj.name = 'Tao.Zeng';
       obj.email = 'tao.zeng.zt@gmail.com';
+
       expect(() => {
         observe.on('name');
-      }).toThrowError('Invalid Parameter');
+      }).to.throwError('Invalid Parameter');
+
       expect(() => {
         observe.on('name', null);
-      }).toThrowError('Invalid Observer Handler');
+      }).to.throwError('Invalid Observer Handler');
     }, 1000);
 
     it("Observe changes on multi object property", function(done) {
@@ -107,14 +109,15 @@ describe("Observer", () => {
           assertEmail(attr, val, oldVal, target);
           done2();
         } else
-          fail('invalid event');
+          expect.fail('invalid event');
       });
 
       obj.name = 'Tao.Zeng';
       obj.email = 'tao.zeng.zt@gmail.com';
+
       expect(() => {
         observe.on('name', 'email');
-      }).toThrowError('Invalid Observer Handler');
+      }).to.throwError('Invalid Observer Handler');
     }, 1000);
 
     it("Observe changes on multi-array object property", function(done) {
@@ -130,14 +133,15 @@ describe("Observer", () => {
           assertEmail(attr, val, oldVal, target);
           done2();
         } else
-          fail('invalid event');
+          expect.fail('invalid event');
       });
 
       obj.name = 'Tao.Zeng';
       obj.email = 'tao.zeng.zt@gmail.com';
+
       expect(() => {
         observe.on(['name', 'email']);
-      }).toThrowError('Invalid Observer Handler');
+      }).to.throwError('Invalid Observer Handler');
     }, 1000);
 
     it("Observe changes on multi-object object property", function(done) {
@@ -158,11 +162,12 @@ describe("Observer", () => {
 
       obj.name = 'Tao.Zeng';
       obj.email = 'tao.zeng.zt@gmail.com';
+
       expect(() => {
         observe.on({
           name: undefined
         });
-      }).toThrowError('Invalid Observer Handler');
+      }).to.throwError('Invalid Observer Handler');
     }, 1000);
 
     it("Observe changes on all object property", function(done) {
@@ -178,7 +183,7 @@ describe("Observer", () => {
           assertEmail(attr, val, oldVal, target);
           done2();
         } else
-          fail('invalid event');
+          expect.fail('invalid event');
       });
 
       obj.name = 'Tao.Zeng';
@@ -200,73 +205,72 @@ describe("Observer", () => {
     });
 
     it("Observe non-changes on array index", function(done) {
-      let handler = jasmine.createSpy('handler');
+      let handler = () => {
+        expect.fail();
+      };
 
       arr = observe.on(0, 5, handler);
       arr[5] = undefined;
       arr[0] = 'javascript';
       setTimeout(() => {
-        expect(handler).not.toHaveBeenCalled();
         observe.un();
         done();
-      }, 500);
+      }, 800);
     }, 1000);
 
 
     it("Observe changes on array index", function(done) {
-      let handler = jasmine.createSpy('handler');
-      let handler2 = jasmine.createSpy('handler2');
+      let async = new AsyncDone(done, observe.un.bind(observe)),
+        done1 = async.async(),
+        done2 = async.async();
 
+      function handler() {
+        expect(Array.prototype.slice.call(arguments)).eql(['0', 'abc', 'javascript', arr]);
+        done1();
+      }
+
+      function handler2() {
+        expect(Array.prototype.slice.call(arguments)).eql(['5', 'abc', undefined, arr]);
+        done2();
+      }
       arr = observe.on({
         0: handler,
         5: handler2
       });
       arr[0] = 'abc';
       arr[5] = 'abc';
-      setTimeout(() => {
-        expect(handler).toHaveBeenCalledWith('0', 'abc', 'javascript', arr);
-        expect(handler2).toHaveBeenCalledWith('5', 'abc', undefined, arr);
-        observe.un();
-        done();
-      }, 500);
     }, 1000);
 
-    it("Observe changes on array length by set", function(done) {
-      let handler = jasmine.createSpy('handler');
+    xit("Observe changes on array length by set(just work on Object.observe)", function(done) {
+      function handler() {
+        expect(Array.prototype.slice.call(arguments)).eql(['length', 6, 3, arr]);
+        done();
+      }
 
       arr = observe.on('length', handler);
       arr[0] = 'abc';
       arr[5] = 'abc';
-      setTimeout(() => {
-        expect(handler).toHaveBeenCalledWith('length', 6, 3, arr);
-        observe.un();
-        done();
-      }, 500);
     }, 1000);
 
     it("Observe changes on array length by push", function(done) {
-      let handler = jasmine.createSpy('handler');
+      function handler() {
+        expect(Array.prototype.slice.call(arguments)).eql(['length', 4, 3, arr]);
+        done();
+      }
 
       arr = observe.on('length', handler);
       arr[0] = 'abc';
       arr.push(123);
-      setTimeout(() => {
-        expect(handler).toHaveBeenCalledWith('length', 4, 3, arr);
-        observe.un();
-        done();
-      }, 500);
     }, 1000);
     it("Observe changes on array length by splice", function(done) {
-      let handler = jasmine.createSpy('handler');
+      function handler() {
+        expect(Array.prototype.slice.call(arguments)).eql(['length', 1, 3, arr]);
+        done();
+      }
 
       arr = observe.on('length', handler);
       arr[0] = 'abc';
       arr.splice(0, 2);
-      setTimeout(() => {
-        expect(handler).toHaveBeenCalledWith('length', 1, 3, arr);
-        observe.un();
-        done();
-      }, 500);
     }, 1000);
   });
 

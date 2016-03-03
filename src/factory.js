@@ -1,4 +1,7 @@
 import Observer from './core'
+import Map from './map'
+import proxy from './proxyEvent'
+
 
 class ObserverFactory {
   constructor() {
@@ -19,8 +22,21 @@ class ObserverFactory {
     return this.observers.get(target);
   }
 
+  hasListen(obj) {
+    let target = proxy.obj(obj),
+      observer = this._get(target);
+
+    if (!observer) {
+      return false;
+    } else if (arguments.length == 1) {
+      return true;
+    } else {
+      return observer.hasListen.apply(observer, Array.prototype.slice.call(arguments, 1));
+    }
+  }
+
   on(obj) {
-    let target = Observer.obj(obj),
+    let target = proxy.obj(obj),
       observer = this._get(target);
 
     if (!observer) {
@@ -36,7 +52,7 @@ class ObserverFactory {
   }
 
   un(obj) {
-    let target = Observer.obj(obj),
+    let target = proxy.obj(obj),
       observer = this._get(target);
 
     if (observer) {
@@ -49,8 +65,4 @@ class ObserverFactory {
     return target;
   }
 }
-
-ObserverFactory.prototype.obj = Observer.obj;
-ObserverFactory.prototype.eq = Observer.eq;
-
 export default new ObserverFactory();

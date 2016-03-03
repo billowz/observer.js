@@ -20,12 +20,6 @@ var fs = require('fs'),
       lib: '_'
     }]
   },
-  shim = {
-    src: './src',
-    dist: './dist',
-    entry: 'shim.js',
-    output: 'shim.js'
-  },
   devserver = {
     host: 'localhost',
     port: 8089
@@ -57,11 +51,8 @@ function _buildCompontent(config, rebuild) {
 gulp.task('build:lib', function() {
   return _buildCompontent(main, true);
 });
-gulp.task('build:shim', function() {
-  return _buildCompontent(shim, true);
-});
 gulp.task('build', ['clean'], function() {
-  return gulp.start(['build:lib', 'build:shim']);
+  return gulp.start(['build:lib']);
 });
 
 gulp.task('clean', function() {
@@ -79,11 +70,10 @@ gulp.task('server', ['build'], function() {
   var cfg = Object.create(main);
   cfg.entry = {};
   cfg.entry[main.output] = main.src + '/' + main.entry;
-  cfg.entry[shim.output] = shim.src + '/' + shim.entry;
   cfg.publicPath = 'http://' + devserver.host + ':' + devserver.port + main.dist.replace(/^\.\//, '/');
   cfg.hot = true;
   cfg.devtool = 'source-map',
-  cfg.plugins = (main.plugins || []).concat(shim.plugins || []).push(new webpack.NoErrorsPlugin());
+  cfg.plugins = (main.plugins || []).push(new webpack.NoErrorsPlugin());
   cfg.output = path.join(__dirname, '[name]');
   var devServer = new WebpackDevServer(webpack(mkcfg(cfg)), {
     contentBase: path.join('./'),

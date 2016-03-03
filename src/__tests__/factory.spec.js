@@ -1,4 +1,5 @@
 import observer from '../factory'
+import proxy from '../proxyEvent'
 
 describe("Observer factory", () => {
   it("Observe changes", function(done) {
@@ -8,15 +9,15 @@ describe("Observer factory", () => {
     };
 
     obj = observer.on(obj, 'name', (attr, val, oldVal, target) => {
-      expect(attr).toEqual('name');
-      expect(val).toEqual('Tao.Zeng');
-      expect(oldVal).toEqual('Mary');
-      expect(obj.name).toEqual(val);
-      expect(target).toEqual(obj);
+      expect(attr).equal('name');
+      expect(val).equal('Tao.Zeng');
+      expect(oldVal).equal('Mary');
+      expect(obj.name).equal(val);
+      expect(target).equal(obj);
 
-      expect(observer._get(observer.obj(obj))).not.toBeUndefined();
+      expect(observer._get(proxy.obj(obj))).not.equal(undefined);
       obj = observer.un(obj, 'name');
-      expect(observer._get(observer.obj(obj))).toBeUndefined();
+      expect(observer._get(proxy.obj(obj))).equal(undefined);
       done();
     });
     obj.name = 'Tao.Zeng';
