@@ -2,46 +2,43 @@
  * 使用VBScript对象代理js对象的get/set方法, 参考Avalon实现
  * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
  */
-import Map from './map'
-
-let OBJECT_PROTO_PROPS = ['hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
-  ARRAY_PROTO_PROPS = ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'indexOf', 'lastIndexOf', 'length', 'map', 'keys', 'join', 'pop', 'push', 'reverse', 'reverseRight', 'some', 'shift', 'slice', 'sort', 'splice', 'toSource', 'unshift'],
-  DESC_BINDING = '__PROXY__',
-  CONST_BINDING = '__VB_CONST__',
-  CONST_SCRIPT = [
-    '\tPublic [' + DESC_BINDING + ']',
-    '\tPublic Default Function [' + CONST_BINDING + '](desc)',
-    '\t\tset [' + DESC_BINDING + '] = desc',
-    '\t\tSet [' + CONST_BINDING + '] = Me',
-    '\tEnd Function'
-  ].join('\r\n'),
-  VBClassPool = {},
-  VBProxyLoop = new Map(),
-  classId = 0,
-  support;
+const _ = require('./util');
+const proxyEvent = require('./proxyEvent');
 
 function isSupported() {
-  if (support === undefined) {
-    if (window.VBArray) {
-      try {
-        window.execScript([ // jshint ignore:line
-          'Function parseVB(code)',
-          '\tExecuteGlobal(code)',
-          'End Function' //转换一段文本为VB代码
-        ].join('\n'), 'VBScript');
-        support = true;
-      } catch (e) {
-        support = false;
-        console.error(e.message, e);
-      }
-    } else {
-      support = false;
+  let support = false;
+  if (window.VBArray) {
+    try {
+      window.execScript([ // jshint ignore:line
+        'Function parseVB(code)',
+        '\tExecuteGlobal(code)',
+        'End Function' //转换一段文本为VB代码
+      ].join('\n'), 'VBScript');
+      support = true;
+    } catch (e) {
+      console.error(e.message, e);
     }
   }
   return support;
 }
 
 if (isSupported()) {
+  const Map = require('./map');
+  let OBJECT_PROTO_PROPS = ['hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
+    ARRAY_PROTO_PROPS = ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'indexOf', 'lastIndexOf', 'length', 'map', 'keys', 'join', 'pop', 'push', 'reverse', 'reverseRight', 'some', 'shift', 'slice', 'sort', 'splice', 'toSource', 'unshift'],
+    DESC_BINDING = '__PROXY__',
+    CONST_BINDING = '__VB_CONST__',
+    CONST_SCRIPT = [
+      '\tPublic [' + DESC_BINDING + ']',
+      '\tPublic Default Function [' + CONST_BINDING + '](desc)',
+      '\t\tset [' + DESC_BINDING + '] = desc',
+      '\t\tSet [' + CONST_BINDING + '] = Me',
+      '\tEnd Function'
+    ].join('\r\n'),
+    VBClassPool = {},
+    VBProxyLoop = new Map(),
+    classId = 0;
+
   function genClassName() {
     return 'VBClass' + (classId++);
   }
@@ -101,7 +98,7 @@ if (isSupported()) {
     //添加普通属性,因为VBScript对象不能像JS那样随意增删属性，必须在这里预先定义好
     for (i = 0; i < properties.length; i++) {
       name = properties[i];
-      if (added.indexOf(name) == -1)
+      if (_.indexOf.call(added, name) == -1)
         buffer.push('\tPublic [' + name + ']');
 
     }
@@ -199,11 +196,12 @@ if (isSupported()) {
     proxy = window[genVBClass(props, accessors)](desc);
 
     proxy['hasOwnProperty'] = function hasOwnProperty(attr) {
-      return attr !== DESC_BINDING && attr !== CONST_BINDING && props.indexOf(attr) == -1;
+      return attr !== DESC_BINDING && attr !== CONST_BINDING && _.indexOf.call(props, attr) == -1;
     }
     proxy.__destory__ = function() {
       if (VBProxyLoop.get(object) === proxy) {
-        VBProxyLoop.delete(object);
+        VBProxyLoop['delete'](object);
+        proxyEvent._fire(object, object);
       }
     }
     for (i = 0; i < props.length; i++) {
@@ -211,7 +209,7 @@ if (isSupported()) {
       if (typeof proxy[name] === 'undefined') {
         bind = object[name];
         if (typeof bind === 'function') {
-          bind = bind.bind(object);
+          bind = _.bind.call(bind, object);
         }
         proxy[name] = bind;
       }
@@ -230,7 +228,6 @@ if (isSupported()) {
   }
 
   let VBProxy = {
-    isSupport: isSupported,
     isVBProxy(object) {
       return object && (typeof object == 'object') && (CONST_BINDING in object);
     },
@@ -265,9 +262,11 @@ if (isSupported()) {
       }
       proxy = createVBProxy(object, desc);
       VBProxyLoop.set(object, proxy);
+      proxyEvent._fire(object, proxy);
       return proxy;
     }
   }
   window.VBProxy = VBProxy;
 }
 
+module.exports = window.VBProxy;

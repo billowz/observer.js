@@ -118,4 +118,4 @@ if (!Map) {
   }
   Map = _Map;
 }
-export default Map;
+module.exports = Map;

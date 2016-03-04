@@ -1,16 +1,19 @@
-import observer from './factory'
-
-const rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
+const observer = require('./factory');
+const reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
+  reIsPlainProp = /^\w*$/,
+  rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
 
 function baseToString(val) {
   return (val === undefined || val === null) ? '' : (val + '');
 }
 
-export default class Expression {
+class Expression {
   static toPath(value) {
     let result = [];
-    if (typeof value === 'string') {
-      baseToString(value).replace(rePropName, function(match, number, quote, string) {
+    if (value instanceof Array) {
+      result = value;
+    } else if (value !== undefined && value !== null) {
+      (value + '').replace(rePropName, function(match, number, quote, string) {
         result.push(quote ? string.replace(reEscapeChar, '$1') : (number || match));
       });
     }
@@ -25,13 +28,25 @@ export default class Expression {
     this.target = this._observe(target, 0);
   }
 
-  static get() {}
+  static get(object, path, defaultValue) {
+    if (object) {
+      path = Expression.toPath(path);
+      var index = 0;
+
+      while (object && index < path.length) {
+        object = object[path[index++]];
+      }
+      return (index === path.length) ? object : undefined;
+    }
+    return defaultValue;
+  }
 
   _observe(obj, idx) {
     let attr = this.path[idx];
 
-    if (idx + 1 < this.path.length)
+    if (idx + 1 < this.path.length) {
       obj[attr] = this._observe(obj[attr], idx + 1);
+    }
     return observer.on(obj, attr, this.observeHandlers[idx]);
   }
 
@@ -39,6 +54,7 @@ export default class Expression {
     let attr = this.path[idx];
 
     obj = observer.un(obj, attr, this.observeHandlers[idx]);
+    console.log('attr:', attr, ',haslisten:', observer.hasListen(obj, attr, this.observeHandlers[idx]))
     if (idx + 1 < this.path.length)
       obj[attr] = this._unobserve(obj[attr], idx + 1);
     return obj;
@@ -48,8 +64,8 @@ export default class Expression {
   _initObserveHandlers() {
     let handlers = [], i;
 
-    for (i = 0; i < this.path; i++) {
-      handlers[i] = this._createObserveHandler(i);
+    for (i = 0; i < this.path.length; i++) {
+      handlers.push(this._createObserveHandler(i));
     }
     return handlers;
   }
@@ -67,7 +83,8 @@ export default class Expression {
         val = Expression.get(val, rpath);
       }
       if (val !== oldVal && this.handlers) {
-        for (let i = 0; i < this.handlers.length; i++) {
+        let hs = this.handlers.slice();
+        for (let i = 0; i < hs.length; i++) {
           this.handlers[i](this.expression, val, oldVal, this.target);
         }
       }
@@ -98,7 +115,9 @@ export default class Expression {
     }
   }
 
-  hasListen() {
+  hasListen(handler) {
+    if (arguments.length)
+      return _.indexOf.call(this.handlers, handler) !== -1;
     return !!this.handlers.length;
   }
 
@@ -114,4 +133,4 @@ export default class Expression {
     return obj;
   }
 }
-
+module.exports = Expression;

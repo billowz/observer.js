@@ -1,28 +1,25 @@
-import Exp from './exp'
-import observer from './factory'
-import Map from './map'
-import proxy from './proxyEvent'
-import _ from './util'
+const Exp = require('./exp'),
+  observer = require('./factory'),
+  Map = require('./map'),
+  proxy = require('./proxyEvent'),
+  _ = require('./util');
 
-class ExpressionFactory {
-  constructor() {
-    this.exps = new Map();
-  }
-
+let exps = new Map();
+let factory = {
   _bind(exp) {
     let obj = proxy.obj(exp.target),
-      map = this.exps.get(obj);
+      map = exps.get(obj);
 
     if (!map) {
       map = {};
-      this.exps.set(obj, map)
+      exps.set(obj, map)
     }
     map[exp.expression] = exp;
-  }
+  },
 
   _unbind(exp) {
     let obj = proxy.obj(exp.target),
-      map = this.exps.get(obj);
+      map = exps.get(obj);
 
     if (map && map[exp.expression] === exp) {
       delete map[exp.expression];
@@ -31,61 +28,79 @@ class ExpressionFactory {
         if (_.hasProp(map, key))
           return;
       }
-      this.exps.delete(obj);
+      exps['delete'](obj);
     }
-  }
+  },
 
   _get(obj, exp) {
     let map;
 
-    obj = proxy.obj(exp.target);
-    map = this.exps.get(obj);
+    obj = proxy.obj(obj);
+    map = exps.get(obj);
     if (map)
       return map[exp];
     return undefined;
-  }
+  },
 
   _on(obj, exp, handler) {
     let path = Exp.toPath(exp);
 
     if (path.length > 1) {
-      let exp = this._get(obj, exp);
+      let _exp = factory._get(obj, exp);
 
-      if (!exp) {
-        exp = new Exp(obj, exp, path);
-        this._bind(exp);
+      if (!_exp) {
+        _exp = new Exp(obj, exp, path);
+        factory._bind(_exp);
       }
-      exp.addListen(handler);
-      return exp.target;
+      _exp.addListen(handler);
+      return _exp.target;
     } else {
       return observer.on(obj, exp, handler);
     }
-  }
+  },
 
   _un(obj, exp, handler) {
     let path = Exp.toPath(exp);
 
     if (path.length > 1) {
-      let exp = this._get(obj, exp);
+      let _exp = factory._get(obj, exp);
 
-      if (exp) {
-        exp.removeListen(handler);
+      if (_exp) {
+        if (arguments.length > 2) {
+          _exp.removeListen(handler);
+        } else {
+          _exp.removeListen();
+        }
+        console.log(_exp.hasListen())
+        if (!_exp.hasListen()) {
+          factory._unbind(_exp);
+          return _exp.destory();
+        }
+        return _exp.target;
+      } else {
+        let ob = observer._get(obj);
+
+        return ob ? ob.target : proxy.obj(obj);
       }
-      if (!exp.hashListen()) {
-        this._unbind(exp);
-        return exp.destory();
-      }
-      return exp.target;
     } else {
       return observer.un(obj, exp, handler);
     }
-  }
+  },
 
   hasListen(obj, exp, handler) {
-    if (!exp || !Exp.toPath(exp).length) {
+    if (!exp || typeof exp === 'function' || !Exp.toPath(exp).length) {
       return observer.hasListen.apply(observer, arguments);
+    } else {
+      let _exp = factory._get(obj, exp);
+      if (_exp) {
+        if (arguments.length == 2) {
+          return true;
+        }
+        return _exp.hasListen(handler);
+      }
+      return false;
     }
-  }
+  },
 
   on(obj) {
     if (arguments.length < 2) {
@@ -99,7 +114,7 @@ class ExpressionFactory {
           if (typeof h !== 'function') {
             throw TypeError('Invalid Observer Handler');
           }
-          obj = this._on(obj, exp, h);
+          obj = factory._on(obj, exp, h);
         });
       } else {
         throw TypeError('Invalid Parameter');
@@ -123,13 +138,12 @@ class ExpressionFactory {
       if (!handler) {
         throw TypeError("Invalid Observer Handler", handler);
       }
-      console.log(exps, ', ', handler);
       for (i = 0; i < exps.length; i++) {
-        obj = this._on(obj, exps[i] + '', handler);
+        obj = factory._on(obj, exps[i] + '', handler);
       }
     }
     return obj;
-  }
+  },
 
 
   un(obj) {
@@ -143,14 +157,14 @@ class ExpressionFactory {
         obj = observer.un(obj, p1);
       } else if (p1 instanceof Array) {
         for (let i = 0; i < p1.length; i++) {
-          obj = this._on(obj, p1);
+          obj = factory._on(obj, p1);
         }
       } else if (p1 && typeof p1 === 'object') {
         _.eachObj(p1, (h, exp) => {
-          obj = this._un(obj, exp, h);
+          obj = factory._un(obj, exp, h);
         });
       } else {
-        obj = this._un(obj, p1 + '');
+        obj = factory._un(obj, p1 + '');
       }
     } else if (arguments.length >= 3) {
       let i;
@@ -169,11 +183,11 @@ class ExpressionFactory {
         }
       }
       for (i = 0; i < exps.length; i++) {
-        obj = this._un(obj, exps[i] + '', handler);
+        obj = factory._un(obj, exps[i] + '', handler);
       }
     }
     return obj;
   }
-}
-export default new ExpressionFactory();
+};
+module.exports = factory;
 

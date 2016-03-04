@@ -1,7 +1,6 @@
 /**
  * 修复浏览器(IE 6,7,8)对Object.defineProperty的支持，使用VBProxy
  */
-require('./VBProxy');
 
 function doesDefinePropertyWork(object) {
   try {
@@ -22,14 +21,15 @@ function doesDefinePropertyWork(object) {
 }
 let OBJECT = Object;
 if (!Object.defineProperty || !doesDefinePropertyWork({})) {
+  let VBProxy = require('./VBProxy');
   if (VBProxy) {
     OBJECT = {
-      defineProperty: function(object, prop, desc) {
+      defineProperty(object, prop, desc) {
         var descs = {};
         descs[prop] = desc;
         return OBJECT.defineProperties(object, descs);
       },
-      defineProperties: function(object, descs) {
+      defineProperties(object, descs) {
         let proxy, prop, proxyDesc,
           hasAccessor = false, desc;
         if (VBProxy.isVBProxy(object)) {
@@ -67,7 +67,7 @@ if (!Object.defineProperty || !doesDefinePropertyWork({})) {
           return proxy;
         }
       },
-      getOwnPropertyDescriptor: function(object, attr) {
+      getOwnPropertyDescriptor(object, attr) {
         let proxy, define;
         if (VBProxy.isSupport()) {
           proxy = VBProxy.getVBProxy(object);
@@ -89,4 +89,4 @@ if (!Object.defineProperty || !doesDefinePropertyWork({})) {
     };
   }
 }
-export default OBJECT;
+module.exports = OBJECT;

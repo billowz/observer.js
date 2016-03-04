@@ -1,33 +1,11 @@
-import OBJECT from './defineProperty'
-import proxy from './proxyEvent'
-import _ from './util'
+const OBJECT = require('./defineProperty'),
+  proxy = require('./proxyEvent'),
+  _ = require('./util');
 
 const arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
 
-let lastTime;
-window.requestAnimationFrame = window.webkitRequestAnimationFrame ||
-  window.mozRequestAnimationFrame ||
-  window.oRequestAnimationFrame ||
-  window.msRequestAnimationFrame ||
-  function requestTimeoutFrame(callback) {
-    let currTime = new Date().getTime(),
-      timeToCall = Math.max(0, 16 - (currTime - lastTime)),
-      reqId = setTimeout(function() {
-        callback(currTime + timeToCall);
-      }, timeToCall);
-    lastTime = currTime + timeToCall;
-    return reqId;
-}
 
-window.cancelAnimationFrame = window.webkitCancelAnimationFrame ||
-  window.mozCancelAnimationFrame ||
-  window.oCancelAnimationFrame ||
-  window.msCancelAnimationFrame ||
-  function cancelAnimationFrame(reqId) {
-    clearTimeout(reqId);
-}
-
-export default class Observer {
+class Observer {
 
   constructor(target) {
     if (target instanceof Array) {
@@ -41,9 +19,9 @@ export default class Observer {
     this.watchers = {};
     this.listens = {};
     this.changeRecords = {};
-    this._notify = this._notify.bind(this);
-    this._onObserveChanged = this._onObserveChanged.bind(this);
-    this._onStateChanged = this._onStateChanged.bind(this);
+    this._notify = _.bind.call(this._notify, this);
+    this._onObserveChanged = _.bind.call(this._onObserveChanged, this);
+    this._onStateChanged = _.bind.call(this._onStateChanged, this);
   }
 
   _notify() {
@@ -66,7 +44,7 @@ export default class Observer {
     if (!(attr in this.changeRecords)) {
       this.changeRecords[attr] = oldVal;
       if (!this.request_frame)
-        this.request_frame = requestAnimationFrame(this._notify);
+        this.request_frame = _.requestAnimationFrame(this._notify);
     }
   }
 
@@ -94,7 +72,6 @@ export default class Observer {
         this._onStateChanged(attr, oldVal);
       }
     });
-    proxy._fire(this.target);
   }
 
   _undefineProperty(attr, value) {
@@ -320,7 +297,7 @@ export default class Observer {
       this._removeListen(attr, h);
     });
     if (this.request_frame) {
-      cancelAnimationFrame(this.request_frame);
+      _.cancelAnimationFrame(this.request_frame);
       this.request_frame = undefined;
     }
     this.target = undefined;
@@ -329,3 +306,4 @@ export default class Observer {
     this.changeRecords = undefined;
   }
 }
+module.exports = Observer;

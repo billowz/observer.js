@@ -17,6 +17,7 @@ module.exports = function(config) {
 
     // list of files / patterns to load in the browser
     files: [
+      'node_modules/babel-core/browser-polyfill.min.js',
       'src/**/*.js'
     ],
 
@@ -31,13 +32,14 @@ module.exports = function(config) {
       'src/**/*.js': ['sourcemap', 'babel', 'commonjs']
     },
 
-    commonjsPreprocessor: {
-      modulesRoot: 'src'
-    },
     babelPreprocessor: {
       options: {
-        presets: ['es2015']
+        sourceMap: 'inline'
       }
+    },
+
+    commonjsPreprocessor: {
+      modulesRoot: 'src'
     },
 
     // test results reporter to use

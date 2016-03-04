@@ -1,4 +1,5 @@
-import Map from './map'
+
+const Map = require('./map');
 
 class ProxyEventFactory {
   isEnable() {
@@ -8,8 +9,10 @@ class ProxyEventFactory {
     return this.obj(obj) === this.obj(obj2);
   }
   obj(obj) {
-    if (window.VBProxy && window.VBProxy.isVBProxy(obj))
-      return window.VBProxy.getVBProxyDesc(obj).object;
+    if (window.VBProxy && window.VBProxy.isVBProxy(obj)) {
+      let desc = window.VBProxy.getVBProxyDesc(obj);
+      return desc ? desc.object : undefined;
+    }
     return obj;
   }
 
@@ -52,22 +55,18 @@ class ProxyEventFactory {
           }
         }
       } else {
-        this.proxyEvents.delete(obj);
+        this.proxyEvents['delete'](obj);
       }
     }
   }
 
-  _fire(proxy) {
-    if (window.VBProxy && window.VBProxy.isVBProxy(proxy)) {
-      let obj = window.VBProxy.getVBProxyDesc(obj).object,
-        handlers = this.proxyEvents.get(obj);
-
-      if (handlers) {
-        for (let i = 0; i < handlers.length; i++) {
-          handlers[i](obj, proxy);
-        }
+  _fire(obj, proxy) {
+    handlers = this.proxyEvents.get(obj);
+    if (handlers) {
+      for (let i = 0; i < handlers.length; i++) {
+        handlers[i](obj, proxy);
       }
     }
   }
 }
-export default new ProxyEventFactory();
+module.exports = new ProxyEventFactory();

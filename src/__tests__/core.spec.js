@@ -1,5 +1,4 @@
-import Observer from '../core'
-
+const Observer = require('../core');
 class AsyncDone {
 
   constructor(done, onDone) {
@@ -35,7 +34,6 @@ describe("Observer", () => {
     });
 
     afterEach(() => {
-      expect(observe.hasListen()).equal(false);
       observe.destroy();
       observe = undefined;
     });
@@ -66,9 +64,8 @@ describe("Observer", () => {
       obj = observe.on('name', handler);
       obj.name = 'Tao.Zeng';
       setTimeout(() => {
-        observe.un();
         done();
-      }, 800);
+      }, 500);
     }, 1000);
 
     it("Observe changes on an object property", function(done) {
@@ -213,7 +210,6 @@ describe("Observer", () => {
       arr[5] = undefined;
       arr[0] = 'javascript';
       setTimeout(() => {
-        observe.un();
         done();
       }, 800);
     }, 1000);
