@@ -20,7 +20,7 @@ observer.on(arr, function(name, value, old) {
     console.log(name + "__" + value + "__" + old);
 });
 arr.push(4); //Array-push__[1,2,3,4]__[1,2,3]
-arr[2] = 5; //2__5__3
+arr[2] = 5; //2__5__3   length__4__3
 ```
 
 ### 复杂对象
@@ -32,11 +32,10 @@ var complexObj = {
         d: [4]
     }]
 };
-observer.on(complexObj, function(name, value, old, path) {
-    console.log(name + "__" + value + "__" + old); //d__100__4
-    console.log(path) //#-c-0
+observer.on(complexObj, 'c[0].d', function(name, value, old) {
+    console.log(name + "__" + value + "__" + old); 
 });
-complexObj.c[0].d = 100;
+complexObj.c[0].d = 100; //c[0].d__100__4
 ```
 ### 普通对象
 ```javascript
@@ -50,7 +49,7 @@ var User = function(name, age) {
 }
 var user = new User("lisi", 25);
 user.name = "wangwu"; //name__wangwu__lisi
-user.age = 20; //什么都输出，因为没有监听age
+user.age = 20; //nothing，no listener
 ```
 
 
