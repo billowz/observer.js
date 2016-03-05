@@ -1,6 +1,23 @@
 {
-  "name": "observer",
-  "description": "observer tool",
+  "name": "observer.js",
+  "description": "Simple utility for watching object changes.",
+  "version": "0.0.1",
+  "homepage": "https://github.com/tao-zeng/observer.js",
+  "author": "Tao Zeng <tao.zeng.zt@gmail.com>",
+  "bugs": {
+    "url": "https://github.com/tao-zeng/observer.js/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tao-zeng/observer.js.git"
+  },
+  "keywords": [
+    "observe",
+    "watch",
+    "data bind"
+  ],
+  "private": false,
+  "license": "MIT",
   "main": "src/index.js",
   "babel": {
     "presets": [
@@ -11,26 +28,6 @@
       "transform-es3-property-literals"
     ]
   },
-  "scripts": {
-    "test": "test"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/tao-zeng/observer.js.git"
-  },
-  "keywords": [
-    "compontent",
-    "data-driven",
-    "databinding",
-    "javascript",
-    "library"
-  ],
-  "author": "Tao Zeng <tao.zeng.zt@gmail.com>",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/tao-zeng/observer.js/issues"
-  },
-  "homepage": "https://github.com/tao-zeng/observer.js",
   "devDependencies": {
     "babel-core": "",
     "babel-loader": "",
