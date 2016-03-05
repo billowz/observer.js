@@ -1,24 +1,7 @@
-const Observer = require('../core');
-class AsyncDone {
+const Observer = require('../core'),
+  _ = require('../util');
+require('./test');
 
-  constructor(done, onDone) {
-    this.done = done;
-    this.onDone = onDone;
-    this.__async = 0;
-  }
-  async() {
-    this.__async++;
-    return () => {
-      this.__async--;
-      if (!this.__async) {
-        if (this.onDone) {
-          this.onDone();
-        }
-        this.done();
-      }
-    };
-  }
-}
 
 describe("Observer", () => {
 
@@ -56,7 +39,7 @@ describe("Observer", () => {
 
     it("Observe non-changes on an object property", function(done) {
       let handler = () => {
-        expect.fail();
+        expect().fail();
       };
 
       obj.name = 'Tao.Zeng';
@@ -106,7 +89,7 @@ describe("Observer", () => {
           assertEmail(attr, val, oldVal, target);
           done2();
         } else
-          expect.fail('invalid event');
+          expect().fail('invalid event');
       });
 
       obj.name = 'Tao.Zeng';
@@ -130,7 +113,7 @@ describe("Observer", () => {
           assertEmail(attr, val, oldVal, target);
           done2();
         } else
-          expect.fail('invalid event');
+          expect().fail('invalid event');
       });
 
       obj.name = 'Tao.Zeng';
@@ -180,7 +163,7 @@ describe("Observer", () => {
           assertEmail(attr, val, oldVal, target);
           done2();
         } else
-          expect.fail('invalid event');
+          expect().fail('invalid event');
       });
 
       obj.name = 'Tao.Zeng';
@@ -203,7 +186,7 @@ describe("Observer", () => {
 
     it("Observe non-changes on array index", function(done) {
       let handler = () => {
-        expect.fail();
+        expect().fail();
       };
 
       arr = observe.on(0, 5, handler);
@@ -216,7 +199,7 @@ describe("Observer", () => {
 
 
     it("Observe changes on array index", function(done) {
-      let async = new AsyncDone(done, observe.un.bind(observe)),
+      let async = new AsyncDone(done, _.bind.call(observe.un, observe)),
         done1 = async.async(),
         done2 = async.async();
 

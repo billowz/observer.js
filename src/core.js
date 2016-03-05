@@ -133,10 +133,6 @@ class Observer {
   _addListen(attr, handler) {
     let _handlers = this.listens[attr];
 
-    if (typeof handler !== 'function') {
-      throw TypeError("Invalid Observer Handler", handler);
-    }
-
     if (!_handlers)
       _handlers = this.listens[attr] = [];
 
@@ -152,7 +148,7 @@ class Observer {
       _handlers = this.listens[attr] || [];
       if (!handler) {
         _handlers = [];
-      } else if ((idx = _handlers.indexOf(handler)) !== -1) {
+      } else if ((idx = _.indexOf.call(_handlers, handler)) !== -1) {
         _handlers.splice(idx, 1);
       }
       if (!_handlers.length) {
@@ -171,13 +167,13 @@ class Observer {
     } else if (arguments.length === 1) {
       if (typeof attr === 'function') {
         return _.eachObj(this.listens, (h, a) => {
-            return h.indexOf(attr) === -1;
+            return _.indexOf.call(h, attr) === -1;
           }) === false;
       } else {
         return !!this.listens[attr];
       }
     } else {
-      return this.listens[attr] && this.listens[attr].indexOf(handler) !== -1;
+      return this.listens[attr] && _.indexOf.call(this.listens[attr], handler) !== -1;
     }
   }
 

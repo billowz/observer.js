@@ -8,10 +8,21 @@ let lastTime,
     window.webkitCancelAnimationFrame ||
     window.mozCancelAnimationFrame ||
     window.oCancelAnimationFrame ||
-    window.msCancelAnimationFrame;
+    window.msCancelAnimationFrame,
+  bind = Function.prototype.bind || function bind(scope) {
+      if (arguments.length < 2 && (scope === undefined || scope === null)) {
+        return this;
+      }
+      let fn = this,
+        args = Array.prototype.slice.call(arguments, 1);
+      return function() {
+        return fn.apply(scope, args.concat(Array.prototype.slice.call(arguments)));
+      };
+    };
 
-if (requestAnimationFrame) {
-  requestAnimationFrame = requestAnimationFrame.bind(window);
+if (requestAnimationFrame && cancelAnimationFrame) {
+  requestAnimationFrame = bind.call(requestAnimationFrame, window);
+  cancelAnimationFrame = bind.call(cancelAnimationFrame, window);
 } else {
   requestAnimationFrame = function requestTimeoutFrame(callback) {
     let currTime = new Date().getTime(),
@@ -22,14 +33,11 @@ if (requestAnimationFrame) {
     lastTime = currTime + timeToCall;
     return reqId;
   }
-}
-if (cancelAnimationFrame) {
-  cancelAnimationFrame = cancelAnimationFrame.bind(window);
-} else {
   cancelAnimationFrame = function cancelAnimationFrame(reqId) {
     clearTimeout(reqId);
   }
 }
+
 let util = {
   requestAnimationFrame: requestAnimationFrame,
 
@@ -48,16 +56,7 @@ let util = {
     }
   },
 
-  bind: Function.prototype.bind || function bind(scope) {
-      if (arguments.length < 2 && (scope === undefined || scope === null)) {
-        return this;
-      }
-      let fn = this,
-        args = Array.prototype.slice.call(arguments, 1);
-      return function() {
-        return fn.apply(scope, args.concat(Array.prototype.slice.call(arguments)));
-      };
-  },
+  bind: bind,
 
 
   indexOf: Array.prototype.indexOf || function indexOf(val) {

@@ -71,7 +71,6 @@ let factory = {
         } else {
           _exp.removeListen();
         }
-        console.log(_exp.hasListen())
         if (!_exp.hasListen()) {
           factory._unbind(_exp);
           return _exp.destory();

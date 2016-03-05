@@ -49,7 +49,7 @@ class ProxyEventFactory {
     if (handlers) {
       if (arguments.length > 1) {
         if (typeof handler === 'function') {
-          let idx = handlers.indexOf(handler);
+          let idx = _.indexOf.call(handlers, handler);
           if (idx != -1) {
             handlers.splice(idx, 1);
           }

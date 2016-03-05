@@ -33,10 +33,10 @@ let factory = {
   },
 
   on(obj) {
-	let observer;
-	
-	obj = proxy.obj(obj);
-	observer = factory._get(obj);
+    let observer;
+
+    obj = proxy.obj(obj);
+    observer = factory._get(obj);
     if (!observer) {
       observer = new Observer(obj);
       factory._bind(observer);
@@ -50,12 +50,12 @@ let factory = {
   },
 
   un(obj) {
-	let observer;
-	
-	obj = proxy.obj(obj);
-	observer = factory._get(obj);
+    let observer;
+
+    obj = proxy.obj(obj);
+    observer = factory._get(obj);
     if (observer) {
-    	obj = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1));
+      obj = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1));
       if (!observer.hasListen()) {
         factory._unbind(observer);
         observer.destroy();

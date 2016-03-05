@@ -24,6 +24,7 @@ function isSupported() {
 
 if (isSupported()) {
   const Map = require('./map');
+
   let OBJECT_PROTO_PROPS = ['hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
     ARRAY_PROTO_PROPS = ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'indexOf', 'lastIndexOf', 'length', 'map', 'keys', 'join', 'pop', 'push', 'reverse', 'reverseRight', 'some', 'shift', 'slice', 'sort', 'splice', 'toSource', 'unshift'],
     DESC_BINDING = '__PROXY__',
@@ -33,7 +34,7 @@ if (isSupported()) {
       '\tPublic Default Function [' + CONST_BINDING + '](desc)',
       '\t\tset [' + DESC_BINDING + '] = desc',
       '\t\tSet [' + CONST_BINDING + '] = Me',
-      '\tEnd Function'
+      '\tEnd Function\r\n'
     ].join('\r\n'),
     VBClassPool = {},
     VBProxyLoop = new Map(),
@@ -47,70 +48,53 @@ if (isSupported()) {
     return className + 'Factory';
   }
 
-  function genVBClassPropertyGetterScript(name, valueScript) {
+  function genVBClassPropertyGetterScript(name) {
     return [
-      '\tPublic Property Get [' + name + ']',
-      '\tOn Error Resume Next', //必须优先使用set语句,否则它会误将数组当字符串返回
-      '\t\tSet[' + name + '] = ' + valueScript,
-      '\tIf Err.Number <> 0 Then',
-      '\t\t[' + name + '] = ' + valueScript,
-      '\tEnd If',
-      '\tOn Error Goto 0',
-      '\tEnd Property'
-    ].join('\r\n');
+      '\tPublic Property Get [', name, ']\r\n',
+      '\tOn Error Resume Next\r\n', //必须优先使用set语句,否则它会误将数组当字符串返回
+      '\t\tSet[', name, '] = [', DESC_BINDING, '].get(Me, "', name, '")\r\n',
+      '\tIf Err.Number <> 0 Then\r\n',
+      '\t\t[', name, '] = [', DESC_BINDING, '].get(Me, "', name, '")\r\n',
+      '\tEnd If\r\n',
+      '\tOn Error Goto 0\r\n',
+      '\tEnd Property\r\n'
+    ];
   }
 
-  function genVBClassPropertySetterScript(name, valueScript) {
+  function genVBClassPropertySetterScript(name) {
     return [
-      '\tPublic Property Let [' + name + '](val)',
-      '\t\t' + valueScript,
-      '\tEnd Property',
-      '\tPublic Property Set [' + name + '](val)', //setter
-      '\t\t' + valueScript,
-      '\tEnd Property',
-    ].join('\r\n');
+      '\tPublic Property Let [', name, '](val)\r\n',
+      '\t\tCall [', DESC_BINDING, '].set(Me, "', name, '",val)\r\n',
+      '\tEnd Property\r\n',
+      '\tPublic Property Set [', name, '](val)\r\n', //setter
+      '\t\tCall [', DESC_BINDING, '].set(Me, "', name, '",val)\r\n',
+      '\tEnd Property\r\n',
+    ];
   }
 
   function genVBClassScript(className, properties, accessors) {
     let buffer = [], i, name,
       added = [];
 
-    buffer.push('Class ' + className, CONST_SCRIPT);
+    buffer.push('Class ', className, '\r\n', CONST_SCRIPT, '\r\n');
 
     //添加访问器属性
     for (i = 0; i < accessors.length; i++) {
       name = accessors[i];
-      buffer.push(
-        genVBClassPropertySetterScript(name, 'Call [' + DESC_BINDING + '].set(Me, "' + name + '", val)'),
-        genVBClassPropertyGetterScript(name, '[' + DESC_BINDING + '].get(Me, "' + name + '")')
-      );
+      buffer.push.apply(buffer, genVBClassPropertySetterScript(name));
+      buffer.push.apply(buffer, genVBClassPropertyGetterScript(name));
       added.push(name);
     }
-    /*
-    accessors.forEach(name => {
-      buffer.push(
-        genVBClassPropertySetterScript(name, 'Call [' + DESC_BINDING + '].set(Me, "' + name + '", val)'),
-        genVBClassPropertyGetterScript(name, '[' + DESC_BINDING + '].get(Me, "' + name + '")')
-      );
-      added.push(name);
-    });*/
 
     //添加普通属性,因为VBScript对象不能像JS那样随意增删属性，必须在这里预先定义好
     for (i = 0; i < properties.length; i++) {
       name = properties[i];
       if (_.indexOf.call(added, name) == -1)
-        buffer.push('\tPublic [' + name + ']');
+        buffer.push('\tPublic [', name, ']\r\n');
 
     }
-    /*
-    properties.forEach(name => {
-       if (added.indexOf(name) == -1) {
-         buffer.push('\tPublic [' + name + ']');
-       }
-    });*/
-
-    buffer.push('End Class');
-    return buffer.join('\r\n');
+    buffer.push('End Class\r\n');
+    return buffer.join('');
   }
   function genVBClass(properties, accessors) {
     let buffer = [], className, factoryName,
@@ -214,16 +198,6 @@ if (isSupported()) {
         proxy[name] = bind;
       }
     }
-    /*
-    props.forEach(name => {
-      if (typeof proxy[name] === 'undefined') {
-        bind = object[name];
-        if (typeof bind === 'function') {
-          bind = bind.bind(object);
-        }
-        proxy[name] = bind;
-      }
-    });*/
     return proxy;
   }
 

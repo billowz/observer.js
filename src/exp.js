@@ -19,6 +19,7 @@ class Expression {
     }
     return result;
   }
+
   constructor(target, expression, path) {
     this.expression = expression;
     this.handlers = [];
@@ -54,7 +55,6 @@ class Expression {
     let attr = this.path[idx];
 
     obj = observer.un(obj, attr, this.observeHandlers[idx]);
-    console.log('attr:', attr, ',haslisten:', observer.hasListen(obj, attr, this.observeHandlers[idx]))
     if (idx + 1 < this.path.length)
       obj[attr] = this._unobserve(obj[attr], idx + 1);
     return obj;
@@ -91,7 +91,6 @@ class Expression {
     }
   }
 
-
   addListen() {
     for (let i = 0; i < arguments.length; i++) {
       if (typeof arguments[i] === 'function') {
@@ -106,7 +105,7 @@ class Expression {
     } else {
       for (let i = 0; i < arguments.length; i++) {
         if (typeof arguments[i] === 'function') {
-          let idx = this.handlers.indexOf(arguments[i]);
+          let idx = _.indexOf.call(this.handlers, arguments[i]);
           if (idx !== -1) {
             this.handlers.splice(idx, 1);
           }

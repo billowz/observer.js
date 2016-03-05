@@ -1,4 +1,5 @@
 const observer = require('../index');
+require('./test');
 
 describe("Observer factory", () => {
   it("Observe changes", function(done) {
@@ -14,7 +15,6 @@ describe("Observer factory", () => {
       expect(observer.hasListen(obj, 'a.b.c')).equal(true);
       observer.un(obj, 'a.b.c');
       expect(observer.hasListen(obj)).equal(false);
-      console.log('callback')
       done();
     });
     expect(observer.hasListen(obj, 'a.b.c')).equal(true);
