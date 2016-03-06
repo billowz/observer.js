@@ -1,5 +1,6 @@
 
-const Map = require('./map');
+const Map = require('./map'),
+  _ = require('./util');
 
 class ProxyEventFactory {
   isEnable() {

@@ -43,10 +43,6 @@ let util = {
 
   cancelAnimationFrame: cancelAnimationFrame,
 
-  hasProp(obj, prop) {
-    return Object.prototype.hasOwnProperty.call(obj, prop);
-  },
-
   eachObj(obj, callback) {
     for (let i in obj) {
       if (obj.hasOwnProperty(i)) {
@@ -57,7 +53,6 @@ let util = {
   },
 
   bind: bind,
-
 
   indexOf: Array.prototype.indexOf || function indexOf(val) {
       for (let i = 0; i < this.length; i++) {

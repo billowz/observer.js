@@ -205,6 +205,7 @@ if (isSupported()) {
     isVBProxy(object) {
       return object && (typeof object == 'object') && (CONST_BINDING in object);
     },
+
     getVBProxy(object, justInPool) {
       if (VBProxy.isVBProxy(object)) {
         if (justInPool === false) {
@@ -214,21 +215,20 @@ if (isSupported()) {
       }
       return VBProxyLoop.get(object);
     },
+
     getVBProxyDesc(object) {
       let proxy = VBProxy.isVBProxy(object) ? object : VBProxyLoop.get(object);
       return proxy ? proxy[DESC_BINDING] : undefined;
     },
+
     createVBProxy(object) {
       let proxy = VBProxy.getVBProxy(object, false),
         rebuild = false, name, desc;
       if (proxy) {
         object = proxy[DESC_BINDING].object;
-        for (name in object) {
-          if (!(name in proxy)) {
-            rebuild = true;
-            break;
-          }
-        }
+        rebuild = _.eachObj(object, (v, name) => {
+            return proxy.hasOwnProperty(name);
+          }) === false;
         if (!rebuild) {
           return proxy;
         }

@@ -1,4 +1,6 @@
-const observer = require('./factory');
+const observer = require('./factory'),
+  _ = require('./util');
+
 const reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
   reIsPlainProp = /^\w*$/,
   rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
@@ -53,7 +55,7 @@ class Expression {
 
   _unobserve(obj, idx) {
     let attr = this.path[idx];
-
+    
     obj = observer.un(obj, attr, this.observeHandlers[idx]);
     if (idx + 1 < this.path.length)
       obj[attr] = this._unobserve(obj[attr], idx + 1);

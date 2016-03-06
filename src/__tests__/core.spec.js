@@ -189,8 +189,8 @@ describe("Observer", () => {
         expect().fail();
       };
 
-      arr = observe.on(0, 5, handler);
-      arr[5] = undefined;
+      arr = observe.on(0, 2, handler);
+      arr[2] = 'c';
       arr[0] = 'javascript';
       setTimeout(() => {
         done();
@@ -209,15 +209,15 @@ describe("Observer", () => {
       }
 
       function handler2() {
-        expect(Array.prototype.slice.call(arguments)).eql(['5', 'abc', undefined, arr]);
+        expect(Array.prototype.slice.call(arguments)).eql(['2', 'abc', 'c', arr]);
         done2();
       }
       arr = observe.on({
         0: handler,
-        5: handler2
+        2: handler2
       });
       arr[0] = 'abc';
-      arr[5] = 'abc';
+      arr[2] = 'abc';
     }, 1000);
 
     xit("Observe changes on array length by set(just work on Object.observe)", function(done) {

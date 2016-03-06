@@ -78,6 +78,7 @@ class Observer {
     this.target = OBJECT.defineProperty(this.target, attr, {
       enumerable: true,
       configurable: true,
+      writable: true,
       value: value
     });
   }

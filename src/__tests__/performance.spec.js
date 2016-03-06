@@ -20,7 +20,9 @@ describe("Observer Performance", () => {
     console.log(this.test.fullTitle() + ': generate data ' + objs.length + ' use:' + ms + ' ms');
     return objs;
   }
+
   function cleanBinding(objs) {
+    this.timeout(0);
     let start = new Date(), ms;
 
     for (let i = 0; i < objs.length; i++) {
@@ -36,6 +38,7 @@ describe("Observer Performance", () => {
   function checkBinding(objs, binded) {
     let start = new Date(), ms;
 
+    this.timeout(0);
     for (let i = 0; i < objs.length; i++) {
       if (observer.hasListen(objs[i]) !== binded) {
         expect().fail();
@@ -52,6 +55,7 @@ describe("Observer Performance", () => {
     let start = new Date(), ms,
       every = handler instanceof Array;
 
+    this.timeout(0);
     for (let i = 0; i < objs.length; i++) {
       objs[i] = observer.on(objs[i], every ? handler[i] : handler);
     }
@@ -65,18 +69,15 @@ describe("Observer Performance", () => {
     let objs;
 
     beforeEach(function() {
-      this.timeout(0);
       objs = generate.call(this);
     });
 
     afterEach(function() {
-      this.timeout(0);
       cleanBinding.call(this, objs);
       objs = [];
     });
 
     it("run", function() {
-      this.timeout(0);
       binding.call(this, objs, function() {}, function() {});
     });
   });
@@ -85,12 +86,10 @@ describe("Observer Performance", () => {
     let objs;
 
     beforeEach(function() {
-      this.timeout(0);
       objs = generate.call(this);
     });
 
     afterEach(function() {
-      this.timeout(0);
       cleanBinding.call(this, objs);
       objs = [];
     });
@@ -100,7 +99,6 @@ describe("Observer Performance", () => {
         __i__ = 0,
         test = this.test;
 
-      this.timeout(0);
       binding.call(this, objs, function() {
         if (++__i__ === objs.length * prop_nr) {
           ms = new Date() - start;
@@ -121,7 +119,6 @@ describe("Observer Performance", () => {
     let objs;
 
     beforeEach(function() {
-      this.timeout(0);
       objs = generate.call(this);
       binding.call(this, objs, function() {}, function() {});
     });
@@ -131,7 +128,6 @@ describe("Observer Performance", () => {
     });
 
     it("run", function() {
-      this.timeout(0);
       cleanBinding.call(this, objs);
     });
   });
@@ -140,19 +136,16 @@ describe("Observer Performance", () => {
     let objs;
 
     beforeEach(function() {
-      this.timeout(0);
       objs = generate.call(this);
       binding.call(this, objs, function() {}, function() {});
     });
 
     afterEach(function() {
-      this.timeout(0);
       cleanBinding.call(this, objs);
       objs = [];
     });
 
     it("run", function() {
-      this.timeout(0);
       checkBinding.call(this, objs, true);
     });
   });
@@ -161,7 +154,6 @@ describe("Observer Performance", () => {
     let objs;
 
     beforeEach(function() {
-      this.timeout(0);
       objs = generate.call(this);
     });
 
@@ -170,7 +162,6 @@ describe("Observer Performance", () => {
     });
 
     it("run", function() {
-      this.timeout(0);
       checkBinding.call(this, objs, false);
     });
   });

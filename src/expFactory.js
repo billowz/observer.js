@@ -25,7 +25,7 @@ let factory = {
       delete map[exp.expression];
 
       for (let key in map) {
-        if (_.hasProp(map, key))
+        if (map.hasOwnProperty(key))
           return;
       }
       exps['delete'](obj);
