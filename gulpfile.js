@@ -13,12 +13,7 @@ var fs = require('fs'),
     entry: 'index.js',
     library: 'observer',
     output: 'observer.js',
-    moduleDirectories: ['dependency'],
-    externals: [{
-      path: 'lodash',
-      root: '_',
-      lib: '_'
-    }]
+    moduleDirectories: ['node_modules']
   },
   devserver = {
     host: 'localhost',

@@ -23,6 +23,9 @@ class Expression {
   }
 
   constructor(target, expression, path) {
+    if (!target || !(target instanceof Array || typeof target === 'object')) {
+      throw TypeError('can not observe object[' + (typeof target) + ']');
+    }
     this.expression = expression;
     this.handlers = [];
     this.path = path || Expression.toPath(expression);
@@ -48,14 +51,15 @@ class Expression {
     let attr = this.path[idx];
 
     if (idx + 1 < this.path.length) {
-      obj[attr] = this._observe(obj[attr], idx + 1);
+      if (obj[attr])
+        obj[attr] = this._observe(obj[attr], idx + 1);
     }
     return observer.on(obj, attr, this.observeHandlers[idx]);
   }
 
   _unobserve(obj, idx) {
     let attr = this.path[idx];
-    
+
     obj = observer.un(obj, attr, this.observeHandlers[idx]);
     if (idx + 1 < this.path.length)
       obj[attr] = this._unobserve(obj[attr], idx + 1);

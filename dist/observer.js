@@ -382,6 +382,8 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
 	var observer = __webpack_require__(5),
@@ -411,6 +413,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function Expression(target, expression, path) {
 	    _classCallCheck(this, Expression);
 	
+	    if (!target || !(target instanceof Array || (typeof target === 'undefined' ? 'undefined' : _typeof(target)) === 'object')) {
+	      throw TypeError('can not observe object[' + (typeof target === 'undefined' ? 'undefined' : _typeof(target)) + ']');
+	    }
 	    this.expression = expression;
 	    this.handlers = [];
 	    this.path = path || Expression.toPath(expression);
@@ -436,7 +441,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var attr = this.path[idx];
 	
 	    if (idx + 1 < this.path.length) {
-	      obj[attr] = this._observe(obj[attr], idx + 1);
+	      if (obj[attr]) obj[attr] = this._observe(obj[attr], idx + 1);
 	    }
 	    return observer.on(obj, attr, this.observeHandlers[idx]);
 	  };
