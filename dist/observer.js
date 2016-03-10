@@ -109,7 +109,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	
 	  ProxyEventFactory.prototype.onProxy = function onProxy(obj, handler) {
-	    var handlers = void 0;
+	    var handlers = undefined;
 	
 	    if (!window.VBProxy) {
 	      return;
@@ -127,7 +127,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  ProxyEventFactory.prototype.unProxy = function unProxy(obj, handler) {
-	    var handlers = void 0;
+	    var handlers = undefined;
 	
 	    if (!window.VBProxy) {
 	      return;
@@ -315,7 +315,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 	
-	var lastTime = void 0,
+	var lastTime = undefined,
 	    requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame,
 	    cancelAnimationFrame = window.cancelAnimationFrame || window.webkitCancelAnimationFrame || window.mozCancelAnimationFrame || window.oCancelAnimationFrame || window.msCancelAnimationFrame,
 	    bind = Function.prototype.bind || function bind(scope) {
@@ -456,7 +456,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  Expression.prototype._initObserveHandlers = function _initObserveHandlers() {
 	    var handlers = [],
-	        i = void 0;
+	        i = undefined;
 	
 	    for (i = 0; i < this.path.length; i++) {
 	      handlers.push(this._createObserveHandler(i));
@@ -569,7 +569,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  on: function on(obj) {
-	    var observer = void 0;
+	    var observer = undefined;
 	
 	    obj = proxy.obj(obj);
 	    observer = factory._get(obj);
@@ -585,7 +585,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return obj;
 	  },
 	  un: function un(obj) {
-	    var observer = void 0;
+	    var observer = undefined;
 	
 	    obj = proxy.obj(obj);
 	    observer = factory._get(obj);
@@ -645,7 +645,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      if (!proxy.eq(val, oldVal)) {
 	        var handlers = _this.listens[attr],
-	            i = void 0;
+	            i = undefined;
 	
 	        for (i = 0; i < handlers.length; i++) {
 	          handlers[i](attr, val, oldVal, _this.target);
@@ -757,9 +757,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  Observer.prototype._removeListen = function _removeListen(attr, handler) {
-	    var _handlers = void 0,
-	        idx = void 0,
-	        i = void 0;
+	    var _handlers = undefined,
+	        idx = undefined,
+	        i = undefined;
 	
 	    if (attr in this.listens) {
 	      _handlers = this.listens[attr] || [];
@@ -819,26 +819,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	        throw TypeError('Invalid Parameter', arguments);
 	      }
 	    } else if (arguments.length >= 2) {
-	      var _i = void 0,
+	      var i = undefined,
 	          _attrs = [],
 	          _handler = undefined;
 	
-	      for (_i = 0; _i < arguments.length; _i++) {
-	        if (typeof arguments[_i] === 'function') {
-	          _handler = arguments[_i];
+	      for (i = 0; i < arguments.length; i++) {
+	        if (typeof arguments[i] === 'function') {
+	          _handler = arguments[i];
 	          break;
 	        }
-	        if (arguments[_i] instanceof Array) {
-	          _attrs.push.apply(_attrs, arguments[_i]);
+	        if (arguments[i] instanceof Array) {
+	          _attrs.push.apply(_attrs, arguments[i]);
 	        } else {
-	          _attrs.push(arguments[_i]);
+	          _attrs.push(arguments[i]);
 	        }
 	      }
 	      if (!_handler) {
 	        throw TypeError("Invalid Observer Handler", _handler);
 	      }
-	      for (_i = 0; _i < _attrs.length; _i++) {
-	        this._addListen(_attrs[_i] + '', _handler);
+	      for (i = 0; i < _attrs.length; i++) {
+	        this._addListen(_attrs[i] + '', _handler);
 	      }
 	    } else {
 	      throw TypeError('Invalid Parameter', arguments);
@@ -863,8 +863,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    } else if (arguments.length == 1) {
 	      if (typeof attrs === 'function') {
 	        if (this.isArray) {
-	          for (var _i2 = 0; _i2 < this.target.length; _i2++) {
-	            this._removeListen(_i2 + '', attrs);
+	          for (var i = 0; i < this.target.length; i++) {
+	            this._removeListen(i + '', attrs);
 	          }
 	          this._removeListen('length', attrs);
 	        } else {
@@ -873,8 +873,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	          });
 	        }
 	      } else if (attrs instanceof Array) {
-	        for (var _i3 = 0; _i3 < attrs.length; _i3++) {
-	          this._removeListen(attrs[_i3] + '');
+	        for (var i = 0; i < attrs.length; i++) {
+	          this._removeListen(attrs[i] + '');
 	        }
 	      } else if (attrs && (typeof attrs === 'undefined' ? 'undefined' : _typeof(attrs)) === 'object') {
 	        _.eachObj(attrs, function (h, attr) {
@@ -884,23 +884,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this._removeListen(attrs + '');
 	      }
 	    } else if (arguments.length >= 2) {
-	      var _i4 = void 0,
+	      var i = undefined,
 	          _attrs = [],
 	          _handler = undefined;
 	
-	      for (_i4 = 0; _i4 < arguments.length; _i4++) {
-	        if (typeof arguments[_i4] === 'function') {
-	          _handler = arguments[_i4];
+	      for (i = 0; i < arguments.length; i++) {
+	        if (typeof arguments[i] === 'function') {
+	          _handler = arguments[i];
 	          break;
 	        }
-	        if (arguments[_i4] instanceof Array) {
-	          _attrs.push.apply(_attrs, arguments[_i4]);
+	        if (arguments[i] instanceof Array) {
+	          _attrs.push.apply(_attrs, arguments[i]);
 	        } else {
-	          _attrs.push(arguments[_i4]);
+	          _attrs.push(arguments[i]);
 	        }
 	      }
-	      for (_i4 = 0; _i4 < _attrs.length; _i4++) {
-	        this._removeListen(_attrs[_i4] + '', _handler);
+	      for (i = 0; i < _attrs.length; i++) {
+	        this._removeListen(_attrs[i] + '', _handler);
 	      }
 	    } else {
 	      throw TypeError('Invalid Parameter', arguments);
@@ -945,7 +945,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	function doesDefinePropertyWork(OBJECT, object) {
 	  try {
 	    var _ret = function () {
-	      var val = void 0;
+	      var val = undefined;
 	      OBJECT.defineProperty(object, 'sentinel', {
 	        get: function get() {
 	          return val;
@@ -1009,8 +1009,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (__webpack_require__(8)) {
 	      OBJECT = {
 	        defineProperty: function defineProperty(object, prop, desc) {
-	          var proxy = void 0,
-	              proxyDesc = void 0,
+	          var proxy = undefined,
+	              proxyDesc = undefined,
 	              isAccessor = desc.get || desc.set;
 	
 	          if (VBProxy.isVBProxy(object)) {
@@ -1033,9 +1033,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }
 	        },
 	        defineProperties: function defineProperties(object, descs) {
-	          var proxy = void 0,
-	              proxyDesc = void 0,
-	              hasAccessor = void 0;
+	          var proxy = undefined,
+	              proxyDesc = undefined,
+	              hasAccessor = undefined;
 	
 	          if (VBProxy.isVBProxy(object)) {
 	            proxy = object;
@@ -1068,8 +1068,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	          }
 	        },
 	        getOwnPropertyDescriptor: function getOwnPropertyDescriptor(object, attr) {
-	          var proxy = void 0,
-	              define = void 0;
+	          var proxy = undefined,
+	              define = undefined;
 	          if (VBProxy.isSupport()) {
 	            proxy = VBProxy.getVBProxy(object);
 	            if (proxy) {
@@ -1147,8 +1147,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    var genVBClassScript = function genVBClassScript(className, properties, accessors) {
 	      var buffer = [],
-	          i = void 0,
-	          name = void 0,
+	          i = undefined,
+	          name = undefined,
 	          added = [];
 	
 	      buffer.push('Class ', className, '\r\n', CONST_SCRIPT, '\r\n');
@@ -1172,8 +1172,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    var genVBClass = function genVBClass(properties, accessors) {
 	      var buffer = [],
-	          className = void 0,
-	          factoryName = void 0,
+	          className = undefined,
+	          factoryName = undefined,
 	          key = '[' + properties.join(',') + ']&&[' + accessors.join(',') + ']';
 	      className = VBClassPool[key];
 	      if (className) {
@@ -1192,8 +1192,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var _createVBProxy = function _createVBProxy(object, desc) {
 	      var accessors = [],
 	          props = ['__hash__', '__destory__'],
-	          i = void 0,
-	          bind = void 0;
+	          i = undefined,
+	          bind = undefined;
 	      desc = desc || new ObjectDescriptor(object);
 	      for (name in object) {
 	        accessors.push(name);
@@ -1315,8 +1315,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      createVBProxy: function createVBProxy(object) {
 	        var proxy = VBProxy.getVBProxy(object, false),
 	            rebuild = false,
-	            name = void 0,
-	            desc = void 0;
+	            name = undefined,
+	            desc = undefined;
 	        if (proxy) {
 	          object = proxy[DESC_BINDING].object;
 	          rebuild = _.eachObj(object, function (v, name) {
@@ -1379,7 +1379,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  _get: function _get(obj, exp) {
-	    var map = void 0;
+	    var map = undefined;
 	
 	    obj = proxy.obj(obj);
 	    map = exps.get(obj);
@@ -1460,13 +1460,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	        throw TypeError('Invalid Parameter');
 	      }
 	    } else if (arguments.length >= 3) {
-	      var i = void 0,
+	      var i = undefined,
 	          _exps = [],
-	          _handler = undefined;
+	          handler = undefined;
 	
 	      for (i = 1; i < arguments.length; i++) {
 	        if (typeof arguments[i] === 'function') {
-	          _handler = arguments[i];
+	          handler = arguments[i];
 	          break;
 	        }
 	        if (arguments[i] instanceof Array) {
@@ -1475,11 +1475,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	          _exps.push(arguments[i]);
 	        }
 	      }
-	      if (!_handler) {
-	        throw TypeError("Invalid Observer Handler", _handler);
+	      if (!handler) {
+	        throw TypeError("Invalid Observer Handler", handler);
 	      }
 	      for (i = 0; i < _exps.length; i++) {
-	        obj = factory._on(obj, _exps[i] + '', _handler);
+	        obj = factory._on(obj, _exps[i] + '', handler);
 	      }
 	    }
 	    return obj;
@@ -1505,23 +1505,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        obj = factory._un(obj, p1 + '');
 	      }
 	    } else if (arguments.length >= 3) {
-	      var _i = void 0;
+	      var i = undefined,
+	          _exps2 = [],
+	          handler = undefined;
 	
-	      exps = [];
-	      handler = undefined;
-	      for (_i = 1; _i < arguments.length; _i++) {
-	        if (typeof arguments[_i] === 'function') {
-	          handler = arguments[_i];
+	      for (i = 1; i < arguments.length; i++) {
+	        if (typeof arguments[i] === 'function') {
+	          handler = arguments[i];
 	          break;
 	        }
-	        if (arguments[_i] instanceof Array) {
-	          exps.push.apply(exps, arguments[_i]);
+	        if (arguments[i] instanceof Array) {
+	          _exps2.push.apply(_exps2, arguments[i]);
 	        } else {
-	          exps.push(arguments[_i]);
+	          _exps2.push(arguments[i]);
 	        }
 	      }
-	      for (_i = 0; _i < exps.length; _i++) {
-	        obj = factory._un(obj, exps[_i] + '', handler);
+	      for (i = 0; i < _exps2.length; i++) {
+	        obj = factory._un(obj, _exps2[i] + '', handler);
 	      }
 	    }
 	    return obj;

@@ -166,10 +166,10 @@ let factory = {
         obj = factory._un(obj, p1 + '');
       }
     } else if (arguments.length >= 3) {
-      let i;
+      let i,
+        exps = [],
+        handler = undefined;
 
-      exps = [];
-      handler = undefined;
       for (i = 1; i < arguments.length; i++) {
         if (typeof arguments[i] === 'function') {
           handler = arguments[i];
