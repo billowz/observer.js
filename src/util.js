@@ -55,7 +55,7 @@ let util = {
   bind: bind,
 
   indexOf: Array.prototype.indexOf || function indexOf(val) {
-      for (let i = 0; i < this.length; i++) {
+      for (let i = 0, l = this.length; i < l; i++) {
         if (this[i] === val) {
           return i;
         }

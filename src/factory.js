@@ -1,6 +1,6 @@
 const Observer = require('./core'),
   Map = require('./map'),
-  proxy = require('./proxyEvent');
+  {proxy} = require('./proxyEvent');
 
 let observers = new Map();
 let factory = {

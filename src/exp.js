@@ -68,9 +68,9 @@ class Expression {
 
 
   _initObserveHandlers() {
-    let handlers = [], i;
+    let handlers = [];
 
-    for (i = 0; i < this.path.length; i++) {
+    for (let i = 0, l = this.path.length; i < l; i++) {
       handlers.push(this._createObserveHandler(i));
     }
     return handlers;
@@ -90,7 +90,7 @@ class Expression {
       }
       if (val !== oldVal && this.handlers) {
         let hs = this.handlers.slice();
-        for (let i = 0; i < hs.length; i++) {
+        for (let i = 0, l = hs.length; i < l; i++) {
           this.handlers[i](this.expression, val, oldVal, this.target);
         }
       }
@@ -98,7 +98,7 @@ class Expression {
   }
 
   addListen() {
-    for (let i = 0; i < arguments.length; i++) {
+    for (let i = 0, l = arguments.length; i < l; i++) {
       if (typeof arguments[i] === 'function') {
         this.handlers.push(arguments[i]);
       }
@@ -109,7 +109,7 @@ class Expression {
     if (arguments.length == 0) {
       this.handlers = [];
     } else {
-      for (let i = 0; i < arguments.length; i++) {
+      for (let i = 0, l = arguments.length; i < l; i++) {
         if (typeof arguments[i] === 'function') {
           let idx = _.indexOf.call(this.handlers, arguments[i]);
           if (idx !== -1) {

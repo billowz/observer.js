@@ -1,4 +1,5 @@
 let Map = window.Map;
+
 if (!Map) {
   let ITERATOR_TYPE = {
       KEY: 'key',

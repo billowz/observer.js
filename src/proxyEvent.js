@@ -1,27 +1,35 @@
-
 const Map = require('./map'),
   _ = require('./util');
 
-class ProxyEventFactory {
+let proxyEvents = new Map();
+
+export let proxy = {
+
   isEnable() {
     return window.VBProxy;
-  }
-  eq(obj, obj2) {
-    return this.obj(obj) === this.obj(obj2);
-  }
+  },
+
+  eq(obj1, obj2) {
+    if (window.VBProxy) {
+      let desc1 = window.VBProxy.getVBProxyDesc(obj1),
+        desc2 = window.VBProxy.getVBProxyDesc(obj2);
+      if (desc1)
+        obj1 = desc1.object;
+      if (desc2)
+        obj2 = desc2.object;
+    }
+    return obj1 === obj2;
+  },
+
   obj(obj) {
-    if (window.VBProxy && window.VBProxy.isVBProxy(obj)) {
+    if (window.VBProxy) {
       let desc = window.VBProxy.getVBProxyDesc(obj);
-      return desc ? desc.object : undefined;
+      return desc ? desc.object : obj;
     }
     return obj;
-  }
+  },
 
-  constructor() {
-    this.proxyEvents = new Map();
-  }
-
-  onProxy(obj, handler) {
+  on(obj, handler) {
     let handlers;
 
     if (!window.VBProxy) {
@@ -30,23 +38,23 @@ class ProxyEventFactory {
     if (typeof handler !== 'function') {
       throw TypeError('Invalid Proxy Event Handler');
     }
-    obj = this.obj(obj);
-    handlers = this.proxyEvents.get(obj);
+    obj = proxy.obj(obj);
+    handlers = proxyEvents.get(obj);
     if (!handlers) {
       handlers = [];
-      this.proxyEvents.set(obj, handlers);
+      proxyEvents.set(obj, handlers);
     }
     handlers.push(handler);
-  }
+  },
 
-  unProxy(obj, handler) {
+  un(obj, handler) {
     let handlers;
 
     if (!window.VBProxy) {
       return;
     }
-    obj = this.obj(obj);
-    handlers = this.proxyEvents.get(obj);
+    obj = proxy.obj(obj);
+    handlers = proxyEvents.get(obj);
     if (handlers) {
       if (arguments.length > 1) {
         if (typeof handler === 'function') {
@@ -56,18 +64,17 @@ class ProxyEventFactory {
           }
         }
       } else {
-        this.proxyEvents['delete'](obj);
-      }
-    }
-  }
-
-  _fire(obj, proxy) {
-    handlers = this.proxyEvents.get(obj);
-    if (handlers) {
-      for (let i = 0; i < handlers.length; i++) {
-        handlers[i](obj, proxy);
+        proxyEvents['delete'](obj);
       }
     }
   }
 }
-module.exports = new ProxyEventFactory();
+
+export function proxyChange(obj, proxy) {
+  handlers = proxyEvents.get(obj);
+  if (handlers) {
+    for (let i = handlers.length - 1; i >= 0; i--) {
+      handlers[i](obj, proxy);
+    }
+  }
+}

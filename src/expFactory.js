@@ -1,7 +1,7 @@
 const Exp = require('./exp'),
   observer = require('./factory'),
   Map = require('./map'),
-  proxy = require('./proxyEvent'),
+  {proxy} = require('./proxyEvent'),
   _ = require('./util');
 
 let exps = new Map();
@@ -119,11 +119,11 @@ let factory = {
         throw TypeError('Invalid Parameter');
       }
     } else if (arguments.length >= 3) {
-      let i,
+      let i, l,
         exps = [],
         handler = undefined;
 
-      for (i = 1; i < arguments.length; i++) {
+      for (i = 1, l = arguments.length; i < l; i++) {
         if (typeof arguments[i] === 'function') {
           handler = arguments[i];
           break;
@@ -137,7 +137,7 @@ let factory = {
       if (!handler) {
         throw TypeError("Invalid Observer Handler", handler);
       }
-      for (i = 0; i < exps.length; i++) {
+      for (i = 0, l = exps.length; i < l; i++) {
         obj = factory._on(obj, exps[i] + '', handler);
       }
     }
@@ -155,7 +155,7 @@ let factory = {
       if (typeof p1 === 'function') {
         obj = observer.un(obj, p1);
       } else if (p1 instanceof Array) {
-        for (let i = 0; i < p1.length; i++) {
+        for (let i = 0, l = p1.length; i < l; i++) {
           obj = factory._on(obj, p1);
         }
       } else if (p1 && typeof p1 === 'object') {
@@ -166,11 +166,11 @@ let factory = {
         obj = factory._un(obj, p1 + '');
       }
     } else if (arguments.length >= 3) {
-      let i,
+      let i, l,
         exps = [],
         handler = undefined;
 
-      for (i = 1; i < arguments.length; i++) {
+      for (i = 1, l = arguments.length; i < l; i++) {
         if (typeof arguments[i] === 'function') {
           handler = arguments[i];
           break;
@@ -181,7 +181,7 @@ let factory = {
           exps.push(arguments[i]);
         }
       }
-      for (i = 0; i < exps.length; i++) {
+      for (i = 0, l = exps.length; i < l; i++) {
         obj = factory._un(obj, exps[i] + '', handler);
       }
     }

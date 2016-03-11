@@ -1,9 +1,8 @@
 const OBJECT = require('./defineProperty'),
-  proxy = require('./proxyEvent'),
+  {proxy} = require('./proxyEvent'),
   _ = require('./util');
 
 const arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
-
 
 class Observer {
 
@@ -29,9 +28,9 @@ class Observer {
       let val = this.target[attr];
 
       if (!proxy.eq(val, oldVal)) {
-        let handlers = this.listens[attr], i;
+        let handlers = this.listens[attr].slice();
 
-        for (i = 0; i < handlers.length; i++) {
+        for (let i = 0, l = handlers.length; i < l; i++) {
           handlers[i](attr, val, oldVal, this.target);
         }
       }
@@ -53,7 +52,7 @@ class Observer {
   }
 
   _onObserveChanged(changes) {
-    for (let i = 0; i < changes.length; i++) {
+    for (let i = 0, l = changes.length; i < l; i++) {
       if (this.listens[changes[i].name])
         this._onStateChanged(changes[i].name, changes[i].oldValue);
     }
@@ -103,7 +102,7 @@ class Observer {
       }
     } else if (!this.watchers[attr]) {
       if (this.isArray && attr === 'length') {
-        for (let i = 0; i < arrayHockMethods.length; i++) {
+        for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
           this._hockArrayLength(arrayHockMethods[i]);
         }
       } else {
@@ -121,7 +120,7 @@ class Observer {
       }
     } else if (this.watchers[attr]) {
       if (this.isArray && attr === 'length') {
-        for (let i = 0; i < arrayHockMethods.length; i++) {
+        for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
           delete this.target[arrayHockMethods[i]];
         }
       } else {
@@ -182,7 +181,7 @@ class Observer {
     if (arguments.length == 1) {
       if (typeof attrs === 'function') {
         if (this.isArray) {
-          for (let i = 0; i < this.target.length; i++) {
+          for (let i = 0, l = this.target.length; i < l; i++) {
             this._addListen(i + '', attrs);
           }
           this._addListen('length', attrs);
@@ -202,11 +201,11 @@ class Observer {
         throw TypeError('Invalid Parameter', arguments);
       }
     } else if (arguments.length >= 2) {
-      let i,
+      let i, l,
         _attrs = [],
         _handler = undefined;
 
-      for (i = 0; i < arguments.length; i++) {
+      for (i = 0, l = arguments.length; i < l; i++) {
         if (typeof arguments[i] === 'function') {
           _handler = arguments[i];
           break;
@@ -220,7 +219,7 @@ class Observer {
       if (!_handler) {
         throw TypeError("Invalid Observer Handler", _handler);
       }
-      for (i = 0; i < _attrs.length; i++) {
+      for (i = 0, l = _attrs.length; i < l; i++) {
         this._addListen(_attrs[i] + '', _handler);
       }
     } else {
@@ -232,7 +231,7 @@ class Observer {
   un(attrs, handler) {
     if (arguments.length == 0) {
       if (this.isArray) {
-        for (let i = 0; i < this.target.length; i++) {
+        for (let i = 0, l = this.target.length; i < l; i++) {
           this._removeListen(i + '');
         }
         this._removeListen('length');
@@ -244,7 +243,7 @@ class Observer {
     } else if (arguments.length == 1) {
       if (typeof attrs === 'function') {
         if (this.isArray) {
-          for (let i = 0; i < this.target.length; i++) {
+          for (let i = 0, l = this.target.length; i < l; i++) {
             this._removeListen(i + '', attrs);
           }
           this._removeListen('length', attrs);
@@ -254,7 +253,7 @@ class Observer {
           });
         }
       } else if (attrs instanceof Array) {
-        for (let i = 0; i < attrs.length; i++) {
+        for (let i = 0, l = attrs.length; i < l; i++) {
           this._removeListen(attrs[i] + '');
         }
       } else if (attrs && typeof attrs === 'object') {
@@ -265,11 +264,11 @@ class Observer {
         this._removeListen(attrs + '');
       }
     } else if (arguments.length >= 2) {
-      let i,
+      let i, l,
         _attrs = [],
         _handler = undefined;
 
-      for (i = 0; i < arguments.length; i++) {
+      for (i = 0, l = arguments.length; i < l; i++) {
         if (typeof arguments[i] === 'function') {
           _handler = arguments[i];
           break;
@@ -280,7 +279,7 @@ class Observer {
           _attrs.push(arguments[i]);
         }
       }
-      for (i = 0; i < _attrs.length; i++) {
+      for (i = 0, l = _attrs.length; i < l; i++) {
         this._removeListen(_attrs[i] + '', _handler);
       }
     } else {

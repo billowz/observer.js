@@ -1,4 +1,4 @@
-const proxy = require('./proxyEvent'),
+const {proxy} = require('./proxyEvent'),
   Exp = require('./exp'),
   exp = require('./expFactory'),
   OBJECT = require('./defineProperty');
@@ -9,6 +9,7 @@ window.observer = {
   hasListen: exp.hasListen,
   obj: proxy.obj,
   eq: proxy.eq,
+  proxy: proxy,
   getVal: Exp.get,
   defineProperty: OBJECT.defineProperty,
   defineProperties: OBJECT.defineProperties,

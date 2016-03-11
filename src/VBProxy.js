@@ -3,7 +3,7 @@
  * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
  */
 const _ = require('./util');
-const proxyEvent = require('./proxyEvent');
+const {proxyChange} = require('./proxyEvent');
 
 function isSupported() {
   let support = false;
@@ -73,13 +73,13 @@ if (isSupported()) {
   }
 
   function genVBClassScript(className, properties, accessors) {
-    let buffer = [], i, name,
+    let buffer = [], i, l, name,
       added = [];
 
     buffer.push('Class ', className, '\r\n', CONST_SCRIPT, '\r\n');
 
     //添加访问器属性
-    for (i = 0; i < accessors.length; i++) {
+    for (i = 0, l = accessors.length; i < l; i++) {
       name = accessors[i];
       buffer.push.apply(buffer, genVBClassPropertySetterScript(name));
       buffer.push.apply(buffer, genVBClassPropertyGetterScript(name));
@@ -87,7 +87,7 @@ if (isSupported()) {
     }
 
     //添加普通属性,因为VBScript对象不能像JS那样随意增删属性，必须在这里预先定义好
-    for (i = 0; i < properties.length; i++) {
+    for (i = 0, l = properties.length; i < l; i++) {
       name = properties[i];
       if (_.indexOf.call(added, name) == -1)
         buffer.push('\tPublic [', name, ']\r\n');
@@ -166,7 +166,7 @@ if (isSupported()) {
 
   function createVBProxy(object, desc) {
     let accessors = [],
-      props = ['__hash__', '__destory__'], i, bind;
+      props = ['__hash__', '__destory__'], i, l, bind;
     desc = desc || new ObjectDescriptor(object);
     for (name in object) {
       accessors.push(name);
@@ -185,10 +185,10 @@ if (isSupported()) {
     proxy.__destory__ = function() {
       if (VBProxyLoop.get(object) === proxy) {
         VBProxyLoop['delete'](object);
-        proxyEvent._fire(object, object);
+        proxyChange(object, object);
       }
     }
-    for (i = 0; i < props.length; i++) {
+    for (i = 0, l = props.length; i < l; i++) {
       name = props[i];
       if (typeof proxy[name] === 'undefined') {
         bind = object[name];
@@ -236,7 +236,7 @@ if (isSupported()) {
       }
       proxy = createVBProxy(object, desc);
       VBProxyLoop.set(object, proxy);
-      proxyEvent._fire(object, proxy);
+      proxyChange(object, proxy);
       return proxy;
     }
   }
