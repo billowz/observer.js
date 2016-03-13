@@ -49,12 +49,20 @@ describe("Observer", () => {
       setTimeout(() => {
         done();
       }, 500);
-    }, 1000);
+    });
 
     it("Observe changes on an object property", function(done) {
       let async = new AsyncDone(done),
         done1 = async.async(),
         done2 = async.async();
+
+      expect(() => {
+        observe.on('name');
+      }).to.throwError('Invalid Observer Handler');
+
+      expect(() => {
+        observe.on('name', null);
+      }).to.throwError('Invalid Observer Handler');
 
       obj = observe.on('name', (attr, val, oldVal, target) => {
         assertName(attr, val, oldVal, target);
@@ -66,112 +74,8 @@ describe("Observer", () => {
       });
       obj.name = 'Tao.Zeng';
       obj.email = 'tao.zeng.zt@gmail.com';
-
-      expect(() => {
-        observe.on('name');
-      }).to.throwError('Invalid Parameter');
-
-      expect(() => {
-        observe.on('name', null);
-      }).to.throwError('Invalid Observer Handler');
-    }, 1000);
-
-    it("Observe changes on multi object property", function(done) {
-      let async = new AsyncDone(done),
-        done1 = async.async(),
-        done2 = async.async();
-
-      obj = observe.on('name', 'email', (attr, val, oldVal, target) => {
-        if (attr === 'name') {
-          assertName(attr, val, oldVal, target);
-          done1();
-        } else if (attr === 'email') {
-          assertEmail(attr, val, oldVal, target);
-          done2();
-        } else
-          expect().fail('invalid event');
-      });
-
-      obj.name = 'Tao.Zeng';
-      obj.email = 'tao.zeng.zt@gmail.com';
-
-      expect(() => {
-        observe.on('name', 'email');
-      }).to.throwError('Invalid Observer Handler');
-    }, 1000);
-
-    it("Observe changes on multi-array object property", function(done) {
-      let async = new AsyncDone(done),
-        done1 = async.async(),
-        done2 = async.async();
-
-      obj = observe.on(['name', 'email'], (attr, val, oldVal, target) => {
-        if (attr === 'name') {
-          assertName(attr, val, oldVal, target);
-          done1();
-        } else if (attr === 'email') {
-          assertEmail(attr, val, oldVal, target);
-          done2();
-        } else
-          expect().fail('invalid event');
-      });
-
-      obj.name = 'Tao.Zeng';
-      obj.email = 'tao.zeng.zt@gmail.com';
-
-      expect(() => {
-        observe.on(['name', 'email']);
-      }).to.throwError('Invalid Observer Handler');
-    }, 1000);
-
-    it("Observe changes on multi-object object property", function(done) {
-      let async = new AsyncDone(done),
-        done1 = async.async(),
-        done2 = async.async();
-
-      obj = observe.on({
-        name: (attr, val, oldVal, target) => {
-          assertName(attr, val, oldVal, target);
-          done1();
-        },
-        email: (attr, val, oldVal, target) => {
-          assertEmail(attr, val, oldVal, target);
-          done2();
-        }
-      });
-
-      obj.name = 'Tao.Zeng';
-      obj.email = 'tao.zeng.zt@gmail.com';
-
-      expect(() => {
-        observe.on({
-          name: undefined
-        });
-      }).to.throwError('Invalid Observer Handler');
-    }, 1000);
-
-    it("Observe changes on all object property", function(done) {
-      let async = new AsyncDone(done),
-        done1 = async.async(),
-        done2 = async.async();
-
-      obj = observe.on((attr, val, oldVal, target) => {
-        if (attr === 'name') {
-          assertName(attr, val, oldVal, target);
-          done1();
-        } else if (attr === 'email') {
-          assertEmail(attr, val, oldVal, target);
-          done2();
-        } else
-          expect().fail('invalid event');
-      });
-
-      obj.name = 'Tao.Zeng';
-      obj.email = 'tao.zeng.zt@gmail.com';
-    }, 1000);
-
+    });
   });
-
 
   describe('Observer changes on Array', () => {
     let arr, observe;
@@ -189,13 +93,14 @@ describe("Observer", () => {
         expect().fail();
       };
 
-      arr = observe.on(0, 2, handler);
+      arr = observe.on(0, handler);
+      arr = observe.on(2, handler);
       arr[2] = 'c';
       arr[0] = 'javascript';
       setTimeout(() => {
         done();
       }, 800);
-    }, 1000);
+    });
 
 
     it("Observe changes on array index", function(done) {
@@ -212,13 +117,12 @@ describe("Observer", () => {
         expect(Array.prototype.slice.call(arguments)).eql(['2', 'abc', 'c', arr]);
         done2();
       }
-      arr = observe.on({
-        0: handler,
-        2: handler2
-      });
+
+      arr = observe.on(0, handler);
+      arr = observe.on(2, handler2);
       arr[0] = 'abc';
       arr[2] = 'abc';
-    }, 1000);
+    });
 
     xit("Observe changes on array length by set(just work on Object.observe)", function(done) {
       function handler() {

@@ -4,60 +4,63 @@ const Observer = require('./core'),
 
 let observers = new Map();
 let factory = {
-  _bind(observer) {
-    observers.set(proxy.obj(observer.target), observer);
+
+  _bind(obj, observer) {
+    observers.set(obj, observer);
   },
 
-  _unbind(observer) {
-    let target = proxy.obj(observer.target);
-
-    if (observers.get(target) === observer) {
-      observers['delete'](target);
+  _unbind(obj, observer) {
+    if (observers.get(obj) === observer) {
+      observers['delete'](obj);
     }
   },
 
-  _get(target) {
-    return observers.get(proxy.obj(target));
+  _get(obj) {
+    return observers.get(obj);
   },
 
-  hasListen(obj) {
-    let observer = factory._get(obj);
+  hasListen(obj, attr, handler) {
+    let observer,
+      l = arguments.length;
 
+    obj = proxy.obj(obj);
+    observer = observers.get(obj);
     if (!observer) {
       return false;
-    } else if (arguments.length == 1) {
+    } else if (l == 1) {
       return true;
-    } else {
-      return observer.hasListen.apply(observer, Array.prototype.slice.call(arguments, 1));
+    } else if (l == 2) {
+      return observer.hasListen(obj, attr);
     }
+    return observer.hasListen(obj, attr, handler);
   },
 
-  on(obj) {
+  on(obj, attr, handler) {
     let observer;
 
     obj = proxy.obj(obj);
-    observer = factory._get(obj);
+    observer = observers.get(obj);
     if (!observer) {
       observer = new Observer(obj);
-      factory._bind(observer);
+      factory._bind(obj, observer);
     }
-    obj = observer.on.apply(observer, Array.prototype.slice.call(arguments, 1));
+    obj = observer.on(attr, handler);
     if (!observer.hasListen()) {
-      factory._unbind(observer);
+      factory._unbind(obj, observer);
       observer.destroy();
     }
     return obj;
   },
 
-  un(obj) {
+  un(obj, attr, handler) {
     let observer;
 
     obj = proxy.obj(obj);
-    observer = factory._get(obj);
+    observer = observers.get(obj);
     if (observer) {
-      obj = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1));
+      obj = arguments.length > 2 ? observer.un(attr, handler) : observer.un(attr);
       if (!observer.hasListen()) {
-        factory._unbind(observer);
+        factory._unbind(obj, observer);
         observer.destroy();
       }
     }

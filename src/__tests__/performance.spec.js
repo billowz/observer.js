@@ -2,7 +2,7 @@ const observer = require('../index');
 require('./test');
 
 describe("Observer Performance", () => {
-  let obj_nr = 200,
+  let obj_nr = 1000,
     prop_nr = 4;
 
   function generate() {
@@ -57,7 +57,9 @@ describe("Observer Performance", () => {
 
     this.timeout(0);
     for (let i = 0; i < objs.length; i++) {
-      objs[i] = observer.on(objs[i], every ? handler[i] : handler);
+      for (let j = 0; j < prop_nr; j++) {
+        objs[i] = observer.on(objs[i], 'key' + j, every ? handler[i] : handler);
+      }
     }
 
     observer.on(objs, 'length', allhandler);

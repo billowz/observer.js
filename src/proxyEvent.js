@@ -29,6 +29,13 @@ export let proxy = {
     return obj;
   },
 
+  proxy(obj) {
+    if (window.VBProxy) {
+      return window.VBProxy.getVBProxy(obj) || obj;
+    }
+    return obj;
+  },
+
   on(obj, handler) {
     let handlers;
 

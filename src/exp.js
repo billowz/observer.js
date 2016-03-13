@@ -1,4 +1,5 @@
 const observer = require('./factory'),
+  {proxy} = require('./proxyEvent'),
   _ = require('./util');
 
 const reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
@@ -10,41 +11,47 @@ function baseToString(val) {
 }
 
 class Expression {
-  static toPath(value) {
-    let result = [];
-    if (value instanceof Array) {
-      result = value;
-    } else if (value !== undefined && value !== null) {
-      (value + '').replace(rePropName, function(match, number, quote, string) {
+  static _parseExpr(exp) {
+    if (exp instanceof Array) {
+      return exp;
+    } else {
+      let result = [];
+      (exp + '').replace(rePropName, function(match, number, quote, string) {
         result.push(quote ? string.replace(reEscapeChar, '$1') : (number || match));
       });
+      return result;
     }
-    return result;
-  }
-
-  constructor(target, expression, path) {
-    if (!target || !(target instanceof Array || typeof target === 'object')) {
-      throw TypeError('can not observe object[' + (typeof target) + ']');
-    }
-    this.expression = expression;
-    this.handlers = [];
-    this.path = path || Expression.toPath(expression);
-    this.observers = [];
-    this.observeHandlers = this._initObserveHandlers();
-    this.target = this._observe(target, 0);
   }
 
   static get(object, path, defaultValue) {
     if (object) {
-      path = Expression.toPath(path);
+      path = Expression._parseExpr(path);
       var index = 0;
 
       while (object && index < path.length) {
         object = object[path[index++]];
       }
-      return (index === path.length) ? object : undefined;
+      return (index == path.length) ? object : undefined;
     }
     return defaultValue;
+  }
+
+  constructor(target, expression, path) {
+    if (!target || !(target instanceof Array || typeof target == 'object')) {
+      throw TypeError('can not observe object[' + (typeof target) + ']');
+    }
+    this.expression = expression;
+    this.handlers = [];
+    this.path = path || Expression._parseExpr(expression);
+    this.observers = [];
+    this.observeHandlers = this._initObserveHandlers();
+    this.target = this._observe(target, 0);
+    this._onTargetProxy = _.bind.call(this._onTargetProxy, this);
+    proxy.on(target, this._onTargetProxy);
+  }
+
+  _onTargetProxy(obj, proxy) {
+    this.target = proxy;
   }
 
   _observe(obj, idx) {
@@ -82,51 +89,59 @@ class Expression {
       ridx = this.path.length - idx - 1;
 
     return (attr, val, oldVal) => {
-      if (ridx > 0) {
+      if (ridx) {
         this._unobserve(oldVal, idx + 1);
         this._observe(val, idx + 1);
         oldVal = Expression.get(oldVal, rpath);
         val = Expression.get(val, rpath);
+        if (proxy.eq(val, oldVal))
+          return;
       }
-      if (val !== oldVal && this.handlers) {
-        let hs = this.handlers.slice();
-        for (let i = 0, l = hs.length; i < l; i++) {
-          this.handlers[i](this.expression, val, oldVal, this.target);
-        }
+
+      let hs = this.handlers.slice();
+
+      for (let i = 0, l = hs.length; i < l; i++) {
+        hs[i](this.expression, val, oldVal, this.target);
       }
     }
   }
 
-  addListen() {
-    for (let i = 0, l = arguments.length; i < l; i++) {
-      if (typeof arguments[i] === 'function') {
-        this.handlers.push(arguments[i]);
-      }
+  on(handler) {
+    if (typeof handler != 'function') {
+      throw TypeError('Invalid Observe Handler');
     }
+    this.handlers.push(handler);
+    return this;
   }
 
-  removeListen() {
-    if (arguments.length == 0) {
+  un(handler) {
+    if (!arguments.length) {
       this.handlers = [];
     } else {
-      for (let i = 0, l = arguments.length; i < l; i++) {
-        if (typeof arguments[i] === 'function') {
-          let idx = _.indexOf.call(this.handlers, arguments[i]);
-          if (idx !== -1) {
-            this.handlers.splice(idx, 1);
-          }
+      if (typeof handler != 'function') {
+        throw TypeError('Invalid Observe Handler');
+      }
+
+      let handlers = this.handlers;
+
+      for (let i = handlers.length - 1; i >= 0; i--) {
+        if (handlers[i] === handler) {
+          handlers.splice(i, 1);
+          break;
         }
       }
     }
+    return this;
   }
 
   hasListen(handler) {
     if (arguments.length)
-      return _.indexOf.call(this.handlers, handler) !== -1;
+      return _.indexOf.call(this.handlers, handler) != -1;
     return !!this.handlers.length;
   }
 
   destory() {
+    proxy.un(this.target, this._onTargetProxy);
     let obj = this._unobserve(this.target, 0);
     this.target = undefined;
     this.expression = undefined;
