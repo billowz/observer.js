@@ -18,9 +18,7 @@ if (!Map) {
     }
 
     _hash(value) {
-      let type = typeof value;
-      return type + ':' + ((value && (type == 'object' || type == 'function')) ?
-          (value[HASH_BIND] || (value[HASH_BIND] = ++hash_generator)) : value);
+      return value[HASH_BIND] || (value[HASH_BIND] = ++hash_generator);
     }
 
     has(key) {

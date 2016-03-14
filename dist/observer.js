@@ -153,8 +153,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
-	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
 	var Map = window.Map;
@@ -179,8 +177,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	
 	      _Map.prototype._hash = function _hash(value) {
-	        var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
-	        return type + ':' + (value && (type == 'object' || type == 'function') ? value[HASH_BIND] || (value[HASH_BIND] = ++hash_generator) : value);
+	        return value[HASH_BIND] || (value[HASH_BIND] = ++hash_generator);
 	      };
 	
 	      _Map.prototype.has = function has(key) {
