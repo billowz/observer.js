@@ -7,11 +7,7 @@ if (!Map) {
       ENTRY: 'entry'
     },
     HASH_BIND = '__hash__',
-    objHashIdx = 0;
-  function hash(value) {
-    return (typeof value) + ' ' + ((value && (typeof value == 'object' || typeof value == 'function')) ?
-        (value[HASH_BIND] || (value[HASH_BIND] = ++objHashIdx)) : value + '');
-  }
+    hash_generator = 0;
 
   class _Map {
 
@@ -21,12 +17,18 @@ if (!Map) {
       this._size = 0;
     }
 
+    _hash(value) {
+      let type = typeof value;
+      return type + ':' + ((value && (type == 'object' || type == 'function')) ?
+          (value[HASH_BIND] || (value[HASH_BIND] = ++hash_generator)) : value);
+    }
+
     has(key) {
-      return hash(key) in this._keyMap;
+      return this._hash(key) in this._keyMap;
     }
 
     get(key) {
-      let hcode = hash(key);
+      let hcode = this._hash(key);
       if (hcode in this._keyMap) {
         return this._map[hcode];
       }
@@ -34,7 +36,7 @@ if (!Map) {
     }
 
     set(key, val) {
-      let hcode = hash(key);
+      let hcode = this._hash(key);
       this._keyMap[hcode] = key;
       this._map[hcode] = val;
       if (!(hcode in this._keyMap)) {
@@ -44,7 +46,7 @@ if (!Map) {
     }
 
     delete(key) {
-      let hcode = hash(key);
+      let hcode = this._hash(key);
       if (hcode in this._keyMap) {
         delete this._keyMap[hcode];
         delete this._map[hcode];
@@ -89,11 +91,12 @@ if (!Map) {
       this._index = 0;
       this._map = map;
       this._type = type;
+      this._hashs = [];
+      for (let h in map._map) {
+        this._hashs.push(h);
+      }
     }
     next() {
-      if (!this._hashs) {
-        this._hashs = Object.keys(this._map._map);
-      }
       let val = undefined;
       if (this._index < this._hashs.length) {
         let hash = this._hashs[this.index++];
@@ -118,5 +121,6 @@ if (!Map) {
     }
   }
   Map = _Map;
+  Map.HASH_BIND = HASH_BIND;
 }
 module.exports = Map;

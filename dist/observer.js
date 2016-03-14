@@ -60,8 +60,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var proxy = _require.proxy;
 	var Exp = __webpack_require__(4);
-	var exp = __webpack_require__(9);
-	var OBJECT = __webpack_require__(7);
+	var exp = __webpack_require__(8);
 	
 	window.observer = {
 	  on: exp.on,
@@ -70,10 +69,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  obj: proxy.obj,
 	  eq: proxy.eq,
 	  proxy: proxy,
-	  getVal: Exp.get,
-	  defineProperty: OBJECT.defineProperty,
-	  defineProperties: OBJECT.defineProperties,
-	  getOwnPropertyDescriptor: OBJECT.getOwnPropertyDescriptor
+	  getVal: Exp.get
 	};
 	module.exports = window.observer;
 
@@ -84,6 +80,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 	
 	exports.__esModule = true;
+	exports.proxyEnable = proxyEnable;
 	exports.proxyChange = proxyChange;
 	var Map = __webpack_require__(2),
 	    _ = __webpack_require__(3);
@@ -91,37 +88,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	var proxyEvents = new Map();
 	
 	var proxy = exports.proxy = {
-	  isEnable: function isEnable() {
-	    return window.VBProxy;
-	  },
 	  eq: function eq(obj1, obj2) {
-	    if (window.VBProxy) {
-	      var desc1 = window.VBProxy.getVBProxyDesc(obj1),
-	          desc2 = window.VBProxy.getVBProxyDesc(obj2);
-	      if (desc1) obj1 = desc1.object;
-	      if (desc2) obj2 = desc2.object;
-	    }
 	    return obj1 === obj2;
 	  },
 	  obj: function obj(_obj) {
-	    if (window.VBProxy) {
-	      var desc = window.VBProxy.getVBProxyDesc(_obj);
-	      return desc ? desc.object : _obj;
-	    }
 	    return _obj;
 	  },
 	  proxy: function proxy(obj) {
-	    if (window.VBProxy) {
-	      return window.VBProxy.getVBProxy(obj) || obj;
-	    }
 	    return obj;
 	  },
-	  on: function on(obj, handler) {
-	    var handlers = undefined;
+	  on: function on() {},
+	  un: function un() {},
+	  _on: function _on(obj, handler) {
+	    var handlers = void 0;
 	
-	    if (!window.VBProxy) {
-	      return;
-	    }
 	    if (typeof handler !== 'function') {
 	      throw TypeError('Invalid Proxy Event Handler');
 	    }
@@ -133,12 +113,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    handlers.push(handler);
 	  },
-	  un: function un(obj, handler) {
-	    var handlers = undefined;
+	  _un: function _un(obj, handler) {
+	    var handlers = void 0;
 	
-	    if (!window.VBProxy) {
-	      return;
-	    }
 	    obj = proxy.obj(obj);
 	    handlers = proxyEvents.get(obj);
 	    if (handlers) {
@@ -155,6 +132,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  }
 	};
+	
+	function proxyEnable() {
+	  proxy.on = proxy._on;
+	  proxy.un = proxy._un;
+	}
 	
 	function proxyChange(obj, proxy) {
 	  handlers = proxyEvents.get(obj);
@@ -179,17 +161,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	if (!Map) {
 	  (function () {
-	    var hash = function hash(value) {
-	      return (typeof value === 'undefined' ? 'undefined' : _typeof(value)) + ' ' + (value && ((typeof value === 'undefined' ? 'undefined' : _typeof(value)) == 'object' || typeof value == 'function') ? value[HASH_BIND] || (value[HASH_BIND] = ++objHashIdx) : value + '');
-	    };
-	
 	    var ITERATOR_TYPE = {
 	      KEY: 'key',
 	      VALUE: 'value',
 	      ENTRY: 'entry'
 	    },
 	        HASH_BIND = '__hash__',
-	        objHashIdx = 0;
+	        hash_generator = 0;
 	
 	    var _Map = function () {
 	      function _Map() {
@@ -200,12 +178,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this._size = 0;
 	      }
 	
+	      _Map.prototype._hash = function _hash(value) {
+	        var type = typeof value === 'undefined' ? 'undefined' : _typeof(value);
+	        return type + ':' + (value && (type == 'object' || type == 'function') ? value[HASH_BIND] || (value[HASH_BIND] = ++hash_generator) : value);
+	      };
+	
 	      _Map.prototype.has = function has(key) {
-	        return hash(key) in this._keyMap;
+	        return this._hash(key) in this._keyMap;
 	      };
 	
 	      _Map.prototype.get = function get(key) {
-	        var hcode = hash(key);
+	        var hcode = this._hash(key);
 	        if (hcode in this._keyMap) {
 	          return this._map[hcode];
 	        }
@@ -213,7 +196,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      };
 	
 	      _Map.prototype.set = function set(key, val) {
-	        var hcode = hash(key);
+	        var hcode = this._hash(key);
 	        this._keyMap[hcode] = key;
 	        this._map[hcode] = val;
 	        if (!(hcode in this._keyMap)) {
@@ -223,7 +206,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      };
 	
 	      _Map.prototype['delete'] = function _delete(key) {
-	        var hcode = hash(key);
+	        var hcode = this._hash(key);
 	        if (hcode in this._keyMap) {
 	          delete this._keyMap[hcode];
 	          delete this._map[hcode];
@@ -275,22 +258,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this._index = 0;
 	        this._map = map;
 	        this._type = type;
+	        this._hashs = [];
+	        for (var h in map._map) {
+	          this._hashs.push(h);
+	        }
 	      }
 	
 	      MapIterator.prototype.next = function next() {
-	        if (!this._hashs) {
-	          this._hashs = Object.keys(this._map._map);
-	        }
 	        var val = undefined;
 	        if (this._index < this._hashs.length) {
-	          var _hash = this._hashs[this.index++];
+	          var hash = this._hashs[this.index++];
 	          switch (this._type) {
 	            case ITERATOR_TYPE.KEY:
-	              val = this._map._keyMap[_hash];
+	              val = this._map._keyMap[hash];
 	            case ITERATOR_TYPE.VALUE:
-	              val = this._map._map[_hash];
+	              val = this._map._map[hash];
 	            case ITERATOR_TYPE.ENTRY:
-	              val = [this._map._keyMap[_hash], this._map._map[_hash]];
+	              val = [this._map._keyMap[hash], this._map._map[hash]];
 	            default:
 	              throw new TypeError('Invalid iterator type');
 	          }
@@ -309,6 +293,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }();
 	
 	    Map = _Map;
+	    Map.HASH_BIND = HASH_BIND;
 	  })();
 	}
 	module.exports = Map;
@@ -319,7 +304,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 	
-	var lastTime = undefined,
+	var lastTime = void 0,
 	    requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame,
 	    cancelAnimationFrame = window.cancelAnimationFrame || window.webkitCancelAnimationFrame || window.mozCancelAnimationFrame || window.oCancelAnimationFrame || window.msCancelAnimationFrame,
 	    bind = Function.prototype.bind || function bind(scope) {
@@ -357,8 +342,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  cancelAnimationFrame: cancelAnimationFrame,
 	
 	  eachObj: function eachObj(obj, callback) {
+	    var hasOwn = Object.prototype.hasOwnProperty;
 	    for (var i in obj) {
-	      if (obj.hasOwnProperty(i)) {
+	      if (hasOwn.call(obj, i)) {
 	        if (callback(obj[i], i) === false) return false;
 	      }
 	    }
@@ -405,16 +391,21 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return val === undefined || val === null ? '' : val + '';
 	}
 	
+	var exprCache = {};
+	
 	var Expression = function () {
 	  Expression._parseExpr = function _parseExpr(exp) {
 	    if (exp instanceof Array) {
 	      return exp;
 	    } else {
 	      var _ret = function () {
-	        var result = [];
-	        (exp + '').replace(rePropName, function (match, number, quote, string) {
-	          result.push(quote ? string.replace(reEscapeChar, '$1') : number || match);
-	        });
+	        var result = exprCache[exp];
+	        if (!result) {
+	          result = exprCache[exp] = [];
+	          (exp + '').replace(rePropName, function (match, number, quote, string) {
+	            result.push(quote ? string.replace(reEscapeChar, '$1') : number || match);
+	          });
+	        }
 	        return {
 	          v: result
 	        };
@@ -586,7 +577,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return observers.get(obj);
 	  },
 	  hasListen: function hasListen(obj, attr, handler) {
-	    var observer = undefined,
+	    var observer = void 0,
 	        l = arguments.length;
 	
 	    obj = proxy.obj(obj);
@@ -601,7 +592,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return observer.hasListen(obj, attr, handler);
 	  },
 	  on: function on(obj, attr, handler) {
-	    var observer = undefined;
+	    var observer = void 0;
 	
 	    obj = proxy.obj(obj);
 	    observer = observers.get(obj);
@@ -617,7 +608,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return obj;
 	  },
 	  un: function un(obj, attr, handler) {
-	    var observer = undefined;
+	    var observer = void 0;
 	
 	    obj = proxy.obj(obj);
 	    observer = observers.get(obj);
@@ -643,11 +634,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	var OBJECT = __webpack_require__(7);
+	var _require = __webpack_require__(7);
 	
-	var _require = __webpack_require__(1);
+	var VBProxyFactory = _require.VBProxyFactory;
 	
-	var proxy = _require.proxy;
+	var _require2 = __webpack_require__(1);
+	
+	var proxy = _require2.proxy;
+	var proxyChange = _require2.proxyChange;
+	var proxyEnable = _require2.proxyEnable;
 	var _ = __webpack_require__(3);
 	
 	var arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
@@ -706,8 +701,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (!l) {
 	      for (var i in listens) {
 	        return true;
-	      }
+	      }return false;
 	    } else if (l == 1) {
+	      console.log(attr);
 	      if (typeof attr == 'function') {
 	        for (var k in listens) {
 	          if (_.indexOf.call(listens[k], attr) != -1) return true;
@@ -715,6 +711,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return false;
 	      } else return !!listens[attr];
 	    } else {
+	      console.log(attr, handler);
 	      if (typeof handler != 'function') {
 	        throw TypeError('Invalid Observe Handler');
 	      }
@@ -781,7 +778,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  Observer.prototype[name] = fn;
 	}
 	
-	if (Object.observe) {
+	function es7Observe() {
 	  applyProto('_init', function _init() {
 	    this._onObserveChanged = _.bind.call(this._onObserveChanged, this);
 	  });
@@ -794,7 +791,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	
 	  applyProto('_onObserveChanged', function _onObserveChanged(changes) {
-	    var c = undefined;
+	    var c = void 0;
 	    for (var i = 0, l = changes.length; i < l; i++) {
 	      c = changes[i];
 	      if (this.listens[c.name]) this._addChangeRecord(c.name, c.oldValue);
@@ -814,7 +811,44 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.es7observe = false;
 	    }
 	  });
-	} else {
+	}
+	
+	function es6Proxy() {
+	  applyProto('_init', function _init() {
+	    this._onObserveChanged = _.bind.call(this._onObserveChanged, this);
+	  });
+	
+	  applyProto('_destroy', function _destroy() {
+	    if (this.es7observe) {
+	      Object.unobserve(this.target, this._onObserveChanged);
+	      this.es7observe = undefined;
+	    }
+	  });
+	
+	  applyProto('_onObserveChanged', function _onObserveChanged(changes) {
+	    var c = void 0;
+	    for (var i = 0, l = changes.length; i < l; i++) {
+	      c = changes[i];
+	      if (this.listens[c.name]) this._addChangeRecord(c.name, c.oldValue);
+	    }
+	  });
+	
+	  applyProto('_watch', function _watch(attr) {
+	    if (!this.es7observe) {
+	      Object.observe(this.target, this._onObserveChanged);
+	      this.es7observe = true;
+	    }
+	  });
+	
+	  applyProto('_unwatch', function _unwatch(attr) {
+	    if (this.es7observe && !this.hasListen()) {
+	      Object.unobserve(this.target, this._onObserveChanged);
+	      this.es7observe = false;
+	    }
+	  });
+	}
+	
+	function es5DefineProperty() {
 	  applyProto('_init', function _init() {
 	    this.watchers = {};
 	  });
@@ -823,34 +857,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    for (var attr in this.watchers) {
 	      this._unwatch(attr);
 	    }
-	  });
-	
-	  applyProto('_defineProperty', function _defineProperty(attr, value) {
-	    var _this2 = this;
-	
-	    this.target = OBJECT.defineProperty(this.target, attr, {
-	      enumerable: true,
-	      configurable: true,
-	      get: function get() {
-	        return value;
-	      },
-	      set: function set(val) {
-	        if (value !== val) {
-	          var oldVal = value;
-	          value = val;
-	          _this2._addChangeRecord(attr, oldVal);
-	        }
-	      }
-	    });
-	  });
-	
-	  applyProto('_undefineProperty', function _undefineProperty(attr, value) {
-	    this.target = OBJECT.defineProperty(this.target, attr, {
-	      enumerable: true,
-	      configurable: true,
-	      writable: true,
-	      value: value
-	    });
 	  });
 	
 	  applyProto('_hockArrayLength', function _hockArrayLength(method) {
@@ -889,6 +895,139 @@ return /******/ (function(modules) { // webpackBootstrap
 	      delete this.watchers[attr];
 	    }
 	  });
+	
+	  function doesDefinePropertyWork(defineProperty, object) {
+	    try {
+	      var _ret = function () {
+	        var val = void 0;
+	        defineProperty(object, 'sentinel', {
+	          get: function get() {
+	            return val;
+	          },
+	          set: function set(value) {
+	            val = value;
+	          }
+	        });
+	        object.sentinel = 1;
+	        return {
+	          v: object.sentinel === val
+	        };
+	      }();
+	
+	      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+	    } catch (exception) {
+	      return false;
+	    }
+	  }
+	
+	  if (Object.defineProperty && doesDefinePropertyWork(Object.defineProperty, {})) {
+	    applyProto('_defineProperty', function _defineProperty(attr, value) {
+	      var _this2 = this;
+	
+	      this.target = Object.defineProperty(this.target, attr, {
+	        enumerable: true,
+	        configurable: true,
+	        get: function get() {
+	          return value;
+	        },
+	        set: function set(val) {
+	          if (value !== val) {
+	            var oldVal = value;
+	            value = val;
+	            _this2._addChangeRecord(attr, oldVal);
+	          }
+	        }
+	      });
+	    });
+	
+	    applyProto('_undefineProperty', function _undefineProperty(attr, value) {
+	      this.target = Object.defineProperty(this.target, attr, {
+	        enumerable: true,
+	        configurable: true,
+	        writable: true,
+	        value: value
+	      });
+	    });
+	  } else if ('__defineGetter__' in {}) {
+	    applyProto('_defineProperty', function _defineProperty(attr, value) {
+	      var _this3 = this;
+	
+	      this.target.__defineGetter__(attr, function () {
+	        return value;
+	      });
+	      this.target.__defineSetter__(attr, function (val) {
+	        if (value !== val) {
+	          var oldVal = value;
+	          value = val;
+	          _this3._addChangeRecord(attr, oldVal);
+	        }
+	      });
+	    });
+	
+	    applyProto('_undefineProperty', function _undefineProperty(attr, value) {
+	      this.target.__defineGetter__(attr, function () {
+	        return value;
+	      });
+	      this.target.__defineSetter__(attr, function (val) {
+	        value = val;
+	      });
+	    });
+	  } else if (VBProxyFactory.isSupport()) {
+	    (function () {
+	      var factory = Observer.VBProxyFactory = new VBProxyFactory(proxyChange);
+	      proxyEnable();
+	      proxy.obj = factory.obj;
+	      proxy.eq = factory.eq;
+	      proxy.proxy = factory.getVBProxy;
+	
+	      applyProto('_defineProperty', function _defineProperty(attr, value) {
+	        var _this4 = this;
+	
+	        var obj = factory.obj(this.target),
+	            desc = factory.getVBProxyDesc(obj);
+	
+	        if (!desc) {
+	          desc = factory.getVBProxyDesc(factory.createVBProxy(obj));
+	        }
+	        this.target = desc.defineProperty(attr, {
+	          get: function get() {
+	            return value;
+	          },
+	          set: function set(val) {
+	            if (value !== val) {
+	              var oldVal = value;
+	              value = val;
+	              _this4._addChangeRecord(attr, oldVal);
+	            }
+	          }
+	        });
+	      });
+	
+	      applyProto('_undefineProperty', function _undefineProperty(attr, value) {
+	        var obj = factory.obj(this.target),
+	            desc = factory.getVBProxyDesc(obj);
+	
+	        if (desc) {
+	          this.target = desc.defineProperty(attr, {
+	            value: value
+	          });
+	          if (!desc.hasAccessor()) {
+	            this.target = factory.freeVBProxy(obj);
+	          }
+	        }
+	      });
+	    })();
+	  } else {
+	    throw new Error('Not Supported.');
+	  }
+	}
+	
+	if (Object.observe) {
+	  es7Observe();
+	} else if (window.Proxy) {
+	  es6Proxy();
+	} else {
+	  es5DefineProperty();
 	}
 	module.exports = Observer;
 
@@ -898,418 +1037,233 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
-	
-	/**
-	 * 修复浏览器(IE 6,7,8)对Object.defineProperty的支持，使用VBProxy
-	 */
-	var _ = __webpack_require__(3);
-	
-	function doesDefinePropertyWork(OBJECT, object) {
-	  try {
-	    var _ret = function () {
-	      var val = undefined;
-	      OBJECT.defineProperty(object, 'sentinel', {
-	        get: function get() {
-	          return val;
-	        },
-	        set: function set(value) {
-	          val = value;
-	        }
-	      });
-	      object.sentinel = 1;
-	      return {
-	        v: object.sentinel === val
-	      };
-	    }();
-	
-	    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-	  } catch (exception) {
-	    return false;
-	  }
-	}
-	var OBJECT = Object;
-	if (!Object.defineProperty || !doesDefinePropertyWork(Object, {})) {
-	
-	  if ('__defineGetter__' in {}) {
-	    OBJECT = {
-	      defineProperty: function defineProperty(obj, prop, desc) {
-	        if ('value' in desc) {
-	          obj[prop] = desc.value;
-	        }
-	        if ('get' in desc) {
-	          obj.__defineGetter__(prop, desc.get);
-	        }
-	        if ('set' in desc) {
-	          obj.__defineSetter__(prop, desc.set);
-	        }
-	        return obj;
-	      },
-	      defineProperties: function defineProperties(obj, descs) {
-	        _.eachObj(descs, function (desc, prop) {
-	          obj = OBJECT.defineProperty(obj, prop, desc);
-	        });
-	        return obj;
-	      },
-	      getOwnPropertyDescriptor: function getOwnPropertyDescriptor(object, attr) {
-	        var get = object.__lookupGetter__(attr),
-	            set = object.__lookupSetter__(attr),
-	            desc = {
-	          writable: true,
-	          enumerable: true,
-	          configurable: true
-	        };
-	        if (get) {
-	          desc.get = get;
-	          desc.set = set;
-	        } else {
-	          desc.value = object[attr];
-	        }
-	        return desc;
-	      }
-	    };
-	  } else {
-	    if (__webpack_require__(8)) {
-	      OBJECT = {
-	        defineProperty: function defineProperty(object, prop, desc) {
-	          var proxy = undefined,
-	              proxyDesc = undefined,
-	              isAccessor = desc.get || desc.set;
-	
-	          if (VBProxy.isVBProxy(object)) {
-	            proxy = object;
-	            object = VBProxy.getVBProxyDesc(proxy).object;
-	          }
-	          if (!proxy && !isAccessor) {
-	            object[prop] = desc.value;
-	            return object;
-	          } else {
-	            if (!(prop in object)) object[prop] = undefined;
-	            proxy = VBProxy.createVBProxy(proxy || object);
-	            proxyDesc = VBProxy.getVBProxyDesc(proxy);
-	            proxyDesc.defineProperty(prop, desc);
-	            if (!proxyDesc.hasAccessor()) {
-	              proxy.__destory__();
-	              return object;
-	            }
-	            return proxy;
-	          }
-	        },
-	        defineProperties: function defineProperties(object, descs) {
-	          var proxy = undefined,
-	              proxyDesc = undefined,
-	              hasAccessor = undefined;
-	
-	          if (VBProxy.isVBProxy(object)) {
-	            proxy = object;
-	            object = VBProxy.getVBProxyDesc(proxy).object;
-	          }
-	          hasAccessor = _.eachObj(descs, function (desc, prop) {
-	            return !(desc.get && desc.set);
-	          }) === false;
-	
-	          if (!proxy && !hasAccessor) {
-	            _.eachObj(descs, function (desc, prop) {
-	              object[prop] = desc.value;
-	            });
-	            return object;
-	          } else {
-	            // fill non-props
-	            _.eachObj(descs, function (desc, prop) {
-	              if (!(prop in object)) object[prop] = undefined;
-	            });
-	            proxy = VBProxy.createVBProxy(proxy || object);
-	            proxyDesc = VBProxy.getVBProxyDesc(proxy);
-	            _.eachObj(descs, function (desc, prop) {
-	              proxyDesc.defineProperty(prop, desc);
-	            });
-	            if (!proxyDesc.hasAccessor()) {
-	              proxy.__destory__();
-	              return object;
-	            }
-	            return proxy;
-	          }
-	        },
-	        getOwnPropertyDescriptor: function getOwnPropertyDescriptor(object, attr) {
-	          var proxy = undefined,
-	              define = undefined;
-	          if (VBProxy.isSupport()) {
-	            proxy = VBProxy.getVBProxy(object);
-	            if (proxy) {
-	              if (!proxy.hasOwnProperty(attr)) {
-	                return undefined;
-	              }
-	              object = proxy.__proxy__.object;
-	              define = proxy.__proxy__.getPropertyDefine(attr);
-	            }
-	          }
-	          return define || {
-	            value: object[attr],
-	            writable: true,
-	            enumerable: true,
-	            configurable: true
-	          };
-	        }
-	      };
-	    }
-	  }
-	}
-	module.exports = OBJECT;
-
-/***/ },
-/* 8 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+	exports.__esModule = true;
+	exports.VBProxyFactory = VBProxyFactory;
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	/**
-	 * 使用VBScript对象代理js对象的get/set方法, 参考Avalon实现
-	 * @see  https://github.com/RubyLouvre/avalon/blob/master/src/08%20modelFactory.shim.js
-	 */
-	var _ = __webpack_require__(3);
+	var Map = __webpack_require__(2);
 	
-	var _require = __webpack_require__(1);
+	function VBProxyFactory(onProxyChange) {
+	  var OBJECT_PROTO_PROPS = [Map.HASH_BIND, 'hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
+	      ARRAY_PROTO_PROPS = OBJECT_PROTO_PROPS.concat(['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'indexOf', 'lastIndexOf', 'length', 'map', 'keys', 'join', 'pop', 'push', 'reverse', 'reverseRight', 'some', 'shift', 'slice', 'sort', 'splice', 'toSource', 'unshift']),
+	      OBJECT_PROTO_PROPS_MAP = {},
+	      ARRAY_PROTO_PROPS_MAP = {},
+	      DESC_BINDING = '__VB_PROXY__',
+	      CONST_BINDING = '__VB_CONST__',
+	      CONST_SCRIPT = ['\tPublic [', DESC_BINDING, ']\r\n', '\tPublic Default Function [', CONST_BINDING, '](desc)\r\n', '\t\tset [', DESC_BINDING, '] = desc\r\n', '\t\tSet [', CONST_BINDING, '] = Me\r\n', '\tEnd Function\r\n'].join(''),
+	      VBClassPool = {},
+	      ClassNameGenerator = 0,
+	      hasOwnProperty = Object.prototype.hasOwnProperty;
 	
-	var proxyChange = _require.proxyChange;
+	  for (var i = OBJECT_PROTO_PROPS.length - 1; i >= 0; i--) {
+	    OBJECT_PROTO_PROPS_MAP[OBJECT_PROTO_PROPS[i]] = true;
+	  }
+	  for (var _i = ARRAY_PROTO_PROPS.length - 1; _i >= 0; _i--) {
+	    ARRAY_PROTO_PROPS_MAP[ARRAY_PROTO_PROPS[_i]] = true;
+	  }
 	
+	  function generateVBClassName() {
+	    return 'VBClass' + ClassNameGenerator++;
+	  }
 	
-	function isSupported() {
-	  var support = false;
+	  function parseVBClassConstructorName(className) {
+	    return className + 'Constructor';
+	  }
+	
+	  function generateSetter(attr) {
+	    return ['\tPublic Property Get [', attr, ']\r\n', '\tOn Error Resume Next\r\n', '\t\tSet[', attr, '] = [', DESC_BINDING, '].get("', attr, '")\r\n', '\tIf Err.Number <> 0 Then\r\n', '\t\t[', attr, '] = [', DESC_BINDING, '].get("', attr, '")\r\n', '\tEnd If\r\n', '\tOn Error Goto 0\r\n', '\tEnd Property\r\n'];
+	  }
+	
+	  function generateGetter(attr) {
+	    return ['\tPublic Property Let [', attr, '](val)\r\n', '\t\tCall [', DESC_BINDING, '].set("', attr, '",val)\r\n', '\tEnd Property\r\n', '\tPublic Property Set [', attr, '](val)\r\n', '\t\tCall [', DESC_BINDING, '].set("', attr, '",val)\r\n', '\tEnd Property\r\n'];
+	  }
+	
+	  function generateVBClass(VBClassName, properties) {
+	    var buffer = void 0,
+	        i = void 0,
+	        l = void 0,
+	        attr = void 0,
+	        added = {};
+	
+	    buffer = ['Class ', VBClassName, '\r\n', CONST_SCRIPT, '\r\n'];
+	    for (i = 0, l = properties.length; i < l; i++) {
+	      attr = properties[i];
+	      buffer.push.apply(buffer, generateSetter(attr));
+	      buffer.push.apply(buffer, generateGetter(attr));
+	      added[attr] = true;
+	    }
+	    buffer.push('End Class\r\n');
+	    return buffer.join('');
+	  }
+	
+	  function generateVBClassConstructor(properties) {
+	    var key = [properties.length, '[', properties.join(','), ']'].join(''),
+	        VBClassConstructorName = VBClassPool[key];
+	
+	    if (VBClassConstructorName) return VBClassConstructorName;
+	
+	    var VBClassName = generateVBClassName();
+	    VBClassConstructorName = parseVBClassConstructorName(VBClassName);
+	    parseVB(generateVBClass(VBClassName, properties));
+	    parseVB(['Function ', VBClassConstructorName, '(desc)\r\n', '\tDim o\r\n', '\tSet o = (New ', VBClassName, ')(desc)\r\n', '\tSet ', VBClassConstructorName, ' = o\r\n', 'End Function'].join(''));
+	    VBClassPool[key] = VBClassConstructorName;
+	    return VBClassConstructorName;
+	  }
+	
+	  function _createVBProxy(object, desc) {
+	    var isArray = object instanceof Array,
+	        props = void 0,
+	        proxy = void 0;
+	
+	    if (isArray) {
+	      props = ARRAY_PROTO_PROPS.slice();
+	      for (var attr in object) {
+	        if (attr !== DESC_BINDING) if (!(attr in ARRAY_PROTO_PROPS_MAP)) props.push(attr);
+	      }
+	    } else {
+	      props = OBJECT_PROTO_PROPS.slice();
+	      for (var _attr in object) {
+	        if (_attr !== DESC_BINDING) if (!(_attr in OBJECT_PROTO_PROPS_MAP)) props.push(_attr);
+	      }
+	    }
+	    desc = desc || new ObjectDescriptor(object, props);
+	    proxy = window[generateVBClassConstructor(props)](desc);
+	    desc.proxy = proxy;
+	    onProxyChange(object, proxy);
+	    return proxy;
+	  }
+	
+	  var ObjectDescriptor = function () {
+	    function ObjectDescriptor(object, props) {
+	      _classCallCheck(this, ObjectDescriptor);
+	
+	      var defines = {};
+	      for (var _i2 = 0, l = props.length; _i2 < l; _i2++) {
+	        defines[_i2] = false;
+	      }
+	      this.object = object;
+	      this.defines = defines;
+	      object[DESC_BINDING] = this;
+	      this.accessorNR = 0;
+	    }
+	
+	    ObjectDescriptor.prototype.isAccessor = function isAccessor(desc) {
+	      return desc && (desc.get || desc.set);
+	    };
+	
+	    ObjectDescriptor.prototype.hasAccessor = function hasAccessor() {
+	      return !!this.accessorNR;
+	    };
+	
+	    ObjectDescriptor.prototype.defineProperty = function defineProperty(attr, desc) {
+	      if (!(attr in this.defines)) {
+	        if (!(attr in this.object)) this.object[attr] = undefined;
+	        _createVBProxy(this.object, this);
+	      }
+	      if (!this.isAccessor(desc)) {
+	        if (this.defines[attr]) {
+	          this.defines[attr] = false;
+	          this.accessorNR--;
+	        }
+	        this.object[attr] = desc.value;
+	      } else {
+	        this.accessorNR++;
+	        this.defines[attr] = desc;
+	        if (desc.get) this.object[attr] = desc.get();
+	      }
+	      return this.proxy;
+	    };
+	
+	    ObjectDescriptor.prototype.getPropertyDefine = function getPropertyDefine(attr) {
+	      return this.defines[attr] || undefined;
+	    };
+	
+	    ObjectDescriptor.prototype.get = function get(attr) {
+	      var define = this.defines[attr];
+	      if (define && define.get) {
+	        return define.get.call(this.proxy);
+	      } else {
+	        return this.object[attr];
+	      }
+	    };
+	
+	    ObjectDescriptor.prototype.set = function set(attr, value) {
+	      var define = this.defines[attr];
+	      if (define && define.set) {
+	        define.set.call(this.proxy, value);
+	      }
+	      this.object[attr] = value;
+	    };
+	
+	    ObjectDescriptor.prototype.destroy = function destroy() {
+	      this.defines = {};
+	    };
+	
+	    return ObjectDescriptor;
+	  }();
+	
+	  var api = {
+	    eq: function eq(obj1, obj2) {
+	      var desc1 = obj1[DESC_BINDING],
+	          desc2 = obj2[DESC_BINDING];
+	      if (desc1) obj1 = desc1.object;
+	      if (desc2) obj2 = desc2.object;
+	      return obj1 === obj2;
+	    },
+	    obj: function obj(object) {
+	      var desc = object[DESC_BINDING];
+	      return desc ? desc.object : object;
+	    },
+	    isVBProxy: function isVBProxy(object) {
+	      return CONST_BINDING in object;
+	    },
+	    getVBProxy: function getVBProxy(object) {
+	      var desc = object[DESC_BINDING];
+	      return desc ? desc.proxy : undefined;
+	    },
+	    getVBProxyDesc: function getVBProxyDesc(object) {
+	      return object[DESC_BINDING];
+	    },
+	    createVBProxy: function createVBProxy(object) {
+	      var desc = object[DESC_BINDING];
+	
+	      if (desc) {
+	        object = desc.object;
+	      }
+	      return _createVBProxy(object, desc);
+	    },
+	    freeVBProxy: function freeVBProxy(object) {
+	      var desc = object[DESC_BINDING];
+	      if (desc) {
+	        object = desc.object;
+	        desc.destroy();
+	        object[DESC_BINDING] = undefined;
+	        onProxyChange(object, undefined);
+	      }
+	      return object;
+	    }
+	  };
+	  return api;
+	}
+	
+	var supported = undefined;
+	VBProxyFactory.isSupport = function isSupport() {
+	  if (supported !== undefined) return supported;
+	  supported = false;
 	  if (window.VBArray) {
 	    try {
-	      window.execScript([// jshint ignore:line
-	      'Function parseVB(code)', '\tExecuteGlobal(code)', 'End Function' //转换一段文本为VB代码
-	      ].join('\n'), 'VBScript');
-	      support = true;
+	      window.execScript(['Function parseVB(code)', '\tExecuteGlobal(code)', 'End Function'].join('\n'), 'VBScript');
+	      supported = true;
 	    } catch (e) {
 	      console.error(e.message, e);
 	    }
 	  }
-	  return support;
-	}
-	
-	if (isSupported()) {
-	  (function () {
-	    var genClassName = function genClassName() {
-	      return 'VBClass' + classId++;
-	    };
-	
-	    var parseVBClassFactoryName = function parseVBClassFactoryName(className) {
-	      return className + 'Factory';
-	    };
-	
-	    var genVBClassPropertyGetterScript = function genVBClassPropertyGetterScript(name) {
-	      return ['\tPublic Property Get [', name, ']\r\n', '\tOn Error Resume Next\r\n', //必须优先使用set语句,否则它会误将数组当字符串返回
-	      '\t\tSet[', name, '] = [', DESC_BINDING, '].get(Me, "', name, '")\r\n', '\tIf Err.Number <> 0 Then\r\n', '\t\t[', name, '] = [', DESC_BINDING, '].get(Me, "', name, '")\r\n', '\tEnd If\r\n', '\tOn Error Goto 0\r\n', '\tEnd Property\r\n'];
-	    };
-	
-	    var genVBClassPropertySetterScript = function genVBClassPropertySetterScript(name) {
-	      return ['\tPublic Property Let [', name, '](val)\r\n', '\t\tCall [', DESC_BINDING, '].set(Me, "', name, '",val)\r\n', '\tEnd Property\r\n', '\tPublic Property Set [', name, '](val)\r\n', //setter
-	      '\t\tCall [', DESC_BINDING, '].set(Me, "', name, '",val)\r\n', '\tEnd Property\r\n'];
-	    };
-	
-	    var genVBClassScript = function genVBClassScript(className, properties, accessors) {
-	      var buffer = [],
-	          i = undefined,
-	          l = undefined,
-	          name = undefined,
-	          added = [];
-	
-	      buffer.push('Class ', className, '\r\n', CONST_SCRIPT, '\r\n');
-	
-	      //添加访问器属性
-	      for (i = 0, l = accessors.length; i < l; i++) {
-	        name = accessors[i];
-	        buffer.push.apply(buffer, genVBClassPropertySetterScript(name));
-	        buffer.push.apply(buffer, genVBClassPropertyGetterScript(name));
-	        added.push(name);
-	      }
-	
-	      //添加普通属性,因为VBScript对象不能像JS那样随意增删属性，必须在这里预先定义好
-	      for (i = 0, l = properties.length; i < l; i++) {
-	        name = properties[i];
-	        if (_.indexOf.call(added, name) == -1) buffer.push('\tPublic [', name, ']\r\n');
-	      }
-	      buffer.push('End Class\r\n');
-	      return buffer.join('');
-	    };
-	
-	    var genVBClass = function genVBClass(properties, accessors) {
-	      var buffer = [],
-	          className = undefined,
-	          factoryName = undefined,
-	          key = '[' + properties.join(',') + ']&&[' + accessors.join(',') + ']';
-	      className = VBClassPool[key];
-	      if (className) {
-	        return parseVBClassFactoryName(className);
-	      } else {
-	        className = genClassName();
-	        factoryName = parseVBClassFactoryName(className);
-	        window.parseVB(genVBClassScript(className, properties, accessors));
-	        window.parseVB(['Function ' + factoryName + '(desc)', //创建实例并传入两个关键的参数
-	        '\tDim o', '\tSet o = (New ' + className + ')(desc)', '\tSet ' + factoryName + ' = o', 'End Function'].join('\r\n'));
-	        VBClassPool[key] = className;
-	        return factoryName;
-	      }
-	    };
-	
-	    var _createVBProxy = function _createVBProxy(object, desc) {
-	      var accessors = [],
-	          props = ['__hash__', '__destory__'],
-	          i = undefined,
-	          l = undefined,
-	          bind = undefined;
-	      desc = desc || new ObjectDescriptor(object);
-	      for (name in object) {
-	        accessors.push(name);
-	      }
-	
-	      props = props.concat(OBJECT_PROTO_PROPS);
-	      if (Object.prototype.toString.call(object) === '[object Array]') {
-	        props = props.concat(ARRAY_PROTO_PROPS);
-	      }
-	
-	      proxy = window[genVBClass(props, accessors)](desc);
-	
-	      proxy['hasOwnProperty'] = function hasOwnProperty(attr) {
-	        return attr !== DESC_BINDING && attr !== CONST_BINDING && _.indexOf.call(props, attr) == -1;
-	      };
-	      proxy.__destory__ = function () {
-	        if (VBProxyLoop.get(object) === proxy) {
-	          VBProxyLoop['delete'](object);
-	          proxyChange(object, object);
-	        }
-	      };
-	      for (i = 0, l = props.length; i < l; i++) {
-	        name = props[i];
-	        if (typeof proxy[name] === 'undefined') {
-	          bind = object[name];
-	          if (typeof bind === 'function') {
-	            bind = _.bind.call(bind, object);
-	          }
-	          proxy[name] = bind;
-	        }
-	      }
-	      return proxy;
-	    };
-	
-	    var Map = __webpack_require__(2);
-	
-	    var OBJECT_PROTO_PROPS = ['hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
-	        ARRAY_PROTO_PROPS = ['concat', 'copyWithin', 'entries', 'every', 'fill', 'filter', 'find', 'findIndex', 'forEach', 'indexOf', 'lastIndexOf', 'length', 'map', 'keys', 'join', 'pop', 'push', 'reverse', 'reverseRight', 'some', 'shift', 'slice', 'sort', 'splice', 'toSource', 'unshift'],
-	        DESC_BINDING = '__PROXY__',
-	        CONST_BINDING = '__VB_CONST__',
-	        CONST_SCRIPT = ['\tPublic [' + DESC_BINDING + ']', '\tPublic Default Function [' + CONST_BINDING + '](desc)', '\t\tset [' + DESC_BINDING + '] = desc', '\t\tSet [' + CONST_BINDING + '] = Me', '\tEnd Function\r\n'].join('\r\n'),
-	        VBClassPool = {},
-	        VBProxyLoop = new Map(),
-	        classId = 0;
-	
-	    var ObjectDescriptor = function () {
-	      function ObjectDescriptor(object, defines) {
-	        _classCallCheck(this, ObjectDescriptor);
-	
-	        this.object = object;
-	        this.defines = defines || {};
-	      }
-	
-	      ObjectDescriptor.prototype.isAccessor = function isAccessor(desc) {
-	        return desc.get || desc.set;
-	      };
-	
-	      ObjectDescriptor.prototype.hasAccessor = function hasAccessor() {
-	        for (var attr in this.defines) {
-	          if (this.isAccessor(this.defines[attr])) {
-	            return true;
-	          }
-	        }
-	        return false;
-	      };
-	
-	      ObjectDescriptor.prototype.defineProperty = function defineProperty(attr, desc) {
-	        if (!this.isAccessor(desc)) {
-	          delete this.defines[attr];
-	        } else {
-	          this.defines[attr] = desc;
-	          if (desc.get) {
-	            this.object[attr] = desc.get();
-	          }
-	        }
-	      };
-	
-	      ObjectDescriptor.prototype.getPropertyDefine = function getPropertyDefine(attr) {
-	        return this.defines[attr];
-	      };
-	
-	      ObjectDescriptor.prototype.get = function get(instance, attr) {
-	        var define = this.defines[attr];
-	        if (define && define.get) {
-	          return define.get.call(instance);
-	        } else {
-	          return this.object[attr];
-	        }
-	      };
-	
-	      ObjectDescriptor.prototype.set = function set(instance, attr, value) {
-	        var define = this.defines[attr];
-	        if (define && define.set) {
-	          define.set.call(instance, value);
-	        }
-	        this.object[attr] = value;
-	      };
-	
-	      return ObjectDescriptor;
-	    }();
-	
-	    var VBProxy = {
-	      isVBProxy: function isVBProxy(object) {
-	        return object && (typeof object === 'undefined' ? 'undefined' : _typeof(object)) == 'object' && CONST_BINDING in object;
-	      },
-	      getVBProxy: function getVBProxy(object, justInPool) {
-	        if (VBProxy.isVBProxy(object)) {
-	          if (justInPool === false) {
-	            return VBProxyLoop.get(object[DESC_BINDING].object) || object;
-	          }
-	          object = object[DESC_BINDING].object;
-	        }
-	        return VBProxyLoop.get(object);
-	      },
-	      getVBProxyDesc: function getVBProxyDesc(object) {
-	        var proxy = VBProxy.isVBProxy(object) ? object : VBProxyLoop.get(object);
-	        return proxy ? proxy[DESC_BINDING] : undefined;
-	      },
-	      createVBProxy: function createVBProxy(object) {
-	        var proxy = VBProxy.getVBProxy(object, false),
-	            rebuild = false,
-	            name = undefined,
-	            desc = undefined;
-	        if (proxy) {
-	          object = proxy[DESC_BINDING].object;
-	          rebuild = _.eachObj(object, function (v, name) {
-	            return proxy.hasOwnProperty(name);
-	          }) === false;
-	          if (!rebuild) {
-	            return proxy;
-	          }
-	          desc = proxy[DESC_BINDING];
-	        }
-	        proxy = _createVBProxy(object, desc);
-	        VBProxyLoop.set(object, proxy);
-	        proxyChange(object, proxy);
-	        return proxy;
-	      }
-	    };
-	    window.VBProxy = VBProxy;
-	  })();
-	}
-	
-	module.exports = window.VBProxy;
+	  return supported;
+	};
 
 /***/ },
-/* 9 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1354,7 +1308,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = Exp._parseExpr(expression);
 	
 	    if (path.length > 1) {
-	      var exp = undefined;
+	      var exp = void 0;
 	
 	      obj = proxy.obj(obj);
 	      exp = factory._get(obj, expression);
@@ -1372,7 +1326,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = Exp._parseExpr(expression);
 	
 	    if (path.length > 1) {
-	      var exp = undefined;
+	      var exp = void 0;
 	
 	      obj = proxy.obj(obj);
 	      exp = factory._get(obj, expression);

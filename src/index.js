@@ -1,7 +1,6 @@
 const {proxy} = require('./proxyEvent'),
   Exp = require('./exp'),
-  exp = require('./expFactory'),
-  OBJECT = require('./defineProperty');
+  exp = require('./expFactory');
 
 window.observer = {
   on: exp.on,
@@ -10,9 +9,6 @@ window.observer = {
   obj: proxy.obj,
   eq: proxy.eq,
   proxy: proxy,
-  getVal: Exp.get,
-  defineProperty: OBJECT.defineProperty,
-  defineProperties: OBJECT.defineProperties,
-  getOwnPropertyDescriptor: OBJECT.getOwnPropertyDescriptor
+  getVal: Exp.get
 }
 module.exports = window.observer;

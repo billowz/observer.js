@@ -10,15 +10,20 @@ function baseToString(val) {
   return (val === undefined || val === null) ? '' : (val + '');
 }
 
+let exprCache = {};
+
 class Expression {
   static _parseExpr(exp) {
     if (exp instanceof Array) {
       return exp;
     } else {
-      let result = [];
-      (exp + '').replace(rePropName, function(match, number, quote, string) {
-        result.push(quote ? string.replace(reEscapeChar, '$1') : (number || match));
-      });
+      let result = exprCache[exp];
+      if (!result) {
+        result = exprCache[exp] = [];
+        (exp + '').replace(rePropName, function(match, number, quote, string) {
+          result.push(quote ? string.replace(reEscapeChar, '$1') : (number || match));
+        });
+      }
       return result;
     }
   }

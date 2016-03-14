@@ -16,7 +16,7 @@ var fs = require('fs'),
     moduleDirectories: ['node_modules']
   },
   devserver = {
-    host: 'localhost',
+    host: '0.0.0.0',
     port: 8089
   };
 

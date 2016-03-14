@@ -44,8 +44,9 @@ let util = {
   cancelAnimationFrame: cancelAnimationFrame,
 
   eachObj(obj, callback) {
+    let hasOwn = Object.prototype.hasOwnProperty;
     for (let i in obj) {
-      if (obj.hasOwnProperty(i)) {
+      if (hasOwn.call(obj, i)) {
         if (callback(obj[i], i) === false)
           return false;
       }

@@ -4,44 +4,25 @@ const Map = require('./map'),
 let proxyEvents = new Map();
 
 export let proxy = {
-
-  isEnable() {
-    return window.VBProxy;
-  },
-
   eq(obj1, obj2) {
-    if (window.VBProxy) {
-      let desc1 = window.VBProxy.getVBProxyDesc(obj1),
-        desc2 = window.VBProxy.getVBProxyDesc(obj2);
-      if (desc1)
-        obj1 = desc1.object;
-      if (desc2)
-        obj2 = desc2.object;
-    }
     return obj1 === obj2;
   },
 
   obj(obj) {
-    if (window.VBProxy) {
-      let desc = window.VBProxy.getVBProxyDesc(obj);
-      return desc ? desc.object : obj;
-    }
     return obj;
   },
 
   proxy(obj) {
-    if (window.VBProxy) {
-      return window.VBProxy.getVBProxy(obj) || obj;
-    }
     return obj;
   },
 
-  on(obj, handler) {
+  on() {},
+
+  un() {},
+
+  _on(obj, handler) {
     let handlers;
 
-    if (!window.VBProxy) {
-      return;
-    }
     if (typeof handler !== 'function') {
       throw TypeError('Invalid Proxy Event Handler');
     }
@@ -54,12 +35,9 @@ export let proxy = {
     handlers.push(handler);
   },
 
-  un(obj, handler) {
+  _un(obj, handler) {
     let handlers;
 
-    if (!window.VBProxy) {
-      return;
-    }
     obj = proxy.obj(obj);
     handlers = proxyEvents.get(obj);
     if (handlers) {
@@ -75,6 +53,11 @@ export let proxy = {
       }
     }
   }
+}
+
+export function proxyEnable() {
+  proxy.on = proxy._on;
+  proxy.un = proxy._un;
 }
 
 export function proxyChange(obj, proxy) {
