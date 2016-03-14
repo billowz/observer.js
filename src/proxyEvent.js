@@ -61,7 +61,7 @@ export function proxyEnable() {
 }
 
 export function proxyChange(obj, proxy) {
-  handlers = proxyEvents.get(obj);
+  let handlers = proxyEvents.get(obj);
   if (handlers) {
     for (let i = handlers.length - 1; i >= 0; i--) {
       handlers[i](obj, proxy);

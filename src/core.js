@@ -15,6 +15,7 @@ class Observer {
       throw TypeError('can not observe object[' + (typeof target) + ']');
     }
     this.target = target;
+    this.obj = target;
     this.listens = {};
     this.changeRecords = {};
     this._notify = _.bind.call(this._notify, this);
@@ -22,6 +23,8 @@ class Observer {
   }
 
   _fire(attr, val, oldVal) {
+    if (proxy.eq(val, oldVal))
+      return;
     let handlers = this.listens[attr].slice();
 
     for (let i = 0, l = handlers.length; i < l; i++) {
@@ -31,10 +34,7 @@ class Observer {
 
   _notify() {
     _.eachObj(this.changeRecords, (oldVal, attr) => {
-      let val = this.target[attr];
-      if (!proxy.eq(val, oldVal)) {
-        this._fire(attr, val, oldVal);
-      }
+      this._fire(attr, this.obj[attr], oldVal);
     });
     this.request_frame = undefined;
     this.changeRecords = {};
@@ -43,7 +43,7 @@ class Observer {
 
   _addChangeRecord(attr, oldVal) {
     if (!Observer.lazy) {
-      this._fire(attr, this.target[attr], oldVal);
+      this._fire(attr, this.obj[attr], oldVal);
     } else if (!(attr in this.changeRecords)) {
       this.changeRecords[attr] = oldVal;
       if (!this.request_frame)
@@ -139,12 +139,13 @@ function applyProto(name, fn) {
 function es7Observe() {
   applyProto('_init', function _init() {
     this._onObserveChanged = _.bind.call(this._onObserveChanged, this);
+    this.es7observe = false;
   });
 
   applyProto('_destroy', function _destroy() {
     if (this.es7observe) {
       Object.unobserve(this.target, this._onObserveChanged);
-      this.es7observe = undefined;
+      this.es7observe = false;
     }
   });
 
@@ -173,37 +174,103 @@ function es7Observe() {
 }
 
 function es6Proxy() {
+  let objProxyLoop = new Map(),
+    proxyObjLoop = new Map();
+
+  proxyEnable();
+
+  proxy.obj = function(proxy) {
+    return proxyObjLoop.get(proxy) || proxy;
+  };
+
+  proxy.eq = function(obj1, obj2) {
+    return proxy.obj(obj1) === proxy.obj(obj2);
+  };
+
+  proxy.proxy = function(obj) {
+    return objProxyLoop.get(obj);
+  };
+
   applyProto('_init', function _init() {
-    this._onObserveChanged = _.bind.call(this._onObserveChanged, this);
+    this.obj = proxy.obj(this.target);
+    this.es6proxy = false;
+    this.watchLen = false;
   });
 
   applyProto('_destroy', function _destroy() {
-    if (this.es7observe) {
-      Object.unobserve(this.target, this._onObserveChanged);
-      this.es7observe = undefined;
+    if (this.watchLen) {
+      for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
+        delete this.obj[arrayHockMethods[i]];
+      }
+      this.watchLen = false;
     }
+    if (this.es6proxy) {
+      proxyObjLoop['delete'](this.target);
+      objProxyLoop['delete'](this.obj);
+      proxyChange(this.obj, undefined);
+      this.es6proxy = false;
+    }
+    this.obj = undefined;
   });
 
-  applyProto('_onObserveChanged', function _onObserveChanged(changes) {
-    let c;
-    for (let i = 0, l = changes.length; i < l; i++) {
-      c = changes[i];
-      if (this.listens[c.name])
-        this._addChangeRecord(c.name, c.oldValue);
+  applyProto('_hockArrayLength', function _hockArrayLength(method) {
+    let self = this;
+
+    this.obj[method] = function() {
+      let len = this.length;
+
+      Array.prototype[method].apply(this, arguments);
+      if (self.obj.length != len)
+        self._addChangeRecord('length', len);
     }
   });
 
   applyProto('_watch', function _watch(attr) {
-    if (!this.es7observe) {
-      Object.observe(this.target, this._onObserveChanged);
-      this.es7observe = true;
+    if (this.isArray && attr === 'length') {
+      if (!this.watchLen) {
+        this.watchLen = true;
+        for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
+          this._hockArrayLength(arrayHockMethods[i]);
+        }
+      }
+    } else if (!this.es6proxy) {
+      let proxy = this.target = new Proxy(this.obj, {
+        set: (obj, prop, value) => {
+          this.isArray && attr === 'length'
+          if (!(this.isArray && attr === 'length')
+            && this.listens[prop]) {
+
+            let oldVal = obj[prop];
+            obj[prop] = value;
+            if (value !== oldVal)
+              this._addChangeRecord(prop, oldVal);
+          } else
+            obj[prop] = value;
+          return true;
+        }
+      });
+      proxyObjLoop.set(proxy, this.obj);
+      objProxyLoop.set(this.obj, proxy);
+      proxyChange(this.obj, proxy);
+      this.es6proxy = true;
     }
   });
 
   applyProto('_unwatch', function _unwatch(attr) {
-    if (this.es7observe && !this.hasListen()) {
-      Object.unobserve(this.target, this._onObserveChanged);
-      this.es7observe = false;
+    if (this.isArray && attr === 'length') {
+      if (this.watchLen) {
+        for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
+          delete this.obj[arrayHockMethods[i]];
+        }
+        this.watchLen = false;
+      }
+    }
+    if (this.es6proxy && !this.hasListen()) {
+      proxyObjLoop['delete'](this.target);
+      objProxyLoop['delete'](this.obj);
+      this.target = this.obj;
+      proxyChange(this.obj, undefined);
+      this.es6proxy = false;
     }
   });
 }
@@ -217,6 +284,7 @@ function es5DefineProperty() {
     for (let attr in this.watchers) {
       this._unwatch(attr);
     }
+    this.watchers = undefined;
   });
 
   applyProto('_hockArrayLength', function _hockArrayLength(method) {
@@ -284,11 +352,9 @@ function es5DefineProperty() {
           return value;
         },
         set: (val) => {
-          if (value !== val) {
-            let oldVal = value;
-            value = val;
-            this._addChangeRecord(attr, oldVal);
-          }
+          let oldVal = value;
+          value = val;
+          this._addChangeRecord(attr, oldVal);
         }
       });
     });
@@ -307,11 +373,9 @@ function es5DefineProperty() {
         return value;
       });
       this.target.__defineSetter__(attr, (val) => {
-        if (value !== val) {
-          let oldVal = value;
-          value = val;
-          this._addChangeRecord(attr, oldVal);
-        }
+        let oldVal = value;
+        value = val;
+        this._addChangeRecord(attr, oldVal);
       });
     });
 
@@ -330,29 +394,39 @@ function es5DefineProperty() {
     proxy.eq = factory.eq;
     proxy.proxy = factory.getVBProxy;
 
+    applyProto('_init', function _init() {
+      this.watchers = {};
+      this.obj = factory.obj(this.target);
+    });
+
+    applyProto('_destroy', function _destroy() {
+      for (let attr in this.watchers) {
+        this._unwatch(attr);
+      }
+      this.watchers = undefined;
+      this.obj = undefined;
+    });
+
     applyProto('_defineProperty', function _defineProperty(attr, value) {
-      let obj = factory.obj(this.target),
+      let obj = this.obj,
         desc = factory.getVBProxyDesc(obj);
 
-      if (!desc) {
+      if (!desc)
         desc = factory.getVBProxyDesc(factory.createVBProxy(obj))
-      }
       this.target = desc.defineProperty(attr, {
         get: () => {
           return value;
         },
         set: (val) => {
-          if (value !== val) {
-            let oldVal = value;
-            value = val;
-            this._addChangeRecord(attr, oldVal);
-          }
+          let oldVal = value;
+          value = val;
+          this._addChangeRecord(attr, oldVal);
         }
       });
     });
 
     applyProto('_undefineProperty', function _undefineProperty(attr, value) {
-      let obj = factory.obj(this.target),
+      let obj = this.obj,
         desc = factory.getVBProxyDesc(obj);
 
       if (desc) {
@@ -371,7 +445,7 @@ function es5DefineProperty() {
 }
 
 if (Object.observe) {
-  es7Observe();
+  es6Proxy();
 } else if (window.Proxy) {
   es6Proxy();
 } else {

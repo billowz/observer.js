@@ -44,12 +44,7 @@ let factory = {
       observer = new Observer(obj);
       factory._bind(obj, observer);
     }
-    obj = observer.on(attr, handler);
-    if (!observer.hasListen()) {
-      factory._unbind(obj, observer);
-      observer.destroy();
-    }
-    return obj;
+    return observer.on(attr, handler);
   },
 
   un(obj, attr, handler) {

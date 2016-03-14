@@ -93,7 +93,7 @@ let factory = {
     }
     let path = Exp._parseExpr(expression);
     if (path.length > 1) {
-      let exp = factory._get(obj, expression);
+      let exp = factory._get(proxy.obj(obj), expression);
       if (exp)
         return l == 2 ? true : exp.hasListen(handler);
       return false;
