@@ -2,44 +2,7 @@ const observer = require('./factory'),
   {proxy} = require('./proxyEvent'),
   _ = require('./util');
 
-const reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
-  reIsPlainProp = /^\w*$/,
-  rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
-
-function baseToString(val) {
-  return (val === undefined || val === null) ? '' : (val + '');
-}
-
-let exprCache = {};
-
 class Expression {
-  static _parseExpr(exp) {
-    if (exp instanceof Array) {
-      return exp;
-    } else {
-      let result = exprCache[exp];
-      if (!result) {
-        result = exprCache[exp] = [];
-        (exp + '').replace(rePropName, function(match, number, quote, string) {
-          result.push(quote ? string.replace(reEscapeChar, '$1') : (number || match));
-        });
-      }
-      return result;
-    }
-  }
-
-  static get(object, path, defaultValue) {
-    if (object) {
-      path = Expression._parseExpr(path);
-      var index = 0;
-
-      while (object && index < path.length) {
-        object = object[path[index++]];
-      }
-      return (index == path.length) ? object : undefined;
-    }
-    return defaultValue;
-  }
 
   constructor(target, expression, path) {
     if (!target || !(target instanceof Array || typeof target == 'object')) {
@@ -47,7 +10,7 @@ class Expression {
     }
     this.expression = expression;
     this.handlers = [];
-    this.path = path || Expression._parseExpr(expression);
+    this.path = path || _.parseExpr(expression);
     this.observers = [];
     this.observeHandlers = this._initObserveHandlers();
     this.target = this._observe(target, 0);
@@ -97,8 +60,8 @@ class Expression {
       if (ridx) {
         this._unobserve(oldVal, idx + 1);
         this._observe(val, idx + 1);
-        oldVal = Expression.get(oldVal, rpath);
-        val = Expression.get(val, rpath);
+        oldVal = _.get(oldVal, rpath);
+        val = _.get(val, rpath);
         if (proxy.eq(val, oldVal))
           return;
       }

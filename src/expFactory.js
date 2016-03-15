@@ -35,7 +35,7 @@ let factory = {
   },
 
   on(obj, expression, handler) {
-    let path = Exp._parseExpr(expression);
+    let path = _.parseExpr(expression);
 
     if (path.length > 1) {
       let exp;
@@ -54,7 +54,7 @@ let factory = {
   },
 
   un(obj, expression, handler) {
-    let path = Exp._parseExpr(expression);
+    let path = _.parseExpr(expression);
 
     if (path.length > 1) {
       let exp;
@@ -91,7 +91,7 @@ let factory = {
         return observer.hasListen(obj, expression);
       }
     }
-    let path = Exp._parseExpr(expression);
+    let path = _.parseExpr(expression);
     if (path.length > 1) {
       let exp = factory._get(proxy.obj(obj), expression);
       if (exp)

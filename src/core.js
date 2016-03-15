@@ -33,9 +33,10 @@ class Observer {
   }
 
   _notify() {
-    _.eachObj(this.changeRecords, (oldVal, attr) => {
-      this._fire(attr, this.obj[attr], oldVal);
-    });
+    let changeRecords = this.changeRecords;
+    for (let attr in changeRecords) {
+      this._fire(attr, this.obj[attr], changeRecords[attr]);
+    }
     this.request_frame = undefined;
     this.changeRecords = {};
   }
@@ -124,6 +125,7 @@ class Observer {
       this.request_frame = undefined;
     }
     this._destroy();
+    this.obj = undefined;
     this.target = undefined;
     this.listens = undefined;
     this.changeRecords = undefined;
@@ -290,11 +292,11 @@ function es5DefineProperty() {
   applyProto('_hockArrayLength', function _hockArrayLength(method) {
     let self = this;
 
-    this.target[method] = function() {
+    this.obj[method] = function() {
       let len = this.length;
 
       Array.prototype[method].apply(this, arguments);
-      if (self.target.length != len)
+      if (self.obj.length != len)
         self._addChangeRecord('length', len);
     }
   });
@@ -306,7 +308,7 @@ function es5DefineProperty() {
           this._hockArrayLength(arrayHockMethods[i]);
         }
       } else {
-        this._defineProperty(attr, this.target[attr]);
+        this._defineProperty(attr, this.obj[attr]);
       }
       this.watchers[attr] = true;
     }
@@ -316,10 +318,10 @@ function es5DefineProperty() {
     if (this.watchers[attr]) {
       if (this.isArray && attr === 'length') {
         for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
-          delete this.target[arrayHockMethods[i]];
+          delete this.obj[arrayHockMethods[i]];
         }
       } else {
-        this._undefineProperty(attr, this.target[attr]);
+        this._undefineProperty(attr, this.obj[attr]);
       }
       delete this.watchers[attr];
     }
@@ -345,7 +347,7 @@ function es5DefineProperty() {
 
   if (Object.defineProperty && doesDefinePropertyWork(Object.defineProperty, {})) {
     applyProto('_defineProperty', function _defineProperty(attr, value) {
-      this.target = Object.defineProperty(this.target, attr, {
+      Object.defineProperty(this.target, attr, {
         enumerable: true,
         configurable: true,
         get: () => {
@@ -360,7 +362,7 @@ function es5DefineProperty() {
     });
 
     applyProto('_undefineProperty', function _undefineProperty(attr, value) {
-      this.target = Object.defineProperty(this.target, attr, {
+      Object.defineProperty(this.target, attr, {
         enumerable: true,
         configurable: true,
         writable: true,
@@ -445,7 +447,7 @@ function es5DefineProperty() {
 }
 
 if (Object.observe) {
-  es6Proxy();
+  es7Observe();
 } else if (window.Proxy) {
   es6Proxy();
 } else {

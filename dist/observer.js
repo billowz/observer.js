@@ -69,7 +69,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  obj: proxy.obj,
 	  eq: proxy.eq,
 	  proxy: proxy,
-	  getVal: Exp.get
+	  util: __webpack_require__(3),
+	  Map: __webpack_require__(2),
+	  VBProxyFactory: __webpack_require__(6).VBProxyFactory
 	};
 	module.exports = window.observer;
 
@@ -299,7 +301,9 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports) {
 
-	"use strict";
+	'use strict';
+	
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 	
 	var lastTime = void 0,
 	    requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame,
@@ -333,20 +337,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	}
 	
+	var propNameReg = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g,
+	    escapeCharReg = /\\(\\)?/g;
+	
+	var exprCache = {};
+	
+	function parseExpr(exp) {
+	  if (exp instanceof Array) {
+	    return exp;
+	  } else {
+	    var _ret = function () {
+	      var result = exprCache[exp];
+	      if (!result) {
+	        result = exprCache[exp] = [];
+	        (exp + '').replace(propNameReg, function (match, number, quote, string) {
+	          result.push(quote ? string.replace(escapeCharReg, '$1') : number || match);
+	        });
+	      }
+	      return {
+	        v: result
+	      };
+	    }();
+	
+	    if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+	  }
+	}
+	
 	var util = {
 	  requestAnimationFrame: requestAnimationFrame,
 	
 	  cancelAnimationFrame: cancelAnimationFrame,
-	
-	  eachObj: function eachObj(obj, callback) {
-	    var hasOwn = Object.prototype.hasOwnProperty;
-	    for (var i in obj) {
-	      if (hasOwn.call(obj, i)) {
-	        if (callback(obj[i], i) === false) return false;
-	      }
-	    }
-	  },
-	
 	
 	  bind: bind,
 	
@@ -357,8 +377,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	    }
 	    return -1;
-	  }
+	  },
 	
+	  parseExpr: parseExpr,
+	
+	  get: function get(object, path, defaultValue) {
+	    if (object) {
+	      path = parseExpr(path);
+	      var index = 0,
+	          l = path.length;
+	
+	      while (object && index < l) {
+	        object = object[path[index++]];
+	      }
+	      return index == l ? object : defaultValue;
+	    }
+	    return defaultValue;
+	  },
+	  has: function has(object, path) {
+	    if (object) {
+	      path = parseExpr(path);
+	      var index = 0,
+	          l = path.length - 1;
+	
+	      while (object && index < l) {
+	        object = object[path[index++]];
+	      }
+	      return index == l && object && path[index++] in object;
+	    }
+	    return false;
+	  }
 	};
 	
 	module.exports = util;
@@ -379,52 +427,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var proxy = _require.proxy;
 	var _ = __webpack_require__(3);
-	
-	var reIsDeepProp = /\.|\[(?:[^[\]]*|(["'])(?:(?!\1)[^\\]|\\.)*?\1)\]/,
-	    reIsPlainProp = /^\w*$/,
-	    rePropName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
-	
-	function baseToString(val) {
-	  return val === undefined || val === null ? '' : val + '';
-	}
-	
-	var exprCache = {};
-	
 	var Expression = function () {
-	  Expression._parseExpr = function _parseExpr(exp) {
-	    if (exp instanceof Array) {
-	      return exp;
-	    } else {
-	      var _ret = function () {
-	        var result = exprCache[exp];
-	        if (!result) {
-	          result = exprCache[exp] = [];
-	          (exp + '').replace(rePropName, function (match, number, quote, string) {
-	            result.push(quote ? string.replace(reEscapeChar, '$1') : number || match);
-	          });
-	        }
-	        return {
-	          v: result
-	        };
-	      }();
-	
-	      if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
-	    }
-	  };
-	
-	  Expression.get = function get(object, path, defaultValue) {
-	    if (object) {
-	      path = Expression._parseExpr(path);
-	      var index = 0;
-	
-	      while (object && index < path.length) {
-	        object = object[path[index++]];
-	      }
-	      return index == path.length ? object : undefined;
-	    }
-	    return defaultValue;
-	  };
-	
 	  function Expression(target, expression, path) {
 	    _classCallCheck(this, Expression);
 	
@@ -433,7 +436,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    this.expression = expression;
 	    this.handlers = [];
-	    this.path = path || Expression._parseExpr(expression);
+	    this.path = path || _.parseExpr(expression);
 	    this.observers = [];
 	    this.observeHandlers = this._initObserveHandlers();
 	    this.target = this._observe(target, 0);
@@ -482,8 +485,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if (ridx) {
 	        _this._unobserve(oldVal, idx + 1);
 	        _this._observe(val, idx + 1);
-	        oldVal = Expression.get(oldVal, rpath);
-	        val = Expression.get(val, rpath);
+	        oldVal = _.get(oldVal, rpath);
+	        val = _.get(val, rpath);
 	        if (proxy.eq(val, oldVal)) return;
 	      }
 	
@@ -668,11 +671,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  Observer.prototype._notify = function _notify() {
-	    var _this = this;
-	
-	    _.eachObj(this.changeRecords, function (oldVal, attr) {
-	      _this._fire(attr, _this.obj[attr], oldVal);
-	    });
+	    var changeRecords = this.changeRecords;
+	    for (var attr in changeRecords) {
+	      this._fire(attr, this.obj[attr], changeRecords[attr]);
+	    }
 	    this.request_frame = undefined;
 	    this.changeRecords = {};
 	  };
@@ -755,6 +757,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.request_frame = undefined;
 	    }
 	    this._destroy();
+	    this.obj = undefined;
 	    this.target = undefined;
 	    this.listens = undefined;
 	    this.changeRecords = undefined;
@@ -857,7 +860,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	
 	  applyProto('_watch', function _watch(attr) {
-	    var _this2 = this;
+	    var _this = this;
 	
 	    if (this.isArray && attr === 'length') {
 	      if (!this.watchLen) {
@@ -869,12 +872,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    } else if (!this.es6proxy) {
 	      var _proxy = this.target = new Proxy(this.obj, {
 	        set: function set(obj, prop, value) {
-	          _this2.isArray && attr === 'length';
-	          if (!(_this2.isArray && attr === 'length') && _this2.listens[prop]) {
+	          _this.isArray && attr === 'length';
+	          if (!(_this.isArray && attr === 'length') && _this.listens[prop]) {
 	
 	            var oldVal = obj[prop];
 	            obj[prop] = value;
-	            if (value !== oldVal) _this2._addChangeRecord(prop, oldVal);
+	            if (value !== oldVal) _this._addChangeRecord(prop, oldVal);
 	          } else obj[prop] = value;
 	          return true;
 	        }
@@ -920,11 +923,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  applyProto('_hockArrayLength', function _hockArrayLength(method) {
 	    var self = this;
 	
-	    this.target[method] = function () {
+	    this.obj[method] = function () {
 	      var len = this.length;
 	
 	      Array.prototype[method].apply(this, arguments);
-	      if (self.target.length != len) self._addChangeRecord('length', len);
+	      if (self.obj.length != len) self._addChangeRecord('length', len);
 	    };
 	  });
 	
@@ -935,7 +938,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          this._hockArrayLength(arrayHockMethods[i]);
 	        }
 	      } else {
-	        this._defineProperty(attr, this.target[attr]);
+	        this._defineProperty(attr, this.obj[attr]);
 	      }
 	      this.watchers[attr] = true;
 	    }
@@ -945,10 +948,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (this.watchers[attr]) {
 	      if (this.isArray && attr === 'length') {
 	        for (var i = 0, l = arrayHockMethods.length; i < l; i++) {
-	          delete this.target[arrayHockMethods[i]];
+	          delete this.obj[arrayHockMethods[i]];
 	        }
 	      } else {
-	        this._undefineProperty(attr, this.target[attr]);
+	        this._undefineProperty(attr, this.obj[attr]);
 	      }
 	      delete this.watchers[attr];
 	    }
@@ -980,9 +983,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  if (Object.defineProperty && doesDefinePropertyWork(Object.defineProperty, {})) {
 	    applyProto('_defineProperty', function _defineProperty(attr, value) {
-	      var _this3 = this;
+	      var _this2 = this;
 	
-	      this.target = Object.defineProperty(this.target, attr, {
+	      Object.defineProperty(this.target, attr, {
 	        enumerable: true,
 	        configurable: true,
 	        get: function get() {
@@ -991,13 +994,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	        set: function set(val) {
 	          var oldVal = value;
 	          value = val;
-	          _this3._addChangeRecord(attr, oldVal);
+	          _this2._addChangeRecord(attr, oldVal);
 	        }
 	      });
 	    });
 	
 	    applyProto('_undefineProperty', function _undefineProperty(attr, value) {
-	      this.target = Object.defineProperty(this.target, attr, {
+	      Object.defineProperty(this.target, attr, {
 	        enumerable: true,
 	        configurable: true,
 	        writable: true,
@@ -1006,7 +1009,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    });
 	  } else if ('__defineGetter__' in {}) {
 	    applyProto('_defineProperty', function _defineProperty(attr, value) {
-	      var _this4 = this;
+	      var _this3 = this;
 	
 	      this.target.__defineGetter__(attr, function () {
 	        return value;
@@ -1014,7 +1017,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.target.__defineSetter__(attr, function (val) {
 	        var oldVal = value;
 	        value = val;
-	        _this4._addChangeRecord(attr, oldVal);
+	        _this3._addChangeRecord(attr, oldVal);
 	      });
 	    });
 	
@@ -1048,7 +1051,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      });
 	
 	      applyProto('_defineProperty', function _defineProperty(attr, value) {
-	        var _this5 = this;
+	        var _this4 = this;
 	
 	        var obj = this.obj,
 	            desc = factory.getVBProxyDesc(obj);
@@ -1061,7 +1064,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          set: function set(val) {
 	            var oldVal = value;
 	            value = val;
-	            _this5._addChangeRecord(attr, oldVal);
+	            _this4._addChangeRecord(attr, oldVal);
 	          }
 	        });
 	      });
@@ -1086,7 +1089,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	if (Object.observe) {
-	  es6Proxy();
+	  es7Observe();
 	} else if (window.Proxy) {
 	  es6Proxy();
 	} else {
@@ -1368,7 +1371,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return map ? map[expression] : undefined;
 	  },
 	  on: function on(obj, expression, handler) {
-	    var path = Exp._parseExpr(expression);
+	    var path = _.parseExpr(expression);
 	
 	    if (path.length > 1) {
 	      var exp = void 0;
@@ -1386,7 +1389,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  un: function un(obj, expression, handler) {
-	    var path = Exp._parseExpr(expression);
+	    var path = _.parseExpr(expression);
 	
 	    if (path.length > 1) {
 	      var exp = void 0;
@@ -1419,7 +1422,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        return observer.hasListen(obj, expression);
 	      }
 	    }
-	    var path = Exp._parseExpr(expression);
+	    var path = _.parseExpr(expression);
 	    if (path.length > 1) {
 	      var exp = factory._get(proxy.obj(obj), expression);
 	      if (exp) return l == 2 ? true : exp.hasListen(handler);

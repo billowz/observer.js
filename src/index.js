@@ -9,6 +9,8 @@ window.observer = {
   obj: proxy.obj,
   eq: proxy.eq,
   proxy: proxy,
-  getVal: Exp.get
+  util: require('./util'),
+  Map: require('./map'),
+  VBProxyFactory: require('./core').VBProxyFactory
 }
 module.exports = window.observer;

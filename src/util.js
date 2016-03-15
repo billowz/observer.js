@@ -38,20 +38,30 @@ if (requestAnimationFrame && cancelAnimationFrame) {
   }
 }
 
+const propNameReg = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g,
+  escapeCharReg = /\\(\\)?/g;
+
+let exprCache = {};
+
+function parseExpr(exp) {
+  if (exp instanceof Array) {
+    return exp;
+  } else {
+    let result = exprCache[exp];
+    if (!result) {
+      result = exprCache[exp] = [];
+      (exp + '').replace(propNameReg, function(match, number, quote, string) {
+        result.push(quote ? string.replace(escapeCharReg, '$1') : (number || match));
+      });
+    }
+    return result;
+  }
+}
+
 let util = {
   requestAnimationFrame: requestAnimationFrame,
 
   cancelAnimationFrame: cancelAnimationFrame,
-
-  eachObj(obj, callback) {
-    let hasOwn = Object.prototype.hasOwnProperty;
-    for (let i in obj) {
-      if (hasOwn.call(obj, i)) {
-        if (callback(obj[i], i) === false)
-          return false;
-      }
-    }
-  },
 
   bind: bind,
 
@@ -62,8 +72,23 @@ let util = {
         }
       }
       return -1;
-  }
+  },
 
+  parseExpr: parseExpr,
+
+  get(object, path, defaultValue) {
+    if (object) {
+      path = parseExpr(path);
+      var index = 0,
+        l = path.length;
+
+      while (object && index < l) {
+        object = object[path[index++]];
+      }
+      return (index == l) ? object : defaultValue;
+    }
+    return defaultValue;
+  }
 }
 
 module.exports = util;
