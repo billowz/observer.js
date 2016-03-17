@@ -1,6 +1,7 @@
 const {proxy} = require('./proxyEvent'),
   Exp = require('./exp'),
-  exp = require('./expFactory');
+  exp = require('./expFactory'),
+  Observer = require('./core');
 
 window.observer = {
   on: exp.on,
@@ -11,6 +12,9 @@ window.observer = {
   proxy: proxy,
   util: require('./util'),
   Map: require('./map'),
-  VBProxyFactory: require('./core').VBProxyFactory
+  VBProxyFactory: Observer.VBProxyFactory,
+  setLazy(lazy) {
+    Observer.lazy = lazy;
+  }
 }
 module.exports = window.observer;

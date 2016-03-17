@@ -19,6 +19,7 @@ class Observer {
     this.listens = {};
     this.changeRecords = {};
     this._notify = _.bind.call(this._notify, this);
+    this.watchPropNum = 0;
     this._init();
   }
 
@@ -41,7 +42,6 @@ class Observer {
     this.changeRecords = {};
   }
 
-
   _addChangeRecord(attr, oldVal) {
     if (!Observer.lazy) {
       this._fire(attr, this.obj[attr], oldVal);
@@ -51,29 +51,29 @@ class Observer {
         this.request_frame = _.requestAnimationFrame(this._notify);
     }
   }
+
   hasListen(attr, handler) {
     let l = arguments.length,
       listens = this.listens;
     if (!l) {
-      for (let i in listens)
-        return true;
-      return false;
+      return !!this.watchPropNum;
     } else if (l == 1) {
-      console.log(attr)
       if (typeof attr == 'function') {
+        let handlers;
         for (let k in listens) {
-          if (_.indexOf.call(listens[k], attr) != -1)
+          handlers = listens[k]
+          if (handlers && _.indexOf.call(handlers, attr) != -1)
             return true;
         }
         return false;
       } else
         return !!listens[attr];
     } else {
-      console.log(attr, handler)
       if (typeof handler != 'function') {
         throw TypeError('Invalid Observe Handler');
       }
-      return listens[attr] && _.indexOf.call(listens[attr], handler) != -1;
+      let handlers = listens[attr];
+      return handlers && _.indexOf.call(handlers, handler) != -1;
     }
   }
 
@@ -87,14 +87,16 @@ class Observer {
     if (!handlers) {
       this.listens[attr] = [handler];
       this._watch(attr);
+      this.watchPropNum++;
     } else
       handlers.push(handler);
     return this.target;
   }
 
   _cleanListen(attr) {
-    delete this.listens[attr];
+    this.listens[attr] = undefined;
     this._unwatch(attr);
+    this.watchPropNum--;
   }
 
   un(attr, handler) {
@@ -132,10 +134,11 @@ class Observer {
   }
 }
 
-Observer.lazy = false;
+Observer.lazy = true;
 
 function applyProto(name, fn) {
   Observer.prototype[name] = fn;
+  return fn;
 }
 
 function es7Observe() {
@@ -278,13 +281,14 @@ function es6Proxy() {
 }
 
 function es5DefineProperty() {
-  applyProto('_init', function _init() {
+  let init = applyProto('_init', function _init() {
     this.watchers = {};
   });
 
-  applyProto('_destroy', function _destroy() {
+  let destroy = applyProto('_destroy', function _destroy() {
     for (let attr in this.watchers) {
-      this._unwatch(attr);
+      if (this.watchers[attr])
+        this._unwatch(attr);
     }
     this.watchers = undefined;
   });
@@ -323,7 +327,7 @@ function es5DefineProperty() {
       } else {
         this._undefineProperty(attr, this.obj[attr]);
       }
-      delete this.watchers[attr];
+      this.watchers[attr] = false;
     }
   });
 
@@ -397,15 +401,12 @@ function es5DefineProperty() {
     proxy.proxy = factory.getVBProxy;
 
     applyProto('_init', function _init() {
-      this.watchers = {};
+      init();
       this.obj = factory.obj(this.target);
     });
 
     applyProto('_destroy', function _destroy() {
-      for (let attr in this.watchers) {
-        this._unwatch(attr);
-      }
-      this.watchers = undefined;
+      destroy();
       this.obj = undefined;
     });
 

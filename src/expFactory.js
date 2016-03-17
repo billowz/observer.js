@@ -7,31 +7,37 @@ const Exp = require('./exp'),
 let exps = new Map();
 let factory = {
   _bind(obj, exp) {
-    let map = exps.get(obj);
+    let desc = exps.get(obj);
 
-    if (!map) {
-      exps.set(obj, (map = {}));
-    }
-    map[exp.expression] = exp;
+    if (!desc) {
+      exps.set(obj, (desc = {
+        exprNum: 1,
+        map: {}
+      }));
+    } else
+      desc.exprNum++;
+    desc.map[exp.expression] = exp;
   },
 
   _unbind(obj, exp) {
-    let map = exps.get(obj);
+    let desc = exps.get(obj);
 
-    if (map && map[exp.expression] == exp) {
-      delete map[exp.expression];
+    if (desc) {
+      let map = desc.map,
+        expression = exp.expression;
 
-      for (let key in map) {
-        return;
+      if (map[expression] === exp) {
+        map[expression] = undefined;
+        if (!(--desc.exprNum))
+          exps['delete'](obj);
       }
-      exps['delete'](obj);
     }
   },
 
   _get(obj, expression) {
-    let map = exps.get(obj);
+    let desc = exps.get(obj);
 
-    return map ? map[expression] : undefined;
+    return desc ? desc.map[expression] : undefined;
   },
 
   on(obj, expression, handler) {

@@ -61,6 +61,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var proxy = _require.proxy;
 	var Exp = __webpack_require__(4);
 	var exp = __webpack_require__(8);
+	var Observer = __webpack_require__(6);
 	
 	window.observer = {
 	  on: exp.on,
@@ -71,7 +72,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  proxy: proxy,
 	  util: __webpack_require__(3),
 	  Map: __webpack_require__(2),
-	  VBProxyFactory: __webpack_require__(6).VBProxyFactory
+	  VBProxyFactory: Observer.VBProxyFactory,
+	  setLazy: function setLazy(lazy) {
+	    Observer.lazy = lazy;
+	  }
 	};
 	module.exports = window.observer;
 
@@ -393,19 +397,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return index == l ? object : defaultValue;
 	    }
 	    return defaultValue;
-	  },
-	  has: function has(object, path) {
-	    if (object) {
-	      path = parseExpr(path);
-	      var index = 0,
-	          l = path.length - 1;
-	
-	      while (object && index < l) {
-	        object = object[path[index++]];
-	      }
-	      return index == l && object && path[index++] in object;
-	    }
-	    return false;
 	  }
 	};
 	
@@ -658,6 +649,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.listens = {};
 	    this.changeRecords = {};
 	    this._notify = _.bind.call(this._notify, this);
+	    this.watchPropNum = 0;
 	    this._init();
 	  }
 	
@@ -692,23 +684,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var l = arguments.length,
 	        listens = this.listens;
 	    if (!l) {
-	      for (var i in listens) {
-	        return true;
-	      }return false;
+	      return !!this.watchPropNum;
 	    } else if (l == 1) {
-	      console.log(attr);
 	      if (typeof attr == 'function') {
+	        var handlers = void 0;
 	        for (var k in listens) {
-	          if (_.indexOf.call(listens[k], attr) != -1) return true;
+	          handlers = listens[k];
+	          if (handlers && _.indexOf.call(handlers, attr) != -1) return true;
 	        }
 	        return false;
 	      } else return !!listens[attr];
 	    } else {
-	      console.log(attr, handler);
 	      if (typeof handler != 'function') {
 	        throw TypeError('Invalid Observe Handler');
 	      }
-	      return listens[attr] && _.indexOf.call(listens[attr], handler) != -1;
+	      var _handlers = listens[attr];
+	      return _handlers && _.indexOf.call(_handlers, handler) != -1;
 	    }
 	  };
 	
@@ -722,13 +713,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (!handlers) {
 	      this.listens[attr] = [handler];
 	      this._watch(attr);
+	      this.watchPropNum++;
 	    } else handlers.push(handler);
 	    return this.target;
 	  };
 	
 	  Observer.prototype._cleanListen = function _cleanListen(attr) {
-	    delete this.listens[attr];
+	    this.listens[attr] = undefined;
 	    this._unwatch(attr);
+	    this.watchPropNum--;
 	  };
 	
 	  Observer.prototype.un = function un(attr, handler) {
@@ -766,10 +759,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Observer;
 	}();
 	
-	Observer.lazy = false;
+	Observer.lazy = true;
 	
 	function applyProto(name, fn) {
 	  Observer.prototype[name] = fn;
+	  return fn;
 	}
 	
 	function es7Observe() {
@@ -909,13 +903,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function es5DefineProperty() {
-	  applyProto('_init', function _init() {
+	  var init = applyProto('_init', function _init() {
 	    this.watchers = {};
 	  });
 	
-	  applyProto('_destroy', function _destroy() {
+	  var destroy = applyProto('_destroy', function _destroy() {
 	    for (var attr in this.watchers) {
-	      this._unwatch(attr);
+	      if (this.watchers[attr]) this._unwatch(attr);
 	    }
 	    this.watchers = undefined;
 	  });
@@ -953,7 +947,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      } else {
 	        this._undefineProperty(attr, this.obj[attr]);
 	      }
-	      delete this.watchers[attr];
+	      this.watchers[attr] = false;
 	    }
 	  });
 	
@@ -1038,15 +1032,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      proxy.proxy = factory.getVBProxy;
 	
 	      applyProto('_init', function _init() {
-	        this.watchers = {};
+	        init();
 	        this.obj = factory.obj(this.target);
 	      });
 	
 	      applyProto('_destroy', function _destroy() {
-	        for (var attr in this.watchers) {
-	          this._unwatch(attr);
-	        }
-	        this.watchers = undefined;
+	        destroy();
 	        this.obj = undefined;
 	      });
 	
@@ -1346,29 +1337,33 @@ return /******/ (function(modules) { // webpackBootstrap
 	var exps = new Map();
 	var factory = {
 	  _bind: function _bind(obj, exp) {
-	    var map = exps.get(obj);
+	    var desc = exps.get(obj);
 	
-	    if (!map) {
-	      exps.set(obj, map = {});
-	    }
-	    map[exp.expression] = exp;
+	    if (!desc) {
+	      exps.set(obj, desc = {
+	        exprNum: 1,
+	        map: {}
+	      });
+	    } else desc.exprNum++;
+	    desc.map[exp.expression] = exp;
 	  },
 	  _unbind: function _unbind(obj, exp) {
-	    var map = exps.get(obj);
+	    var desc = exps.get(obj);
 	
-	    if (map && map[exp.expression] == exp) {
-	      delete map[exp.expression];
+	    if (desc) {
+	      var map = desc.map,
+	          expression = exp.expression;
 	
-	      for (var key in map) {
-	        return;
+	      if (map[expression] === exp) {
+	        map[expression] = undefined;
+	        if (! --desc.exprNum) exps['delete'](obj);
 	      }
-	      exps['delete'](obj);
 	    }
 	  },
 	  _get: function _get(obj, expression) {
-	    var map = exps.get(obj);
+	    var desc = exps.get(obj);
 	
-	    return map ? map[expression] : undefined;
+	    return desc ? desc.map[expression] : undefined;
 	  },
 	  on: function on(obj, expression, handler) {
 	    var path = _.parseExpr(expression);
