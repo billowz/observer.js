@@ -86,8 +86,8 @@ class Observer {
 
     if (!handlers) {
       this.listens[attr] = [handler];
-      this._watch(attr);
       this.watchPropNum++;
+      this._watch(attr);
     } else
       handlers.push(handler);
     return this.target;
@@ -95,8 +95,8 @@ class Observer {
 
   _cleanListen(attr) {
     this.listens[attr] = undefined;
-    this._unwatch(attr);
     this.watchPropNum--;
+    this._unwatch(attr);
   }
 
   un(attr, handler) {
@@ -210,12 +210,11 @@ function es6Proxy() {
       this.watchLen = false;
     }
     if (this.es6proxy) {
+      proxyChange(this.obj, undefined);
       proxyObjLoop['delete'](this.target);
       objProxyLoop['delete'](this.obj);
-      proxyChange(this.obj, undefined);
       this.es6proxy = false;
     }
-    this.obj = undefined;
   });
 
   applyProto('_hockArrayLength', function _hockArrayLength(method) {
@@ -262,19 +261,17 @@ function es6Proxy() {
   });
 
   applyProto('_unwatch', function _unwatch(attr) {
-    if (this.isArray && attr === 'length') {
-      if (this.watchLen) {
-        for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
-          delete this.obj[arrayHockMethods[i]];
-        }
-        this.watchLen = false;
+    if (this.isArray && attr === 'length' && this.watchLen) {
+      for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
+        delete this.obj[arrayHockMethods[i]];
       }
+      this.watchLen = false;
     }
     if (this.es6proxy && !this.hasListen()) {
+      proxyChange(this.obj, undefined);
       proxyObjLoop['delete'](this.target);
       objProxyLoop['delete'](this.obj);
       this.target = this.obj;
-      proxyChange(this.obj, undefined);
       this.es6proxy = false;
     }
   });
@@ -407,7 +404,6 @@ function es5DefineProperty() {
 
     applyProto('_destroy', function _destroy() {
       destroy();
-      this.obj = undefined;
     });
 
     applyProto('_defineProperty', function _defineProperty(attr, value) {

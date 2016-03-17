@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.0.6 built in Thu, 17 Mar 2016 06:10:36 GMT
+ * observer.js v0.0.6 built in Thu, 17 Mar 2016 12:09:58 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -720,16 +720,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    if (!handlers) {
 	      this.listens[attr] = [handler];
-	      this._watch(attr);
 	      this.watchPropNum++;
+	      this._watch(attr);
 	    } else handlers.push(handler);
 	    return this.target;
 	  };
 	
 	  Observer.prototype._cleanListen = function _cleanListen(attr) {
 	    this.listens[attr] = undefined;
-	    this._unwatch(attr);
 	    this.watchPropNum--;
+	    this._unwatch(attr);
 	  };
 	
 	  Observer.prototype.un = function un(attr, handler) {
@@ -842,12 +842,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.watchLen = false;
 	    }
 	    if (this.es6proxy) {
+	      proxyChange(this.obj, undefined);
 	      proxyObjLoop['delete'](this.target);
 	      objProxyLoop['delete'](this.obj);
-	      proxyChange(this.obj, undefined);
 	      this.es6proxy = false;
 	    }
-	    this.obj = undefined;
 	  });
 	
 	  applyProto('_hockArrayLength', function _hockArrayLength(method) {
@@ -892,19 +891,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	
 	  applyProto('_unwatch', function _unwatch(attr) {
-	    if (this.isArray && attr === 'length') {
-	      if (this.watchLen) {
-	        for (var i = 0, l = arrayHockMethods.length; i < l; i++) {
-	          delete this.obj[arrayHockMethods[i]];
-	        }
-	        this.watchLen = false;
+	    if (this.isArray && attr === 'length' && this.watchLen) {
+	      for (var i = 0, l = arrayHockMethods.length; i < l; i++) {
+	        delete this.obj[arrayHockMethods[i]];
 	      }
+	      this.watchLen = false;
 	    }
 	    if (this.es6proxy && !this.hasListen()) {
+	      proxyChange(this.obj, undefined);
 	      proxyObjLoop['delete'](this.target);
 	      objProxyLoop['delete'](this.obj);
 	      this.target = this.obj;
-	      proxyChange(this.obj, undefined);
 	      this.es6proxy = false;
 	    }
 	  });
@@ -1046,7 +1043,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      applyProto('_destroy', function _destroy() {
 	        destroy();
-	        this.obj = undefined;
 	      });
 	
 	      applyProto('_defineProperty', function _defineProperty(attr, value) {
