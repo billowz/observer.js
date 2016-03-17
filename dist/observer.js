@@ -1,3 +1,11 @@
+/*!
+ * observer.js v0.0.6 built in Thu, 17 Mar 2016 06:10:36 GMT
+ * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
+ * Released under the MIT license
+ * support IE6+ and other browsers
+ * support ES6 Proxy and Object.observe
+ * https://github.com/tao-zeng/observer.js
+ */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();

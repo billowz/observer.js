@@ -6,6 +6,7 @@ var fs = require('fs'),
   gulpWebpack = require('gulp-webpack'),
   WebpackDevServer = require('webpack-dev-server'),
   mkcfg = require('./tool/make.webpack.js'),
+  pkg = require('./package.json'),
   karma = require('karma').Server,
   main = {
     src: './src',
@@ -13,7 +14,13 @@ var fs = require('fs'),
     entry: 'index.js',
     library: 'observer',
     output: 'observer.js',
-    moduleDirectories: ['node_modules']
+    moduleDirectories: ['node_modules'],
+    plugins: [new webpack.BannerPlugin(`${pkg.name} v${pkg.version} built in ${new Date().toUTCString()}
+Copyright (c) 2016 ${pkg.author}
+Released under the ${pkg.license} license
+support IE6+ and other browsers
+support ES6 Proxy and Object.observe
+${pkg.homepage}`)]
   },
   devserver = {
     host: '0.0.0.0',
