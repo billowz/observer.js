@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.0.6 built in Thu, 17 Mar 2016 12:09:58 GMT
+ * observer.js v0.0.7 built in Fri, 18 Mar 2016 03:13:48 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -75,14 +75,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	  on: exp.on,
 	  un: exp.un,
 	  hasListen: exp.hasListen,
-	  obj: proxy.obj,
-	  eq: proxy.eq,
+	  obj: function obj(_obj) {
+	    return proxy.obj(_obj);
+	  },
+	  eq: function eq(obj1, obj2) {
+	    return proxy.eq(obj1, obj2);
+	  },
+	
 	  proxy: proxy,
 	  util: __webpack_require__(3),
 	  Map: __webpack_require__(2),
 	  VBProxyFactory: Observer.VBProxyFactory,
-	  setLazy: function setLazy(lazy) {
-	    Observer.lazy = lazy;
+	  setConfig: Observer.setConfig,
+	  config: function config() {
+	    return Observer.config;
+	  },
+	  policy: function policy() {
+	    return Observer.policy;
 	  }
 	};
 	module.exports = window.observer;
@@ -95,61 +104,77 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	exports.__esModule = true;
 	exports.proxyEnable = proxyEnable;
+	exports.proxyDisable = proxyDisable;
 	exports.proxyChange = proxyChange;
 	var Map = __webpack_require__(2),
 	    _ = __webpack_require__(3);
 	
 	var proxyEvents = new Map();
 	
-	var proxy = exports.proxy = {
-	  eq: function eq(obj1, obj2) {
-	    return obj1 === obj2;
-	  },
-	  obj: function obj(_obj) {
-	    return _obj;
-	  },
-	  proxy: function proxy(obj) {
-	    return obj;
-	  },
-	  on: function on() {},
-	  un: function un() {},
-	  _on: function _on(obj, handler) {
-	    var handlers = void 0;
+	function empty() {}
 	
-	    if (typeof handler !== 'function') {
-	      throw TypeError('Invalid Proxy Event Handler');
-	    }
-	    obj = proxy.obj(obj);
-	    handlers = proxyEvents.get(obj);
-	    if (!handlers) {
-	      handlers = [];
-	      proxyEvents.set(obj, handlers);
-	    }
-	    handlers.push(handler);
-	  },
-	  _un: function _un(obj, handler) {
-	    var handlers = void 0;
+	function default_equal(obj1, obj2) {
+	  return obj1 === obj2;
+	}
 	
-	    obj = proxy.obj(obj);
-	    handlers = proxyEvents.get(obj);
-	    if (handlers) {
-	      if (arguments.length > 1) {
-	        if (typeof handler === 'function') {
-	          var idx = _.indexOf.call(handlers, handler);
-	          if (idx != -1) {
-	            handlers.splice(idx, 1);
-	          }
+	function default_obj(obj) {
+	  return obj;
+	}
+	
+	function default_proxy(obj) {
+	  return obj;
+	}
+	
+	function bind(obj, handler) {
+	  var handlers = void 0;
+	
+	  if (typeof handler !== 'function') {
+	    throw TypeError('Invalid Proxy Event Handler');
+	  }
+	  obj = proxy.obj(obj);
+	  handlers = proxyEvents.get(obj);
+	  if (!handlers) {
+	    handlers = [];
+	    proxyEvents.set(obj, handlers);
+	  }
+	  handlers.push(handler);
+	}
+	
+	function unbind(obj, handler) {
+	  var handlers = void 0;
+	
+	  obj = proxy.obj(obj);
+	  handlers = proxyEvents.get(obj);
+	  if (handlers) {
+	    if (arguments.length > 1) {
+	      if (typeof handler === 'function') {
+	        var idx = _.indexOf.call(handlers, handler);
+	        if (idx != -1) {
+	          handlers.splice(idx, 1);
 	        }
-	      } else {
-	        proxyEvents['delete'](obj);
 	      }
+	    } else {
+	      proxyEvents['delete'](obj);
 	    }
 	  }
-	};
+	}
+	
+	var proxy = exports.proxy = {};
 	
 	function proxyEnable() {
-	  proxy.on = proxy._on;
-	  proxy.un = proxy._un;
+	  proxy.on = bind;
+	  proxy.un = unbind;
+	  proxy.eq = undefined;
+	  proxy.obj = undefined;
+	  proxy.proxy = undefined;
+	}
+	
+	function proxyDisable() {
+	  proxy.on = empty;
+	  proxy.un = empty;
+	  proxy.eq = default_equal;
+	  proxy.obj = default_obj;
+	  proxy.proxy = default_proxy;
 	}
 	
 	function proxyChange(obj, proxy) {
@@ -331,22 +356,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	};
 	
+	function requestTimeoutFrame(callback) {
+	  var currTime = new Date().getTime(),
+	      timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+	      reqId = setTimeout(function () {
+	    callback(currTime + timeToCall);
+	  }, timeToCall);
+	  lastTime = currTime + timeToCall;
+	  return reqId;
+	}
+	
+	function cancelTimeoutFrame(reqId) {
+	  clearTimeout(reqId);
+	}
+	
 	if (requestAnimationFrame && cancelAnimationFrame) {
 	  requestAnimationFrame = bind.call(requestAnimationFrame, window);
 	  cancelAnimationFrame = bind.call(cancelAnimationFrame, window);
 	} else {
-	  requestAnimationFrame = function requestTimeoutFrame(callback) {
-	    var currTime = new Date().getTime(),
-	        timeToCall = Math.max(0, 16 - (currTime - lastTime)),
-	        reqId = setTimeout(function () {
-	      callback(currTime + timeToCall);
-	    }, timeToCall);
-	    lastTime = currTime + timeToCall;
-	    return reqId;
-	  };
-	  cancelAnimationFrame = function cancelAnimationFrame(reqId) {
-	    clearTimeout(reqId);
-	  };
+	  requestAnimationFrame = requestTimeoutFrame;
+	  cancelAnimationFrame = cancelTimeoutFrame;
 	}
 	
 	var propNameReg = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g,
@@ -376,6 +405,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	var util = {
+	  requestTimeoutFrame: requestTimeoutFrame,
+	
+	  cancelTimeoutFrame: cancelTimeoutFrame,
+	
 	  requestAnimationFrame: requestAnimationFrame,
 	
 	  cancelAnimationFrame: cancelAnimationFrame,
@@ -637,9 +670,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	var proxy = _require2.proxy;
 	var proxyChange = _require2.proxyChange;
 	var proxyEnable = _require2.proxyEnable;
+	var proxyDisable = _require2.proxyDisable;
 	var _ = __webpack_require__(3);
 	
 	var arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
+	var config = {
+	  lazy: true,
+	  animationFrame: true,
+	  chromeObserve: true,
+	  es6Proxy: true
+	};
 	
 	var Observer = function () {
 	  function Observer(target) {
@@ -680,11 +720,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  Observer.prototype._addChangeRecord = function _addChangeRecord(attr, oldVal) {
-	    if (!Observer.lazy) {
+	    if (!config.lazy) {
 	      this._fire(attr, this.obj[attr], oldVal);
 	    } else if (!(attr in this.changeRecords)) {
 	      this.changeRecords[attr] = oldVal;
-	      if (!this.request_frame) this.request_frame = _.requestAnimationFrame(this._notify);
+	      if (!this.request_frame) this.request_frame = (config.animationFrame ? _.requestAnimationFrame : _.requestTimeoutFrame)(this._notify);
 	    }
 	  };
 	
@@ -754,7 +794,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  Observer.prototype.destroy = function destroy() {
 	    if (this.request_frame) {
-	      _.cancelAnimationFrame(this.request_frame);
+	      (config.animationFrame ? _.cancelAnimationFrame : _.cancelTimeoutFrame)(this.request_frame);
 	      this.request_frame = undefined;
 	    }
 	    this._destroy();
@@ -767,23 +807,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return Observer;
 	}();
 	
-	Observer.lazy = true;
-	
 	function applyProto(name, fn) {
 	  Observer.prototype[name] = fn;
 	  return fn;
 	}
 	
-	function es7Observe() {
+	function chromeObserve() {
+	  Observer.policy = 'chromeObserve';
+	  proxyDisable();
+	
 	  applyProto('_init', function _init() {
 	    this._onObserveChanged = _.bind.call(this._onObserveChanged, this);
-	    this.es7observe = false;
+	    this.chromeObserve = false;
 	  });
 	
 	  applyProto('_destroy', function _destroy() {
-	    if (this.es7observe) {
+	    if (this.chromeObserve) {
 	      Object.unobserve(this.target, this._onObserveChanged);
-	      this.es7observe = false;
+	      this.chromeObserve = false;
 	    }
 	  });
 	
@@ -796,21 +837,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	
 	  applyProto('_watch', function _watch(attr) {
-	    if (!this.es7observe) {
+	    if (!this.chromeObserve) {
 	      Object.observe(this.target, this._onObserveChanged);
-	      this.es7observe = true;
+	      this.chromeObserve = true;
 	    }
 	  });
 	
 	  applyProto('_unwatch', function _unwatch(attr) {
-	    if (this.es7observe && !this.hasListen()) {
+	    if (this.chromeObserve && !this.hasListen()) {
 	      Object.unobserve(this.target, this._onObserveChanged);
-	      this.es7observe = false;
+	      this.chromeObserve = false;
 	    }
 	  });
 	}
 	
 	function es6Proxy() {
+	  Observer.policy = 'es6Proxy';
+	
 	  var objProxyLoop = new Map(),
 	      proxyObjLoop = new Map();
 	
@@ -831,16 +874,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  applyProto('_init', function _init() {
 	    this.obj = proxy.obj(this.target);
 	    this.es6proxy = false;
-	    this.watchLen = false;
 	  });
 	
 	  applyProto('_destroy', function _destroy() {
-	    if (this.watchLen) {
-	      for (var i = 0, l = arrayHockMethods.length; i < l; i++) {
-	        delete this.obj[arrayHockMethods[i]];
-	      }
-	      this.watchLen = false;
-	    }
 	    if (this.es6proxy) {
 	      proxyChange(this.obj, undefined);
 	      proxyObjLoop['delete'](this.target);
@@ -849,40 +885,52 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  });
 	
-	  applyProto('_hockArrayLength', function _hockArrayLength(method) {
-	    var self = this;
+	  applyProto('_createArrayProxy', function _arrayProxy() {
+	    var _this = this;
 	
-	    this.obj[method] = function () {
-	      var len = this.length;
+	    var oldLength = this.target.length;
+	    return new Proxy(this.obj, {
+	      set: function set(obj, prop, value) {
+	        if (!_this.listens[prop]) {
+	          obj[prop] = value;
+	          return true;
+	        }
+	        var oldVal = void 0;
+	        if (prop === 'length') {
+	          oldVal = oldLength;
+	          oldLength = value;
+	        } else {
+	          oldVal = obj[prop];
+	        }
+	        obj[prop] = value;
+	        if (value !== oldVal) _this._addChangeRecord(prop, oldVal);
+	        return true;
+	      }
+	    });
+	  });
 	
-	      Array.prototype[method].apply(this, arguments);
-	      if (self.obj.length != len) self._addChangeRecord('length', len);
-	    };
+	  applyProto('_createObjectProxy', function _arrayProxy() {
+	    var _this2 = this;
+	
+	    return new Proxy(this.obj, {
+	      set: function set(obj, prop, value) {
+	        if (!_this2.listens[prop]) {
+	          obj[prop] = value;
+	          return true;
+	        }
+	        var oldVal = obj[prop];
+	        obj[prop] = value;
+	        if (value !== oldVal) _this2._addChangeRecord(prop, oldVal);
+	        return true;
+	      }
+	    });
 	  });
 	
 	  applyProto('_watch', function _watch(attr) {
-	    var _this = this;
+	    if (!this.es6proxy) {
+	      var _proxy = this.isArray ? this._createArrayProxy() : this._createObjectProxy();
 	
-	    if (this.isArray && attr === 'length') {
-	      if (!this.watchLen) {
-	        this.watchLen = true;
-	        for (var i = 0, l = arrayHockMethods.length; i < l; i++) {
-	          this._hockArrayLength(arrayHockMethods[i]);
-	        }
-	      }
-	    } else if (!this.es6proxy) {
-	      var _proxy = this.target = new Proxy(this.obj, {
-	        set: function set(obj, prop, value) {
-	          _this.isArray && attr === 'length';
-	          if (!(_this.isArray && attr === 'length') && _this.listens[prop]) {
-	
-	            var oldVal = obj[prop];
-	            obj[prop] = value;
-	            if (value !== oldVal) _this._addChangeRecord(prop, oldVal);
-	          } else obj[prop] = value;
-	          return true;
-	        }
-	      });
+	      this.target = _proxy;
 	      proxyObjLoop.set(_proxy, this.obj);
 	      objProxyLoop.set(this.obj, _proxy);
 	      proxyChange(this.obj, _proxy);
@@ -891,12 +939,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	
 	  applyProto('_unwatch', function _unwatch(attr) {
-	    if (this.isArray && attr === 'length' && this.watchLen) {
-	      for (var i = 0, l = arrayHockMethods.length; i < l; i++) {
-	        delete this.obj[arrayHockMethods[i]];
-	      }
-	      this.watchLen = false;
-	    }
 	    if (this.es6proxy && !this.hasListen()) {
 	      proxyChange(this.obj, undefined);
 	      proxyObjLoop['delete'](this.target);
@@ -981,8 +1023,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	
 	  if (Object.defineProperty && doesDefinePropertyWork(Object.defineProperty, {})) {
+	    Observer.policy = 'es5DefineProperty';
+	    proxyDisable();
 	    applyProto('_defineProperty', function _defineProperty(attr, value) {
-	      var _this2 = this;
+	      var _this3 = this;
 	
 	      Object.defineProperty(this.target, attr, {
 	        enumerable: true,
@@ -993,7 +1037,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        set: function set(val) {
 	          var oldVal = value;
 	          value = val;
-	          _this2._addChangeRecord(attr, oldVal);
+	          _this3._addChangeRecord(attr, oldVal);
 	        }
 	      });
 	    });
@@ -1007,8 +1051,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      });
 	    });
 	  } else if ('__defineGetter__' in {}) {
+	    Observer.policy = 'defineGetterAndSetter';
+	    proxyDisable();
 	    applyProto('_defineProperty', function _defineProperty(attr, value) {
-	      var _this3 = this;
+	      var _this4 = this;
 	
 	      this.target.__defineGetter__(attr, function () {
 	        return value;
@@ -1016,7 +1062,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.target.__defineSetter__(attr, function (val) {
 	        var oldVal = value;
 	        value = val;
-	        _this3._addChangeRecord(attr, oldVal);
+	        _this4._addChangeRecord(attr, oldVal);
 	      });
 	    });
 	
@@ -1030,8 +1076,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    });
 	  } else if (VBProxyFactory.isSupport()) {
 	    (function () {
-	      var factory = Observer.VBProxyFactory = new VBProxyFactory(proxyChange);
+	      Observer.policy = 'VBProxy';
 	      proxyEnable();
+	
+	      var factory = Observer.VBProxyFactory = new VBProxyFactory(proxyChange);
 	      proxy.obj = factory.obj;
 	      proxy.eq = factory.eq;
 	      proxy.proxy = factory.getVBProxy;
@@ -1046,7 +1094,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      });
 	
 	      applyProto('_defineProperty', function _defineProperty(attr, value) {
-	        var _this4 = this;
+	        var _this5 = this;
 	
 	        var obj = this.obj,
 	            desc = factory.getVBProxyDesc(obj);
@@ -1059,7 +1107,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          set: function set(val) {
 	            var oldVal = value;
 	            value = val;
-	            _this4._addChangeRecord(attr, oldVal);
+	            _this5._addChangeRecord(attr, oldVal);
 	          }
 	        });
 	      });
@@ -1083,13 +1131,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	}
 	
-	if (Object.observe) {
-	  es7Observe();
-	} else if (window.Proxy) {
-	  es6Proxy();
-	} else {
-	  es5DefineProperty();
+	function applyPolicy() {
+	  if (Object.observe && config.chromeObserve && Observer.policy != 'chromeObserve') {
+	    chromeObserve();
+	  } else if (window.Proxy && config.es6Proxy && Observer.policy != 'es6Proxy') {
+	    es6Proxy();
+	  } else if (!Observer.policy) {
+	    es5DefineProperty();
+	  }
 	}
+	
+	Observer.setConfig = function setConfig(cfg) {
+	  var oldCfg = {};
+	  for (var attr in cfg) {
+	    if (attr in config) {
+	      oldCfg[attr] = config[attr];
+	      config[attr] = cfg[attr];
+	    }
+	  }
+	  if (cfg.chromeObserve != oldCfg.chromeObserve || cfg.es6Proxy != oldCfg.es6Proxy) {
+	    applyPolicy();
+	  }
+	  return cfg;
+	};
+	
+	Observer.config = config;
+	
+	applyPolicy();
+	
 	module.exports = Observer;
 
 /***/ },

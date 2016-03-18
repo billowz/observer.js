@@ -20,22 +20,26 @@ let lastTime,
       };
     };
 
+function requestTimeoutFrame(callback) {
+  let currTime = new Date().getTime(),
+    timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+    reqId = setTimeout(function() {
+      callback(currTime + timeToCall);
+    }, timeToCall);
+  lastTime = currTime + timeToCall;
+  return reqId;
+}
+
+function cancelTimeoutFrame(reqId) {
+  clearTimeout(reqId);
+}
+
 if (requestAnimationFrame && cancelAnimationFrame) {
   requestAnimationFrame = bind.call(requestAnimationFrame, window);
   cancelAnimationFrame = bind.call(cancelAnimationFrame, window);
 } else {
-  requestAnimationFrame = function requestTimeoutFrame(callback) {
-    let currTime = new Date().getTime(),
-      timeToCall = Math.max(0, 16 - (currTime - lastTime)),
-      reqId = setTimeout(function() {
-        callback(currTime + timeToCall);
-      }, timeToCall);
-    lastTime = currTime + timeToCall;
-    return reqId;
-  }
-  cancelAnimationFrame = function cancelAnimationFrame(reqId) {
-    clearTimeout(reqId);
-  }
+  requestAnimationFrame = requestTimeoutFrame
+  cancelAnimationFrame = cancelTimeoutFrame
 }
 
 const propNameReg = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g,
@@ -59,6 +63,10 @@ function parseExpr(exp) {
 }
 
 let util = {
+  requestTimeoutFrame: requestTimeoutFrame,
+
+  cancelTimeoutFrame: cancelTimeoutFrame,
+
   requestAnimationFrame: requestAnimationFrame,
 
   cancelAnimationFrame: cancelAnimationFrame,

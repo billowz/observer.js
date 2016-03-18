@@ -7,14 +7,22 @@ window.observer = {
   on: exp.on,
   un: exp.un,
   hasListen: exp.hasListen,
-  obj: proxy.obj,
-  eq: proxy.eq,
+  obj(obj) {
+    return proxy.obj(obj);
+  },
+  eq(obj1, obj2) {
+    return proxy.eq(obj1, obj2)
+  },
   proxy: proxy,
   util: require('./util'),
   Map: require('./map'),
   VBProxyFactory: Observer.VBProxyFactory,
-  setLazy(lazy) {
-    Observer.lazy = lazy;
+  setConfig: Observer.setConfig,
+  config() {
+    return Observer.config;
+  },
+  policy() {
+    return Observer.policy;
   }
 }
 module.exports = window.observer;

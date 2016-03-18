@@ -1,8 +1,14 @@
 const {VBProxyFactory} = require('./VBProxy'),
-  {proxy, proxyChange, proxyEnable} = require('./proxyEvent'),
+  {proxy, proxyChange, proxyEnable, proxyDisable} = require('./proxyEvent'),
   _ = require('./util');
 
 const arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
+const config = {
+  lazy: true,
+  animationFrame: true,
+  chromeObserve: true,
+  es6Proxy: true
+}
 
 class Observer {
 
@@ -43,12 +49,12 @@ class Observer {
   }
 
   _addChangeRecord(attr, oldVal) {
-    if (!Observer.lazy) {
+    if (!config.lazy) {
       this._fire(attr, this.obj[attr], oldVal);
     } else if (!(attr in this.changeRecords)) {
       this.changeRecords[attr] = oldVal;
       if (!this.request_frame)
-        this.request_frame = _.requestAnimationFrame(this._notify);
+        this.request_frame = (config.animationFrame ? _.requestAnimationFrame : _.requestTimeoutFrame)(this._notify);
     }
   }
 
@@ -123,7 +129,7 @@ class Observer {
 
   destroy() {
     if (this.request_frame) {
-      _.cancelAnimationFrame(this.request_frame);
+      (config.animationFrame ? _.cancelAnimationFrame : _.cancelTimeoutFrame)(this.request_frame);
       this.request_frame = undefined;
     }
     this._destroy();
@@ -134,23 +140,25 @@ class Observer {
   }
 }
 
-Observer.lazy = true;
 
 function applyProto(name, fn) {
   Observer.prototype[name] = fn;
   return fn;
 }
 
-function es7Observe() {
+function chromeObserve() {
+  Observer.policy = 'chromeObserve';
+  proxyDisable();
+
   applyProto('_init', function _init() {
     this._onObserveChanged = _.bind.call(this._onObserveChanged, this);
-    this.es7observe = false;
+    this.chromeObserve = false;
   });
 
   applyProto('_destroy', function _destroy() {
-    if (this.es7observe) {
+    if (this.chromeObserve) {
       Object.unobserve(this.target, this._onObserveChanged);
-      this.es7observe = false;
+      this.chromeObserve = false;
     }
   });
 
@@ -164,21 +172,23 @@ function es7Observe() {
   });
 
   applyProto('_watch', function _watch(attr) {
-    if (!this.es7observe) {
+    if (!this.chromeObserve) {
       Object.observe(this.target, this._onObserveChanged);
-      this.es7observe = true;
+      this.chromeObserve = true;
     }
   });
 
   applyProto('_unwatch', function _unwatch(attr) {
-    if (this.es7observe && !this.hasListen()) {
+    if (this.chromeObserve && !this.hasListen()) {
       Object.unobserve(this.target, this._onObserveChanged);
-      this.es7observe = false;
+      this.chromeObserve = false;
     }
   });
 }
 
 function es6Proxy() {
+  Observer.policy = 'es6Proxy';
+
   let objProxyLoop = new Map(),
     proxyObjLoop = new Map();
 
@@ -199,16 +209,9 @@ function es6Proxy() {
   applyProto('_init', function _init() {
     this.obj = proxy.obj(this.target);
     this.es6proxy = false;
-    this.watchLen = false;
   });
 
   applyProto('_destroy', function _destroy() {
-    if (this.watchLen) {
-      for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
-        delete this.obj[arrayHockMethods[i]];
-      }
-      this.watchLen = false;
-    }
     if (this.es6proxy) {
       proxyChange(this.obj, undefined);
       proxyObjLoop['delete'](this.target);
@@ -217,42 +220,50 @@ function es6Proxy() {
     }
   });
 
-  applyProto('_hockArrayLength', function _hockArrayLength(method) {
-    let self = this;
+  applyProto('_createArrayProxy', function _arrayProxy() {
+    let oldLength = this.target.length;
+    return new Proxy(this.obj, {
+      set: (obj, prop, value) => {
+        if (!this.listens[prop]) {
+          obj[prop] = value;
+          return true;
+        }
+        let oldVal;
+        if (prop === 'length') {
+          oldVal = oldLength;
+          oldLength = value;
+        } else {
+          oldVal = obj[prop];
+        }
+        obj[prop] = value;
+        if (value !== oldVal)
+          this._addChangeRecord(prop, oldVal);
+        return true;
+      }
+    });
+  });
 
-    this.obj[method] = function() {
-      let len = this.length;
-
-      Array.prototype[method].apply(this, arguments);
-      if (self.obj.length != len)
-        self._addChangeRecord('length', len);
-    }
+  applyProto('_createObjectProxy', function _arrayProxy() {
+    return new Proxy(this.obj, {
+      set: (obj, prop, value) => {
+        if (!this.listens[prop]) {
+          obj[prop] = value;
+          return true;
+        }
+        let oldVal = obj[prop];
+        obj[prop] = value;
+        if (value !== oldVal)
+          this._addChangeRecord(prop, oldVal);
+        return true;
+      }
+    });
   });
 
   applyProto('_watch', function _watch(attr) {
-    if (this.isArray && attr === 'length') {
-      if (!this.watchLen) {
-        this.watchLen = true;
-        for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
-          this._hockArrayLength(arrayHockMethods[i]);
-        }
-      }
-    } else if (!this.es6proxy) {
-      let proxy = this.target = new Proxy(this.obj, {
-        set: (obj, prop, value) => {
-          this.isArray && attr === 'length'
-          if (!(this.isArray && attr === 'length')
-            && this.listens[prop]) {
+    if (!this.es6proxy) {
+      let proxy = this.isArray ? this._createArrayProxy() : this._createObjectProxy();
 
-            let oldVal = obj[prop];
-            obj[prop] = value;
-            if (value !== oldVal)
-              this._addChangeRecord(prop, oldVal);
-          } else
-            obj[prop] = value;
-          return true;
-        }
-      });
+      this.target = proxy;
       proxyObjLoop.set(proxy, this.obj);
       objProxyLoop.set(this.obj, proxy);
       proxyChange(this.obj, proxy);
@@ -261,12 +272,6 @@ function es6Proxy() {
   });
 
   applyProto('_unwatch', function _unwatch(attr) {
-    if (this.isArray && attr === 'length' && this.watchLen) {
-      for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
-        delete this.obj[arrayHockMethods[i]];
-      }
-      this.watchLen = false;
-    }
     if (this.es6proxy && !this.hasListen()) {
       proxyChange(this.obj, undefined);
       proxyObjLoop['delete'](this.target);
@@ -347,6 +352,8 @@ function es5DefineProperty() {
   }
 
   if (Object.defineProperty && doesDefinePropertyWork(Object.defineProperty, {})) {
+    Observer.policy = 'es5DefineProperty';
+    proxyDisable();
     applyProto('_defineProperty', function _defineProperty(attr, value) {
       Object.defineProperty(this.target, attr, {
         enumerable: true,
@@ -371,6 +378,8 @@ function es5DefineProperty() {
       });
     });
   } else if ('__defineGetter__' in {}) {
+    Observer.policy = 'defineGetterAndSetter';
+    proxyDisable();
     applyProto('_defineProperty', function _defineProperty(attr, value) {
       this.target.__defineGetter__(attr, () => {
         return value;
@@ -391,8 +400,10 @@ function es5DefineProperty() {
       });
     });
   } else if (VBProxyFactory.isSupport()) {
-    let factory = Observer.VBProxyFactory = new VBProxyFactory(proxyChange);
+    Observer.policy = 'VBProxy';
     proxyEnable();
+
+    let factory = Observer.VBProxyFactory = new VBProxyFactory(proxyChange);
     proxy.obj = factory.obj;
     proxy.eq = factory.eq;
     proxy.proxy = factory.getVBProxy;
@@ -443,11 +454,32 @@ function es5DefineProperty() {
   }
 }
 
-if (Object.observe) {
-  es7Observe();
-} else if (window.Proxy) {
-  es6Proxy();
-} else {
-  es5DefineProperty();
+function applyPolicy() {
+  if (Object.observe && config.chromeObserve && Observer.policy != 'chromeObserve') {
+    chromeObserve();
+  } else if (window.Proxy && config.es6Proxy && Observer.policy != 'es6Proxy') {
+    es6Proxy();
+  } else if (!Observer.policy) {
+    es5DefineProperty();
+  }
 }
+
+Observer.setConfig = function setConfig(cfg) {
+  let oldCfg = {};
+  for (let attr in cfg) {
+    if (attr in config) {
+      oldCfg[attr] = config[attr];
+      config[attr] = cfg[attr];
+    }
+  }
+  if (cfg.chromeObserve != oldCfg.chromeObserve || cfg.es6Proxy != oldCfg.es6Proxy) {
+    applyPolicy();
+  }
+  return cfg;
+}
+
+Observer.config = config;
+
+applyPolicy();
+
 module.exports = Observer;
