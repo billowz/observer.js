@@ -60,7 +60,6 @@ module.exports = function(config) {
       require('karma-commonjs'),
       require('karma-babel-preprocessor'),
       require('karma-sourcemap-loader'),
-      require('karma-spec-reporter'),
       require('karma-chrome-launcher'),
       require('karma-phantomjs-launcher'),
       require('karma-browserstack-launcher')
