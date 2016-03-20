@@ -8,6 +8,7 @@ var fs = require('fs'),
   mkcfg = require('./build/make.webpack.js'),
   pkg = require('./package.json'),
   karma = require('karma').Server,
+  codecov = require('gulp-codecov'),
   main = {
     src: './src',
     dist: './dist',
@@ -113,4 +114,9 @@ gulp.task('sauce', function(done) {
   }, done).start();
 });
 
-gulp.task('ci', ['cover', 'sauce'])
+gulp.task('cover-ci', ['cover'], function() {
+  return gulp.src('./coverage/lcov.info')
+    .pipe(codecov());
+});
+
+gulp.task('ci', ['cover-ci', 'sauce']);
