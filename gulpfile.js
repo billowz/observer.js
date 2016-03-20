@@ -112,3 +112,5 @@ gulp.task('sauce', function(done) {
     configFile: __dirname + '/build/karma.sauce.config.js'
   }).start();
 });
+
+gulp.task('ci', 'cover', 'sauce')
