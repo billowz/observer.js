@@ -2,7 +2,7 @@ const observer = require('../index');
 require('./test.spec');
 
 describe("Observer Performance", () => {
-  let obj_nr = 1000,
+  let obj_nr = 200,
     prop_nr = 4;
 
   function generate() {
@@ -67,7 +67,7 @@ describe("Observer Performance", () => {
     console.log(this.test.fullTitle() + ': binding ' + objs.length + ' use:' + ms + ' ms');
   }
 
-  describe('Observer.on', () => {
+  xdescribe('Observer.on', () => {
     let objs;
 
     beforeEach(function() {
@@ -84,7 +84,7 @@ describe("Observer Performance", () => {
     });
   });
 
-  describe('Observer event', () => {
+  xdescribe('Observer event', () => {
     let objs;
 
     beforeEach(function() {
@@ -117,7 +117,7 @@ describe("Observer Performance", () => {
     });
   });
 
-  describe('Observer.un', () => {
+  xdescribe('Observer.un', () => {
     let objs;
 
     beforeEach(function() {
@@ -134,7 +134,7 @@ describe("Observer Performance", () => {
     });
   });
 
-  describe('Observer.hasListen:true', () => {
+  xdescribe('Observer.hasListen:true', () => {
     let objs;
 
     beforeEach(function() {
@@ -152,7 +152,7 @@ describe("Observer Performance", () => {
     });
   });
 
-  describe('Observer.hasListen:false', () => {
+  xdescribe('Observer.hasListen:false', () => {
     let objs;
 
     beforeEach(function() {

@@ -14,11 +14,11 @@ var batch = {
     browserName: 'safari',
     platform: 'OS X 10.10'
   },
-  sl_ie_9: {
+  sl_ie_11: {
     base: 'SauceLabs',
     browserName: 'internet explorer',
-    platform: 'Windows 7',
-    version: '9'
+    platform: 'Windows 8.1',
+    version: '11'
   },
   sl_ie_10: {
     base: 'SauceLabs',
@@ -26,11 +26,29 @@ var batch = {
     platform: 'Windows 8',
     version: '10'
   },
-  sl_ie_11: {
+  sl_ie_9: {
     base: 'SauceLabs',
     browserName: 'internet explorer',
-    platform: 'Windows 8.1',
-    version: '11'
+    platform: 'Windows 7',
+    version: '9'
+  },
+  sl_ie_8: {
+    base: 'SauceLabs',
+    browserName: 'internet explorer',
+    platform: 'Windows 7',
+    version: '8'
+  },
+  sl_ie_7: {
+    base: 'SauceLabs',
+    browserName: 'internet explorer',
+    platform: 'Windows xp',
+    version: '7'
+  },
+  sl_ie_6: {
+    base: 'SauceLabs',
+    browserName: 'internet explorer',
+    platform: 'Windows xp',
+    version: '6'
   },
   sl_ios_safari: {
     base: 'SauceLabs',
