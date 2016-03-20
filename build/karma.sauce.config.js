@@ -49,12 +49,6 @@ var batch = {
     browserName: 'internet explorer',
     platform: 'Windows XP',
     version: '6'
-  },
-  sl_ios_safari: {
-    base: 'SauceLabs',
-    browserName: 'iphone',
-    platform: 'OS X 10.9',
-    version: '7.1'
   }
 }
 
