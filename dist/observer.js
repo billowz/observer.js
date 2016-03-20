@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.0.7 built in Fri, 18 Mar 2016 03:13:48 GMT
+ * observer.js v0.0.8 built in Fri, 18 Mar 2016 12:53:21 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -126,7 +126,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function bind(obj, handler) {
-	  var handlers = void 0;
+	  var handlers = undefined;
 	
 	  if (typeof handler !== 'function') {
 	    throw TypeError('Invalid Proxy Event Handler');
@@ -141,7 +141,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function unbind(obj, handler) {
-	  var handlers = void 0;
+	  var handlers = undefined;
 	
 	  obj = proxy.obj(obj);
 	  handlers = proxyEvents.get(obj);
@@ -342,7 +342,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 	
-	var lastTime = void 0,
+	var lastTime = undefined,
 	    requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame,
 	    cancelAnimationFrame = window.cancelAnimationFrame || window.webkitCancelAnimationFrame || window.mozCancelAnimationFrame || window.oCancelAnimationFrame || window.msCancelAnimationFrame,
 	    bind = Function.prototype.bind || function bind(scope) {
@@ -609,7 +609,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return observers.get(obj);
 	  },
 	  hasListen: function hasListen(obj, attr, handler) {
-	    var observer = void 0,
+	    var observer = undefined,
 	        l = arguments.length;
 	
 	    obj = proxy.obj(obj);
@@ -624,7 +624,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return observer.hasListen(obj, attr, handler);
 	  },
 	  on: function on(obj, attr, handler) {
-	    var observer = void 0;
+	    var observer = undefined;
 	
 	    obj = proxy.obj(obj);
 	    observer = observers.get(obj);
@@ -635,7 +635,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return observer.on(attr, handler);
 	  },
 	  un: function un(obj, attr, handler) {
-	    var observer = void 0;
+	    var observer = undefined;
 	
 	    obj = proxy.obj(obj);
 	    observer = observers.get(obj);
@@ -735,7 +735,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return !!this.watchPropNum;
 	    } else if (l == 1) {
 	      if (typeof attr == 'function') {
-	        var handlers = void 0;
+	        var handlers = undefined;
 	        for (var k in listens) {
 	          handlers = listens[k];
 	          if (handlers && _.indexOf.call(handlers, attr) != -1) return true;
@@ -746,8 +746,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if (typeof handler != 'function') {
 	        throw TypeError('Invalid Observe Handler');
 	      }
-	      var _handlers = listens[attr];
-	      return _handlers && _.indexOf.call(_handlers, handler) != -1;
+	      var handlers = listens[attr];
+	      return handlers && _.indexOf.call(handlers, handler) != -1;
 	    }
 	  };
 	
@@ -829,7 +829,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	
 	  applyProto('_onObserveChanged', function _onObserveChanged(changes) {
-	    var c = void 0;
+	    var c = undefined;
 	    for (var i = 0, l = changes.length; i < l; i++) {
 	      c = changes[i];
 	      if (this.listens[c.name]) this._addChangeRecord(c.name, c.oldValue);
@@ -895,7 +895,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          obj[prop] = value;
 	          return true;
 	        }
-	        var oldVal = void 0;
+	        var oldVal = undefined;
 	        if (prop === 'length') {
 	          oldVal = oldLength;
 	          oldLength = value;
@@ -1001,7 +1001,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function doesDefinePropertyWork(defineProperty, object) {
 	    try {
 	      var _ret = function () {
-	        var val = void 0;
+	        var val = undefined;
 	        defineProperty(object, 'sentinel', {
 	          get: function get() {
 	            return val;
@@ -1189,8 +1189,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  for (var i = OBJECT_PROTO_PROPS.length - 1; i >= 0; i--) {
 	    OBJECT_PROTO_PROPS_MAP[OBJECT_PROTO_PROPS[i]] = true;
 	  }
-	  for (var _i = ARRAY_PROTO_PROPS.length - 1; _i >= 0; _i--) {
-	    ARRAY_PROTO_PROPS_MAP[ARRAY_PROTO_PROPS[_i]] = true;
+	  for (var i = ARRAY_PROTO_PROPS.length - 1; i >= 0; i--) {
+	    ARRAY_PROTO_PROPS_MAP[ARRAY_PROTO_PROPS[i]] = true;
 	  }
 	
 	  function generateVBClassName() {
@@ -1210,10 +1210,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	
 	  function generateVBClass(VBClassName, properties) {
-	    var buffer = void 0,
-	        i = void 0,
-	        l = void 0,
-	        attr = void 0,
+	    var buffer = undefined,
+	        i = undefined,
+	        l = undefined,
+	        attr = undefined,
 	        added = {};
 	
 	    buffer = ['Class ', VBClassName, '\r\n', CONST_SCRIPT, '\r\n'];
@@ -1243,8 +1243,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  function _createVBProxy(object, desc) {
 	    var isArray = object instanceof Array,
-	        props = void 0,
-	        proxy = void 0;
+	        props = undefined,
+	        proxy = undefined;
 	
 	    if (isArray) {
 	      props = ARRAY_PROTO_PROPS.slice();
@@ -1253,8 +1253,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	    } else {
 	      props = OBJECT_PROTO_PROPS.slice();
-	      for (var _attr in object) {
-	        if (_attr !== DESC_BINDING) if (!(_attr in OBJECT_PROTO_PROPS_MAP)) props.push(_attr);
+	      for (var attr in object) {
+	        if (attr !== DESC_BINDING) if (!(attr in OBJECT_PROTO_PROPS_MAP)) props.push(attr);
 	      }
 	    }
 	    desc = desc || new ObjectDescriptor(object, props);
@@ -1269,8 +1269,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      _classCallCheck(this, ObjectDescriptor);
 	
 	      var defines = {};
-	      for (var _i2 = 0, l = props.length; _i2 < l; _i2++) {
-	        defines[_i2] = false;
+	      for (var i = 0, l = props.length; i < l; i++) {
+	        defines[i] = false;
 	      }
 	      this.object = object;
 	      this.defines = defines;
@@ -1442,7 +1442,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = _.parseExpr(expression);
 	
 	    if (path.length > 1) {
-	      var exp = void 0;
+	      var exp = undefined;
 	
 	      obj = proxy.obj(obj);
 	      exp = factory._get(obj, expression);
@@ -1460,7 +1460,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = _.parseExpr(expression);
 	
 	    if (path.length > 1) {
-	      var exp = void 0;
+	      var exp = undefined;
 	
 	      obj = proxy.obj(obj);
 	      exp = factory._get(obj, expression);
