@@ -1,10 +1,9 @@
-[![Build Status](https://api.travis-ci.org/tao-zeng/observer.js.svg?branch=master)](https://travis-ci.org/tao-zeng/observer.js) 
-[![Join the chat at https://gitter.im/tao-zeng/observer.js](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/tao-zeng/observer.js?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Issue Stats](http://issuestats.com/github/tao-zeng/observer.js/badge/pr)](http://issuestats.com/github/tao-zeng/observer.js)
-[![Issue Stats](http://issuestats.com/github/tao-zeng/observer.js/badge/issue)](http://issuestats.com/github/tao-zeng/observer.js)
-[![npm version](https://badge.fury.io/js/angular2.svg)](http://badge.fury.io/js/angular2)
-[![Downloads](http://img.shields.io/npm/dm/angular2.svg)](https://npmjs.org/package/angular2)
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/angular2-ci.svg)](https://saucelabs.com/u/angular2-ci)
+[![Build](https://api.travis-ci.org/tao-zeng/observer.js.svg?branch=master)](https://travis-ci.org/tao-zeng/observer.js)
+[![Coverage](https://img.shields.io/codecov/c/github/tao-zeng/observer.js/dev.svg)](https://codecov.io/github/tao-zeng/observer.js?branch=master)
+[![Version](https://img.shields.io/npm/v/observer.js.svg)](https://npmjs.org/package/observer.js)
+[![License](https://img.shields.io/npm/l/observer.js.svg)](https://npmjs.org/package/observer.js)
+[![Downloads](https://img.shields.io/npm/dt/observer.js.svg)](https://npmjs.org/package/observer.js)
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/observer_js.svg)](https://saucelabs.com/u/observer_js)
 
 ##observer.js
 

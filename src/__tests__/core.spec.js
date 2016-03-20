@@ -1,6 +1,6 @@
 const Observer = require('../core'),
   _ = require('../util');
-require('./test');
+require('./test.spec');
 
 
 describe("Observer", () => {

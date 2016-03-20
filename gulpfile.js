@@ -5,7 +5,7 @@ var fs = require('fs'),
   webpack = require('webpack'),
   gulpWebpack = require('gulp-webpack'),
   WebpackDevServer = require('webpack-dev-server'),
-  mkcfg = require('./tool/make.webpack.js'),
+  mkcfg = require('./build/make.webpack.js'),
   pkg = require('./package.json'),
   karma = require('karma').Server,
   main = {
@@ -98,14 +98,17 @@ gulp.task('server', ['build'], function() {
 
 gulp.task('test', function(done) {
   new karma({
-    configFile: __dirname + '/karma.conf.js',
-    singleRun: true
+    configFile: __dirname + '/build/karma.unit.config.js'
+  }).start();
+});
+gulp.task('cover', function(done) {
+  new karma({
+    configFile: __dirname + '/build/karma.cover.config.js'
   }).start();
 });
 
-gulp.task('tdd', function(done) {
+gulp.task('sauce', function(done) {
   new karma({
-    configFile: __dirname + '/karma.conf.js',
-    singleRun: false
+    configFile: __dirname + '/build/karma.sauce.config.js'
   }).start();
 });
