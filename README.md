@@ -1,5 +1,5 @@
 [![Build](https://api.travis-ci.org/tao-zeng/observer.js.svg?branch=master)](https://travis-ci.org/tao-zeng/observer.js)
-[![Coverage](https://img.shields.io/codecov/c/github/tao-zeng/observer.js/dev.svg)](https://codecov.io/github/tao-zeng/observer.js?branch=master)
+[![codecov.io](https://codecov.io/github/tao-zeng/observer.js/coverage.svg?branch=master)](https://codecov.io/github/tao-zeng/observer.js?branch=master)
 [![Version](https://img.shields.io/npm/v/observer.js.svg)](https://npmjs.org/package/observer.js)
 [![License](https://img.shields.io/npm/l/observer.js.svg)](https://npmjs.org/package/observer.js)
 [![Downloads](https://img.shields.io/npm/dt/observer.js.svg)](https://npmjs.org/package/observer.js)
