@@ -58,10 +58,11 @@ module.exports = function(config) {
     customLaunchers: batch,
     reporters: ['progress', 'saucelabs'],
     sauceLabs: {
-      testName: 'observer.js unit tests',
-      username: 'observer_js',
+      testName: 'tpl.js unit tests',
+      username: 'tpl_js',
       accessKey: '6b589fb2-460b-46d7-a272-8e9646bfb0d7'
     },
+    port: 9876,
     // mobile emulators are really slow
     captureTimeout: 300000,
     browserNoActivityTimeout: 300000

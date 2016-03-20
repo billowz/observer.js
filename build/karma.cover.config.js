@@ -4,6 +4,7 @@ module.exports = function(config) {
   var options = Object.assign(base, {
     browsers: ['PhantomJS'],
     reporters: ['progress', 'coverage'],
+    port: 9877,
     coverageReporter: {
       reporters: [
         {
