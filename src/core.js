@@ -409,12 +409,12 @@ function es5DefineProperty() {
     proxy.proxy = factory.getVBProxy;
 
     applyProto('_init', function _init() {
-      init();
+      init.call(this);
       this.obj = factory.obj(this.target);
     });
 
     applyProto('_destroy', function _destroy() {
-      destroy();
+      destroy.call(this);
     });
 
     applyProto('_defineProperty', function _defineProperty(attr, value) {

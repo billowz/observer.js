@@ -41,13 +41,13 @@ var batch = {
   sl_ie_7: {
     base: 'SauceLabs',
     browserName: 'internet explorer',
-    platform: 'Windows xp',
+    platform: 'Windows XP',
     version: '7'
   },
   sl_ie_6: {
     base: 'SauceLabs',
     browserName: 'internet explorer',
-    platform: 'Windows xp',
+    platform: 'Windows XP',
     version: '6'
   },
   sl_ios_safari: {
@@ -55,12 +55,6 @@ var batch = {
     browserName: 'iphone',
     platform: 'OS X 10.9',
     version: '7.1'
-  },
-  sl_android: {
-    base: 'SauceLabs',
-    browserName: 'android',
-    platform: 'Linux',
-    version: '4.2'
   }
 }
 
