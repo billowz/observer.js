@@ -99,18 +99,18 @@ gulp.task('server', ['build'], function() {
 gulp.task('test', function(done) {
   new karma({
     configFile: __dirname + '/build/karma.unit.config.js'
-  }).start();
+  }, done).start();
 });
 gulp.task('cover', function(done) {
   new karma({
     configFile: __dirname + '/build/karma.cover.config.js'
-  }).start();
+  }, done).start();
 });
 
 gulp.task('sauce', function(done) {
   new karma({
     configFile: __dirname + '/build/karma.sauce.config.js'
-  }).start();
+  }, done).start();
 });
 
-gulp.task('ci', 'cover', 'sauce')
+gulp.task('ci', ['cover', 'sauce'])
