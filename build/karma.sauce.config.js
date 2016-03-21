@@ -1,4 +1,6 @@
 var base = require('./karma.base.config.js')
+var pkg = require('../package.json')
+
 var batch = {
   sl_chrome: {
     base: 'SauceLabs',
@@ -60,7 +62,9 @@ module.exports = function(config) {
     sauceLabs: {
       testName: 'observer.js unit tests',
       username: 'observer_js',
-      accessKey: '6b589fb2-460b-46d7-a272-8e9646bfb0d7'
+      accessKey: '6b589fb2-460b-46d7-a272-8e9646bfb0d7',
+      tags: ['v' + pkg.version],
+      'public': 'public'
     },
     port: 9876,
     // mobile emulators are really slow
