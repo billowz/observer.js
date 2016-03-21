@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.0.9 built in Mon, 21 Mar 2016 08:48:00 GMT
+ * observer.js v0.0.9 built in Mon, 21 Mar 2016 08:51:49 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers

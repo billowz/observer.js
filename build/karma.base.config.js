@@ -20,8 +20,7 @@ module.exports = {
   plugins: [
     require('karma-mocha'),
     require('karma-expect'),
-    require('karma-webpack'),
-    require('karma-babel-preprocessor')
+    require('karma-webpack')
   ],
 
   concurrency: Infinity,
