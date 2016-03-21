@@ -1,6 +1,7 @@
 var webpackCfg = require('./webpack.dev.config.js')
 delete webpackCfg.entry
 webpackCfg.devtool = 'inline-source-map'
+
 module.exports = {
   transports: ['websocket', 'polling', 'jsonp-polling'],
 

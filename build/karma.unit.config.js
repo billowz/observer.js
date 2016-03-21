@@ -4,7 +4,7 @@ module.exports = function(config) {
   var options = Object.assign(base, {
     browsers: ['Chrome'],
     reporters: ['progress'],
-    autoWatch: true,
+    autoWatch: false,
     singleRun: false
   });
 
