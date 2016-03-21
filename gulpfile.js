@@ -79,17 +79,55 @@ gulp.task('ci', ['cover-ci', 'sauce']);
 
 
 
-gulp.task('commit', function() {
+gulp.task('_commit', function() {
   var args = minimist(process.argv.slice(2));
-  console.log(args.comment)
   return gulp.src('.')
-    .pipe(git.commit(args.comment, {
-      args: '-a'
-    }));
+    .pipe(git.add({
+      args: '-A'
+    }))
+    .pipe(git.commit(args.comment));
 });
 
-gulp.task('push', function(cb) {
+gulp.task('commit', function(callback) {
+  runSequence('build', '_commit',
+    function(error) {
+      if (error)
+        console.log(error.message);
+      callback(error);
+    });
+});
+
+gulp.task('_push', function(cb) {
   git.push('origin', 'master', cb);
+});
+
+gulp.task('push', function(callback) {
+  runSequence('build', '_commit', '_push',
+    function(error) {
+      if (error)
+        console.log(error.message);
+      callback(error);
+    });
+});
+
+gulp.task('_version', function() {
+  var args = minimist(process.argv.slice(2));
+  return gulp.src('./package.json')
+    .pipe(bump({
+      type: args.type || 'patch'
+    }).on('error', function(err) {
+      console.log(err)
+    }))
+    .pipe(gulp.dest('./'));
+});
+
+gulp.task('version', function(callback) {
+  runSequence('build', '_version', '_commit', '_push',
+    function(error) {
+      if (error)
+        console.log(error.message);
+      callback(error);
+    });
 });
 
 gulp.task('tag', function(cb) {
@@ -102,29 +140,16 @@ gulp.task('tag', function(cb) {
   });
 });
 
-gulp.task('version', function() {
-  var args = minimist(process.argv.slice(2));
-  return gulp.src('./package.json')
-    .pipe(bump({
-      type: args.type || 'patch'
-    }).on('error', function(err) {
-      console.log(err)
-    }))
-    .pipe(gulp.dest('./'));
-});
-
 gulp.task('release', function(callback) {
   runSequence(
-    'version',
-    'commit',
-    'push',
+    'build',
+    '_version',
+    '_commit',
+    '_push',
     'tag',
     function(error) {
-      if (error) {
+      if (error)
         console.log(error.message);
-      } else {
-        console.log('RELEASE FINISHED SUCCESSFULLY');
-      }
       callback(error);
     });
 });
