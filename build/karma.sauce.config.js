@@ -9,7 +9,9 @@ var batch = {
   },
   sl_firefox: {
     base: 'SauceLabs',
-    browserName: 'firefox'
+    browserName: 'firefox',
+    platform: 'Windows 7',
+    version: '44'
   },
   sl_mac_safari: {
     base: 'SauceLabs',
