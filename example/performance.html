@@ -1,45 +1,50 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-<meta name="description" content="dbmon observer" />
-<title>dbmon (observer.js)</title>
+    <meta name="description" content="dbmon observer" />
+    <title>dbmon (observer.js)</title>
 </head>
+
 <body>
+<a href="../index.html">Back</a>
+</body>
+<script src="../dist/observer.js"></script>
+<script src="../lib/ENV.js"></script>
+<script src="../lib/monitor.js"></script>
 
-  <script src="../dist/observer.js"></script>
+<script>
+var app = {
+    databases: []
+}
 
-  <script src="../lib/ENV.js"></script>
-  <script src="../lib/monitor.js"></script>
-  <script>
-    var app = {
-      databases: []
-    }
-    function handler(){}
-    function loadSamples() {
-      for(var j=0; j<app.databases.length; j++){
+function handler() {}
+
+function loadSamples() {
+    for (var j = 0; j < app.databases.length; j++) {
         var db = app.databases[j];
         observer.un(db, 'dbname', handler);
         observer.un(db, 'lastSample.nbQueries', handler);
-        for(var i=0; i<5; i++){
-          observer.un(db, 'lastSample.topFiveQueries['+i+'].formatElapsed', handler);
-          observer.un(db, 'lastSample.topFiveQueries['+i+'].query', handler);
+        for (var i = 0; i < 5; i++) {
+            observer.un(db, 'lastSample.topFiveQueries[' + i + '].formatElapsed', handler);
+            observer.un(db, 'lastSample.topFiveQueries[' + i + '].query', handler);
         }
-      }
+    }
 
-      app.databases = ENV.generateData().toArray().slice(0, 10);
-      for(var j=0; j<app.databases.length; j++){
+    app.databases = ENV.generateData().toArray().slice(0, 10);
+    for (var j = 0; j < app.databases.length; j++) {
         var db = app.databases[j];
         observer.on(db, 'dbname', handler);
         observer.on(db, 'lastSample.nbQueries', handler);
-        for(var i=0; i<5; i++){
-          observer.on(db, 'lastSample.topFiveQueries['+i+'].formatElapsed', handler);
-          observer.on(db, 'lastSample.topFiveQueries['+i+'].query', handler);
+        for (var i = 0; i < 5; i++) {
+            observer.on(db, 'lastSample.topFiveQueries[' + i + '].formatElapsed', handler);
+            observer.on(db, 'lastSample.topFiveQueries[' + i + '].query', handler);
         }
-      }
-      Monitoring.renderRate.ping();
-      setTimeout(loadSamples, ENV.timeout);
     }
-    loadSamples()
-  </script>
-</body>
+    Monitoring.renderRate.ping();
+    setTimeout(loadSamples, ENV.timeout);
+}
+loadSamples()
+</script>
+
 </html>

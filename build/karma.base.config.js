@@ -1,30 +1,26 @@
+var webpackCfg = require('./webpack.dev.config.js')
+delete webpackCfg.entry
+webpackCfg.devtool = 'inline-source-map'
 module.exports = {
   transports: ['websocket', 'polling', 'jsonp-polling'],
 
-  frameworks: ['mocha', 'expect', 'commonjs'],
+  frameworks: ['mocha', 'expect'],
 
   files: [
-    '../src/**/*.js'
+    '../node_modules/observer.js/dist/observer.js',
+    '../src/__tests__/index.spec.js'
   ],
 
   preprocessors: {
-    '../src/**/*.js': ['babel', 'commonjs']
+    '../src/__tests__/index.spec.js': ['webpack']
   },
 
-  babelPreprocessor: {
-    options: {
-      sourceMap: 'inline'
-    }
-  },
-
-  commonjsPreprocessor: {
-    modulesRoot: '../src'
-  },
+  webpack: webpackCfg,
 
   plugins: [
     require('karma-mocha'),
     require('karma-expect'),
-    require('karma-commonjs'),
+    require('karma-webpack'),
     require('karma-babel-preprocessor')
   ],
 

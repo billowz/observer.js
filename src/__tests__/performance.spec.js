@@ -1,5 +1,4 @@
 const observer = require('../index');
-require('./test.spec');
 
 describe("Observer Performance", () => {
   let obj_nr = 1000,

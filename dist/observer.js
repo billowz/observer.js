@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.0.8 built in Sun, 20 Mar 2016 05:44:38 GMT
+ * observer.js v0.0.8 built in Mon, 21 Mar 2016 07:03:38 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -52,7 +52,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.c = installedModules;
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "";
+/******/ 	__webpack_require__.p = "http://localhost:8088/dist/";
 /******/
 /******/ 	// Load entry module and return exports
 /******/ 	return __webpack_require__(0);
@@ -126,7 +126,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function bind(obj, handler) {
-	  var handlers = undefined;
+	  var handlers = void 0;
 	
 	  if (typeof handler !== 'function') {
 	    throw TypeError('Invalid Proxy Event Handler');
@@ -141,7 +141,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function unbind(obj, handler) {
-	  var handlers = undefined;
+	  var handlers = void 0;
 	
 	  obj = proxy.obj(obj);
 	  handlers = proxyEvents.get(obj);
@@ -342,7 +342,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 	
-	var lastTime = undefined,
+	var lastTime = void 0,
 	    requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame,
 	    cancelAnimationFrame = window.cancelAnimationFrame || window.webkitCancelAnimationFrame || window.mozCancelAnimationFrame || window.oCancelAnimationFrame || window.msCancelAnimationFrame,
 	    bind = Function.prototype.bind || function bind(scope) {
@@ -609,7 +609,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return observers.get(obj);
 	  },
 	  hasListen: function hasListen(obj, attr, handler) {
-	    var observer = undefined,
+	    var observer = void 0,
 	        l = arguments.length;
 	
 	    obj = proxy.obj(obj);
@@ -624,7 +624,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return observer.hasListen(obj, attr, handler);
 	  },
 	  on: function on(obj, attr, handler) {
-	    var observer = undefined;
+	    var observer = void 0;
 	
 	    obj = proxy.obj(obj);
 	    observer = observers.get(obj);
@@ -635,7 +635,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return observer.on(attr, handler);
 	  },
 	  un: function un(obj, attr, handler) {
-	    var observer = undefined;
+	    var observer = void 0;
 	
 	    obj = proxy.obj(obj);
 	    observer = observers.get(obj);
@@ -735,7 +735,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return !!this.watchPropNum;
 	    } else if (l == 1) {
 	      if (typeof attr == 'function') {
-	        var handlers = undefined;
+	        var handlers = void 0;
 	        for (var k in listens) {
 	          handlers = listens[k];
 	          if (handlers && _.indexOf.call(handlers, attr) != -1) return true;
@@ -746,8 +746,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if (typeof handler != 'function') {
 	        throw TypeError('Invalid Observe Handler');
 	      }
-	      var handlers = listens[attr];
-	      return handlers && _.indexOf.call(handlers, handler) != -1;
+	      var _handlers = listens[attr];
+	      return _handlers && _.indexOf.call(_handlers, handler) != -1;
 	    }
 	  };
 	
@@ -829,7 +829,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 	
 	  applyProto('_onObserveChanged', function _onObserveChanged(changes) {
-	    var c = undefined;
+	    var c = void 0;
 	    for (var i = 0, l = changes.length; i < l; i++) {
 	      c = changes[i];
 	      if (this.listens[c.name]) this._addChangeRecord(c.name, c.oldValue);
@@ -895,7 +895,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          obj[prop] = value;
 	          return true;
 	        }
-	        var oldVal = undefined;
+	        var oldVal = void 0;
 	        if (prop === 'length') {
 	          oldVal = oldLength;
 	          oldLength = value;
@@ -1001,7 +1001,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  function doesDefinePropertyWork(defineProperty, object) {
 	    try {
 	      var _ret = function () {
-	        var val = undefined;
+	        var val = void 0;
 	        defineProperty(object, 'sentinel', {
 	          get: function get() {
 	            return val;
@@ -1085,12 +1085,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	      proxy.proxy = factory.getVBProxy;
 	
 	      applyProto('_init', function _init() {
-	        init();
+	        init.call(this);
 	        this.obj = factory.obj(this.target);
 	      });
 	
 	      applyProto('_destroy', function _destroy() {
-	        destroy();
+	        destroy.call(this);
 	      });
 	
 	      applyProto('_defineProperty', function _defineProperty(attr, value) {
@@ -1189,8 +1189,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  for (var i = OBJECT_PROTO_PROPS.length - 1; i >= 0; i--) {
 	    OBJECT_PROTO_PROPS_MAP[OBJECT_PROTO_PROPS[i]] = true;
 	  }
-	  for (var i = ARRAY_PROTO_PROPS.length - 1; i >= 0; i--) {
-	    ARRAY_PROTO_PROPS_MAP[ARRAY_PROTO_PROPS[i]] = true;
+	  for (var _i = ARRAY_PROTO_PROPS.length - 1; _i >= 0; _i--) {
+	    ARRAY_PROTO_PROPS_MAP[ARRAY_PROTO_PROPS[_i]] = true;
 	  }
 	
 	  function generateVBClassName() {
@@ -1210,10 +1210,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	
 	  function generateVBClass(VBClassName, properties) {
-	    var buffer = undefined,
-	        i = undefined,
-	        l = undefined,
-	        attr = undefined,
+	    var buffer = void 0,
+	        i = void 0,
+	        l = void 0,
+	        attr = void 0,
 	        added = {};
 	
 	    buffer = ['Class ', VBClassName, '\r\n', CONST_SCRIPT, '\r\n'];
@@ -1243,8 +1243,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  function _createVBProxy(object, desc) {
 	    var isArray = object instanceof Array,
-	        props = undefined,
-	        proxy = undefined;
+	        props = void 0,
+	        proxy = void 0;
 	
 	    if (isArray) {
 	      props = ARRAY_PROTO_PROPS.slice();
@@ -1253,8 +1253,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	    } else {
 	      props = OBJECT_PROTO_PROPS.slice();
-	      for (var attr in object) {
-	        if (attr !== DESC_BINDING) if (!(attr in OBJECT_PROTO_PROPS_MAP)) props.push(attr);
+	      for (var _attr in object) {
+	        if (_attr !== DESC_BINDING) if (!(_attr in OBJECT_PROTO_PROPS_MAP)) props.push(_attr);
 	      }
 	    }
 	    desc = desc || new ObjectDescriptor(object, props);
@@ -1269,8 +1269,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      _classCallCheck(this, ObjectDescriptor);
 	
 	      var defines = {};
-	      for (var i = 0, l = props.length; i < l; i++) {
-	        defines[i] = false;
+	      for (var _i2 = 0, l = props.length; _i2 < l; _i2++) {
+	        defines[_i2] = false;
 	      }
 	      this.object = object;
 	      this.defines = defines;
@@ -1442,7 +1442,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = _.parseExpr(expression);
 	
 	    if (path.length > 1) {
-	      var exp = undefined;
+	      var exp = void 0;
 	
 	      obj = proxy.obj(obj);
 	      exp = factory._get(obj, expression);
@@ -1460,7 +1460,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = _.parseExpr(expression);
 	
 	    if (path.length > 1) {
-	      var exp = undefined;
+	      var exp = void 0;
 	
 	      obj = proxy.obj(obj);
 	      exp = factory._get(obj, expression);

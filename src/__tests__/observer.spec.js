@@ -1,5 +1,4 @@
 const observer = require('../index');
-require('./test.spec');
 
 describe("Observer factory", () => {
   it("Observe changes", function(done) {
