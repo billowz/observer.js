@@ -7,7 +7,6 @@ module.exports = {
   frameworks: ['mocha', 'expect'],
 
   files: [
-    '../node_modules/observer.js/dist/observer.js',
     '../src/__tests__/index.spec.js'
   ],
 
