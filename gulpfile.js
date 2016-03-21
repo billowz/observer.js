@@ -1,10 +1,15 @@
 var gulp = require('gulp'),
   clean = require('gulp-clean'),
   webpack = require('webpack'),
+  runSequence = require('run-sequence'),
   gulpWebpack = require('gulp-webpack'),
   WebpackDevServer = require('webpack-dev-server'),
   karma = require('karma').Server,
   webpackCfg = require('./build/webpack.dev.config.js'),
+  minimist = require('minimist'),
+  bump = require('gulp-bump'),
+  git = require('gulp-git'),
+  pkg = require('./package.json'),
   dist = './dist'
 
 gulp.task('build', ['clean'], function() {
@@ -35,7 +40,6 @@ gulp.task('watch', function(event) {
     gulp.start('build');
   });
 });
-
 
 gulp.task('server', function() {
   webpackCfg.devtool = 'source-map'
@@ -72,3 +76,55 @@ gulp.task('cover-ci', ['cover'], function() {
 });
 
 gulp.task('ci', ['cover-ci', 'sauce']);
+
+
+
+gulp.task('commit', function() {
+  var args = minimist(process.argv.slice(2));
+  console.log(args.comment)
+  return gulp.src('.')
+    .pipe(git.commit(args.comment, {
+      args: '-a'
+    }));
+});
+
+gulp.task('push', function(cb) {
+  git.push('origin', 'master', cb);
+});
+
+gulp.task('tag', function(cb) {
+  git.tag(pkg.version, 'Created Tag for version: ' + pkg.version, function(error) {
+    if (error)
+      return cb(error);
+    git.push('origin', 'master', {
+      args: '--tags'
+    }, cb);
+  });
+});
+
+gulp.task('version', function() {
+  var args = minimist(process.argv.slice(2));
+  return gulp.src('./package.json')
+    .pipe(bump({
+      type: args.type || 'patch'
+    }).on('error', function(err) {
+      console.log(err)
+    }))
+    .pipe(gulp.dest('./'));
+});
+
+gulp.task('release', function(callback) {
+  runSequence(
+    'version',
+    'commit',
+    'push',
+    'tag',
+    function(error) {
+      if (error) {
+        console.log(error.message);
+      } else {
+        console.log('RELEASE FINISHED SUCCESSFULLY');
+      }
+      callback(error);
+    });
+});
