@@ -60,7 +60,7 @@ module.exports = function(config) {
     sauceLabs: {
       testName: 'observer.js unit tests',
       username: 'observer_js',
-      accessKey: '0a943154-ae00-4742-bb2b-6a87cf2d13b3'
+      accessKey: '6b589fb2-460b-46d7-a272-8e9646bfb0d7'
     },
     port: 9876,
     // mobile emulators are really slow
