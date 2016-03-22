@@ -58,10 +58,18 @@ class Expression {
 
     return (attr, val, oldVal) => {
       if (ridx) {
-        this._unobserve(oldVal, idx + 1);
-        this._observe(val, idx + 1);
-        oldVal = _.get(oldVal, rpath);
-        val = _.get(val, rpath);
+        if (oldVal) {
+          this._unobserve(oldVal, idx + 1);
+          oldVal = _.get(oldVal, rpath);
+        } else {
+          oldVal = undefined;
+        }
+        if (val) {
+          this._observe(val, idx + 1);
+          val = _.get(val, rpath);
+        } else {
+          val = undefined;
+        }
         if (proxy.eq(val, oldVal))
           return;
       }

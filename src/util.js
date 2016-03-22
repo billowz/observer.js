@@ -10,9 +10,6 @@ let lastTime,
     window.oCancelAnimationFrame ||
     window.msCancelAnimationFrame,
   bind = Function.prototype.bind || function bind(scope) {
-      if (arguments.length < 2 && (scope === undefined || scope === null)) {
-        return this;
-      }
       let fn = this,
         args = Array.prototype.slice.call(arguments, 1);
       return function() {

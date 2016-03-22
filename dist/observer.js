@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.0.8 built in Mon, 21 Mar 2016 09:50:37 GMT
+ * observer.js v0.0.9 built in Tue, 22 Mar 2016 10:54:19 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -204,7 +204,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      ENTRY: 'entry'
 	    },
 	        HASH_BIND = '__hash__',
-	        hash_generator = 0;
+	        hash_generator = 0,
+	        hasOwn = Object.prototype.hasOwnProperty;
 	
 	    var _Map = function () {
 	      function _Map() {
@@ -216,7 +217,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	
 	      _Map.prototype._hash = function _hash(value) {
-	        return value[HASH_BIND] || (value[HASH_BIND] = ++hash_generator);
+	        if (hasOwn.call(value, HASH_BIND)) return value[HASH_BIND];
+	        return value[HASH_BIND] = ++hash_generator;
 	      };
 	
 	      _Map.prototype.has = function has(key) {
@@ -346,9 +348,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame,
 	    cancelAnimationFrame = window.cancelAnimationFrame || window.webkitCancelAnimationFrame || window.mozCancelAnimationFrame || window.oCancelAnimationFrame || window.msCancelAnimationFrame,
 	    bind = Function.prototype.bind || function bind(scope) {
-	  if (arguments.length < 2 && (scope === undefined || scope === null)) {
-	    return this;
-	  }
 	  var fn = this,
 	      args = Array.prototype.slice.call(arguments, 1);
 	  return function () {
@@ -515,10 +514,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    return function (attr, val, oldVal) {
 	      if (ridx) {
-	        _this._unobserve(oldVal, idx + 1);
-	        _this._observe(val, idx + 1);
-	        oldVal = _.get(oldVal, rpath);
-	        val = _.get(val, rpath);
+	        if (oldVal) {
+	          _this._unobserve(oldVal, idx + 1);
+	          oldVal = _.get(oldVal, rpath);
+	        } else {
+	          oldVal = undefined;
+	        }
+	        if (val) {
+	          _this._observe(val, idx + 1);
+	          val = _.get(val, rpath);
+	        } else {
+	          val = undefined;
+	        }
 	        if (proxy.eq(val, oldVal)) return;
 	      }
 	
@@ -860,6 +867,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  proxyEnable();
 	
 	  proxy.obj = function (proxy) {
+	    if (!proxy) return proxy;
 	    return proxyObjLoop.get(proxy) || proxy;
 	  };
 	
@@ -1101,12 +1109,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	        if (!desc) desc = factory.getVBProxyDesc(factory.createVBProxy(obj));
 	        this.target = desc.defineProperty(attr, {
-	          get: function get() {
-	            return value;
-	          },
 	          set: function set(val) {
-	            var oldVal = value;
-	            value = val;
+	            var oldVal = _this5.obj[attr];
+	            _this5.obj[attr] = val;
 	            _this5._addChangeRecord(attr, oldVal);
 	          }
 	        });
@@ -1172,7 +1177,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	var Map = __webpack_require__(2);
+	var Map = __webpack_require__(2),
+	    _ = __webpack_require__(3);
 	
 	function VBProxyFactory(onProxyChange) {
 	  var OBJECT_PROTO_PROPS = [Map.HASH_BIND, 'hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
@@ -1184,7 +1190,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      CONST_SCRIPT = ['\tPublic [', DESC_BINDING, ']\r\n', '\tPublic Default Function [', CONST_BINDING, '](desc)\r\n', '\t\tset [', DESC_BINDING, '] = desc\r\n', '\t\tSet [', CONST_BINDING, '] = Me\r\n', '\tEnd Function\r\n'].join(''),
 	      VBClassPool = {},
 	      ClassNameGenerator = 0,
-	      hasOwnProperty = Object.prototype.hasOwnProperty;
+	      hasOwn = Object.prototype.hasOwnProperty;
 	
 	  for (var i = OBJECT_PROTO_PROPS.length - 1; i >= 0; i--) {
 	    OBJECT_PROTO_PROPS_MAP[OBJECT_PROTO_PROPS[i]] = true;
@@ -1270,7 +1276,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      var defines = {};
 	      for (var _i2 = 0, l = props.length; _i2 < l; _i2++) {
-	        defines[_i2] = false;
+	        defines[props[_i2]] = false;
 	      }
 	      this.object = object;
 	      this.defines = defines;
@@ -1310,7 +1316,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    };
 	
 	    ObjectDescriptor.prototype.get = function get(attr) {
-	      var define = this.defines[attr];
+	      var define = this.defines[attr],
+	          ret = void 0;
 	      if (define && define.get) {
 	        return define.get.call(this.proxy);
 	      } else {
@@ -1335,28 +1342,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  var api = {
 	    eq: function eq(obj1, obj2) {
-	      var desc1 = obj1[DESC_BINDING],
-	          desc2 = obj2[DESC_BINDING];
+	      var desc1 = api.getVBProxyDesc(obj1),
+	          desc2 = api.getVBProxyDesc(obj2);
 	      if (desc1) obj1 = desc1.object;
 	      if (desc2) obj2 = desc2.object;
 	      return obj1 === obj2;
 	    },
 	    obj: function obj(object) {
-	      var desc = object[DESC_BINDING];
+	      if (!object) return object;
+	      var desc = api.getVBProxyDesc(object);
 	      return desc ? desc.object : object;
 	    },
 	    isVBProxy: function isVBProxy(object) {
-	      return CONST_BINDING in object;
+	      return hasOwn.call(object, CONST_BINDING);
 	    },
 	    getVBProxy: function getVBProxy(object) {
-	      var desc = object[DESC_BINDING];
+	      var desc = api.getVBProxyDesc(object);
 	      return desc ? desc.proxy : undefined;
 	    },
 	    getVBProxyDesc: function getVBProxyDesc(object) {
+	      if (!hasOwn.call(object, DESC_BINDING)) return undefined;
 	      return object[DESC_BINDING];
 	    },
 	    createVBProxy: function createVBProxy(object) {
-	      var desc = object[DESC_BINDING];
+	      var desc = api.getVBProxyDesc(object);
 	
 	      if (desc) {
 	        object = desc.object;
@@ -1364,7 +1373,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return _createVBProxy(object, desc);
 	    },
 	    freeVBProxy: function freeVBProxy(object) {
-	      var desc = object[DESC_BINDING];
+	      var desc = api.getVBProxyDesc(object);
 	      if (desc) {
 	        object = desc.object;
 	        desc.destroy();

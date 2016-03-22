@@ -7,7 +7,8 @@ if (!Map) {
       ENTRY: 'entry'
     },
     HASH_BIND = '__hash__',
-    hash_generator = 0;
+    hash_generator = 0,
+    hasOwn = Object.prototype.hasOwnProperty;
 
   class _Map {
 
@@ -18,7 +19,9 @@ if (!Map) {
     }
 
     _hash(value) {
-      return value[HASH_BIND] || (value[HASH_BIND] = ++hash_generator);
+      if (hasOwn.call(value, HASH_BIND))
+        return value[HASH_BIND];
+      return (value[HASH_BIND] = ++hash_generator);
     }
 
     has(key) {

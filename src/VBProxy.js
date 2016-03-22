@@ -1,4 +1,5 @@
-const Map = require('./map')
+const Map = require('./map'),
+  _ = require('./util')
 
 export function VBProxyFactory(onProxyChange) {
   let OBJECT_PROTO_PROPS = [Map.HASH_BIND, 'hasOwnProperty', 'toString', 'toLocaleString', 'isPrototypeOf', 'propertyIsEnumerable', 'valueOf'],
@@ -18,7 +19,7 @@ export function VBProxyFactory(onProxyChange) {
     ].join(''),
     VBClassPool = {},
     ClassNameGenerator = 0,
-    hasOwnProperty = Object.prototype.hasOwnProperty;
+    hasOwn = Object.prototype.hasOwnProperty;
 
   for (let i = OBJECT_PROTO_PROPS.length - 1; i >= 0; i--) {
     OBJECT_PROTO_PROPS_MAP[OBJECT_PROTO_PROPS[i]] = true;
@@ -126,7 +127,7 @@ export function VBProxyFactory(onProxyChange) {
     constructor(object, props) {
       let defines = {};
       for (let i = 0, l = props.length; i < l; i++) {
-        defines[i] = false;
+        defines[props[i]] = false;
       }
       this.object = object;
       this.defines = defines;
@@ -168,7 +169,8 @@ export function VBProxyFactory(onProxyChange) {
     }
 
     get(attr) {
-      let define = this.defines[attr];
+      let define = this.defines[attr],
+        ret;
       if (define && define.get) {
         return define.get.call(this.proxy);
       } else {
@@ -191,8 +193,8 @@ export function VBProxyFactory(onProxyChange) {
 
   let api = {
     eq(obj1, obj2) {
-      let desc1 = obj1[DESC_BINDING],
-        desc2 = obj2[DESC_BINDING];
+      let desc1 = api.getVBProxyDesc(obj1),
+        desc2 = api.getVBProxyDesc(obj2);
       if (desc1)
         obj1 = desc1.object;
       if (desc2)
@@ -201,25 +203,28 @@ export function VBProxyFactory(onProxyChange) {
     },
 
     obj(object) {
-      let desc = object[DESC_BINDING];
+      if (!object) return object;
+      let desc = api.getVBProxyDesc(object);
       return desc ? desc.object : object;
     },
 
     isVBProxy(object) {
-      return CONST_BINDING in object;
+      return hasOwn.call(object, CONST_BINDING);
     },
 
     getVBProxy(object) {
-      let desc = object[DESC_BINDING];
+      let desc = api.getVBProxyDesc(object);
       return desc ? desc.proxy : undefined;
     },
 
     getVBProxyDesc(object) {
+      if (!hasOwn.call(object, DESC_BINDING))
+        return undefined;
       return object[DESC_BINDING];
     },
 
     createVBProxy(object) {
-      let desc = object[DESC_BINDING];
+      let desc = api.getVBProxyDesc(object);
 
       if (desc) {
         object = desc.object;
@@ -228,7 +233,7 @@ export function VBProxyFactory(onProxyChange) {
     },
 
     freeVBProxy(object) {
-      let desc = object[DESC_BINDING];
+      let desc = api.getVBProxyDesc(object);
       if (desc) {
         object = desc.object;
         desc.destroy();

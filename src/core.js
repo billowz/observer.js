@@ -195,6 +195,7 @@ function es6Proxy() {
   proxyEnable();
 
   proxy.obj = function(proxy) {
+    if (!proxy) return proxy;
     return proxyObjLoop.get(proxy) || proxy;
   };
 
@@ -424,12 +425,9 @@ function es5DefineProperty() {
       if (!desc)
         desc = factory.getVBProxyDesc(factory.createVBProxy(obj))
       this.target = desc.defineProperty(attr, {
-        get: () => {
-          return value;
-        },
         set: (val) => {
-          let oldVal = value;
-          value = val;
+          let oldVal = this.obj[attr];
+          this.obj[attr] = val;
           this._addChangeRecord(attr, oldVal);
         }
       });
