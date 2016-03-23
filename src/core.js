@@ -32,8 +32,10 @@ class Observer {
   _fire(attr, val, oldVal) {
     if (proxy.eq(val, oldVal))
       return;
-    let handlers = this.listens[attr].slice();
-
+    let handlers = this.listens[attr];
+    if(!handlers)
+      return;
+    handlers = handlers.slice();
     for (let i = 0, l = handlers.length; i < l; i++) {
       handlers[i](attr, val, oldVal, this.target);
     }

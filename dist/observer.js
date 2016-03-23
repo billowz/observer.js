@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.0.9 built in Tue, 22 Mar 2016 10:54:19 GMT
+ * observer.js v0.0.10 built in Wed, 23 Mar 2016 11:35:55 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -710,8 +710,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  Observer.prototype._fire = function _fire(attr, val, oldVal) {
 	    if (proxy.eq(val, oldVal)) return;
-	    var handlers = this.listens[attr].slice();
-	
+	    var handlers = this.listens[attr];
+	    if (!handlers) return;
+	    handlers = handlers.slice();
 	    for (var i = 0, l = handlers.length; i < l; i++) {
 	      handlers[i](attr, val, oldVal, this.target);
 	    }
@@ -1361,7 +1362,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return desc ? desc.proxy : undefined;
 	    },
 	    getVBProxyDesc: function getVBProxyDesc(object) {
-	      if (!hasOwn.call(object, DESC_BINDING)) return undefined;
+	      if (!object || !hasOwn.call(object, DESC_BINDING)) return undefined;
 	      return object[DESC_BINDING];
 	    },
 	    createVBProxy: function createVBProxy(object) {

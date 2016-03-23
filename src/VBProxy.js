@@ -218,7 +218,7 @@ export function VBProxyFactory(onProxyChange) {
     },
 
     getVBProxyDesc(object) {
-      if (!hasOwn.call(object, DESC_BINDING))
+      if (!object || !hasOwn.call(object, DESC_BINDING))
         return undefined;
       return object[DESC_BINDING];
     },
