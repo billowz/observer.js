@@ -33,7 +33,7 @@ class Observer {
     if (proxy.eq(val, oldVal))
       return;
     let handlers = this.listens[attr];
-    if(!handlers)
+    if (!handlers)
       return;
     handlers = handlers.slice();
     for (let i = 0, l = handlers.length; i < l; i++) {

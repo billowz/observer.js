@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.0.10 built in Wed, 23 Mar 2016 11:35:55 GMT
+ * observer.js v0.0.11 built in Thu, 24 Mar 2016 08:56:53 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -1216,59 +1216,90 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return ['\tPublic Property Let [', attr, '](val)\r\n', '\t\tCall [', DESC_BINDING, '].set("', attr, '",val)\r\n', '\tEnd Property\r\n', '\tPublic Property Set [', attr, '](val)\r\n', '\t\tCall [', DESC_BINDING, '].set("', attr, '",val)\r\n', '\tEnd Property\r\n'];
 	  }
 	
-	  function generateVBClass(VBClassName, properties) {
+	  function generateVBClass(VBClassName, properties, funcMap) {
 	    var buffer = void 0,
 	        i = void 0,
 	        l = void 0,
-	        attr = void 0,
-	        added = {};
+	        attr = void 0;
 	
 	    buffer = ['Class ', VBClassName, '\r\n', CONST_SCRIPT, '\r\n'];
 	    for (i = 0, l = properties.length; i < l; i++) {
 	      attr = properties[i];
-	      buffer.push.apply(buffer, generateSetter(attr));
-	      buffer.push.apply(buffer, generateGetter(attr));
-	      added[attr] = true;
+	      if (funcMap[attr]) {
+	        buffer.push('\tPublic [' + attr + ']\r\n');
+	      } else {
+	        buffer.push.apply(buffer, generateSetter(attr));
+	        buffer.push.apply(buffer, generateGetter(attr));
+	      }
 	    }
 	    buffer.push('End Class\r\n');
 	    return buffer.join('');
 	  }
 	
-	  function generateVBClassConstructor(properties) {
-	    var key = [properties.length, '[', properties.join(','), ']'].join(''),
+	  function generateVBClassConstructor(properties, funcMap, funcArray) {
+	    var key = [properties.length, '[', properties.join(','), ']', '[', funcArray.join(','), ']'].join(''),
 	        VBClassConstructorName = VBClassPool[key];
 	
 	    if (VBClassConstructorName) return VBClassConstructorName;
 	
 	    var VBClassName = generateVBClassName();
 	    VBClassConstructorName = parseVBClassConstructorName(VBClassName);
-	    parseVB(generateVBClass(VBClassName, properties));
+	    parseVB(generateVBClass(VBClassName, properties, funcMap));
 	    parseVB(['Function ', VBClassConstructorName, '(desc)\r\n', '\tDim o\r\n', '\tSet o = (New ', VBClassName, ')(desc)\r\n', '\tSet ', VBClassConstructorName, ' = o\r\n', 'End Function'].join(''));
 	    VBClassPool[key] = VBClassConstructorName;
 	    return VBClassConstructorName;
 	  }
 	
-	  function _createVBProxy(object, desc) {
+	  function _createVBProxy2(object, desc) {
 	    var isArray = object instanceof Array,
-	        props = void 0,
-	        proxy = void 0;
+	        props = [],
+	        funcMap = {},
+	        funcArray = [],
+	        prop = void 0,
+	        proxy = void 0,
+	        protoProps = void 0,
+	        protoPropMap = void 0;
 	
 	    if (isArray) {
-	      props = ARRAY_PROTO_PROPS.slice();
-	      for (var attr in object) {
-	        if (attr !== DESC_BINDING) if (!(attr in ARRAY_PROTO_PROPS_MAP)) props.push(attr);
-	      }
+	      protoProps = ARRAY_PROTO_PROPS;
+	      protoPropMap = ARRAY_PROTO_PROPS_MAP;
 	    } else {
-	      props = OBJECT_PROTO_PROPS.slice();
-	      for (var _attr in object) {
-	        if (_attr !== DESC_BINDING) if (!(_attr in OBJECT_PROTO_PROPS_MAP)) props.push(_attr);
+	      protoProps = OBJECT_PROTO_PROPS;
+	      protoPropMap = OBJECT_PROTO_PROPS_MAP;
+	    }
+	
+	    for (var _i2 = 0, l = protoProps.length; _i2 < l; _i2++) {
+	      prop = protoProps[_i2];
+	      if (typeof object[prop] == 'function') {
+	        funcMap[prop] = true;
+	        funcArray.push(prop);
+	      }
+	      props.push(prop);
+	    }
+	    for (prop in object) {
+	      if (prop !== DESC_BINDING && !(prop in protoPropMap)) {
+	        if (typeof object[prop] == 'function') {
+	          funcMap[prop] = true;
+	          funcArray.push(prop);
+	        }
+	        props.push(prop);
 	      }
 	    }
 	    desc = desc || new ObjectDescriptor(object, props);
-	    proxy = window[generateVBClassConstructor(props)](desc);
+	    proxy = window[generateVBClassConstructor(props, funcMap, funcArray)](desc);
+	    for (var _i3 = 0, _l = funcArray.length; _i3 < _l; _i3++) {
+	      prop = funcArray[_i3];
+	      proxy[prop] = funcProxy(object[prop], proxy);
+	    }
 	    desc.proxy = proxy;
 	    onProxyChange(object, proxy);
 	    return proxy;
+	  }
+	
+	  function funcProxy(fn, proxy) {
+	    return function () {
+	      fn.apply(!this || this == window ? proxy : this, arguments);
+	    };
 	  }
 	
 	  var ObjectDescriptor = function () {
@@ -1276,8 +1307,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      _classCallCheck(this, ObjectDescriptor);
 	
 	      var defines = {};
-	      for (var _i2 = 0, l = props.length; _i2 < l; _i2++) {
-	        defines[props[_i2]] = false;
+	      for (var _i4 = 0, l = props.length; _i4 < l; _i4++) {
+	        defines[props[_i4]] = false;
 	      }
 	      this.object = object;
 	      this.defines = defines;
@@ -1295,7 +1326,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    ObjectDescriptor.prototype.defineProperty = function defineProperty(attr, desc) {
 	      if (!(attr in this.defines)) {
-	        if (!(attr in this.object)) this.object[attr] = undefined;
+	        if (!(attr in this.object)) {
+	          this.object[attr] = undefined;
+	        } else if (typeof this.object[attr] == 'function') {
+	          console.warn('defineProperty not support function [' + attr + ']');
+	        }
 	        _createVBProxy(this.object, this);
 	      }
 	      if (!this.isAccessor(desc)) {
@@ -1321,21 +1356,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	          ret = void 0;
 	      if (define && define.get) {
 	        return define.get.call(this.proxy);
-	      } else {
-	        return this.object[attr];
-	      }
+	      } else return this.object[attr];
 	    };
 	
 	    ObjectDescriptor.prototype.set = function set(attr, value) {
 	      var define = this.defines[attr];
-	      if (define && define.set) {
-	        define.set.call(this.proxy, value);
-	      }
+	      if (define && define.set) define.set.call(this.proxy, value);
 	      this.object[attr] = value;
-	    };
-	
-	    ObjectDescriptor.prototype.destroy = function destroy() {
-	      this.defines = {};
 	    };
 	
 	    return ObjectDescriptor;
@@ -1371,16 +1398,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	      if (desc) {
 	        object = desc.object;
 	      }
-	      return _createVBProxy(object, desc);
+	      return _createVBProxy2(object, desc);
 	    },
 	    freeVBProxy: function freeVBProxy(object) {
 	      var desc = api.getVBProxyDesc(object);
-	      if (desc) {
-	        object = desc.object;
-	        desc.destroy();
-	        object[DESC_BINDING] = undefined;
-	        onProxyChange(object, undefined);
-	      }
+	      if (desc) onProxyChange(object, undefined);
 	      return object;
 	    }
 	  };

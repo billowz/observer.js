@@ -60,23 +60,25 @@ export function VBProxyFactory(onProxyChange) {
     ];
   }
 
-  function generateVBClass(VBClassName, properties) {
-    let buffer, i, l, attr,
-      added = {};
+  function generateVBClass(VBClassName, properties, funcMap) {
+    let buffer, i, l, attr;
 
     buffer = ['Class ', VBClassName, '\r\n', CONST_SCRIPT, '\r\n'];
     for (i = 0, l = properties.length; i < l; i++) {
       attr = properties[i];
-      buffer.push.apply(buffer, generateSetter(attr));
-      buffer.push.apply(buffer, generateGetter(attr));
-      added[attr] = true;
+      if (funcMap[attr]) {
+        buffer.push('\tPublic [' + attr + ']\r\n')
+      } else {
+        buffer.push.apply(buffer, generateSetter(attr));
+        buffer.push.apply(buffer, generateGetter(attr));
+      }
     }
     buffer.push('End Class\r\n');
     return buffer.join('');
   }
 
-  function generateVBClassConstructor(properties) {
-    let key = [properties.length, '[', properties.join(','), ']'].join(''),
+  function generateVBClassConstructor(properties, funcMap, funcArray) {
+    let key = [properties.length, '[', properties.join(','), ']', '[', funcArray.join(','), ']'].join(''),
       VBClassConstructorName = VBClassPool[key];
 
     if (VBClassConstructorName)
@@ -84,7 +86,7 @@ export function VBProxyFactory(onProxyChange) {
 
     let VBClassName = generateVBClassName();
     VBClassConstructorName = parseVBClassConstructorName(VBClassName);
-    parseVB(generateVBClass(VBClassName, properties));
+    parseVB(generateVBClass(VBClassName, properties, funcMap));
     parseVB([
       'Function ', VBClassConstructorName, '(desc)\r\n',
       '\tDim o\r\n',
@@ -99,28 +101,50 @@ export function VBProxyFactory(onProxyChange) {
 
   function createVBProxy(object, desc) {
     let isArray = object instanceof Array,
-      props, proxy;
+      props = [],
+      funcMap = {},
+      funcArray = [], prop, proxy, protoProps, protoPropMap;
 
     if (isArray) {
-      props = ARRAY_PROTO_PROPS.slice();
-      for (let attr in object) {
-        if (attr !== DESC_BINDING)
-          if (!(attr in ARRAY_PROTO_PROPS_MAP))
-            props.push(attr);
-      }
+      protoProps = ARRAY_PROTO_PROPS;
+      protoPropMap = ARRAY_PROTO_PROPS_MAP;
     } else {
-      props = OBJECT_PROTO_PROPS.slice();
-      for (let attr in object) {
-        if (attr !== DESC_BINDING)
-          if (!(attr in OBJECT_PROTO_PROPS_MAP))
-            props.push(attr);
+      protoProps = OBJECT_PROTO_PROPS;
+      protoPropMap = OBJECT_PROTO_PROPS_MAP;
+    }
+
+    for (let i = 0, l = protoProps.length; i < l; i++) {
+      prop = protoProps[i];
+      if (typeof object[prop] == 'function') {
+        funcMap[prop] = true;
+        funcArray.push(prop);
+      }
+      props.push(prop);
+    }
+    for (prop in object) {
+      if (prop !== DESC_BINDING && !(prop in protoPropMap)) {
+        if (typeof object[prop] == 'function') {
+          funcMap[prop] = true;
+          funcArray.push(prop);
+        }
+        props.push(prop);
       }
     }
     desc = desc || new ObjectDescriptor(object, props);
-    proxy = window[generateVBClassConstructor(props)](desc);
+    proxy = window[generateVBClassConstructor(props, funcMap, funcArray)](desc);
+    for (let i = 0, l = funcArray.length; i < l; i++) {
+      prop = funcArray[i];
+      proxy[prop] = funcProxy(object[prop], proxy);
+    }
     desc.proxy = proxy;
     onProxyChange(object, proxy);
     return proxy;
+  }
+
+  function funcProxy(fn, proxy) {
+    return function() {
+      fn.apply((!this || this == window) ? proxy : this, arguments);
+    };
   }
 
   class ObjectDescriptor {
@@ -145,9 +169,12 @@ export function VBProxyFactory(onProxyChange) {
 
     defineProperty(attr, desc) {
       if (!(attr in this.defines)) {
-        if (!(attr in this.object))
+        if (!(attr in this.object)) {
           this.object[attr] = undefined;
-        createVBProxy(this.object, this);
+        } else if (typeof this.object[attr] == 'function') {
+          console.warn('defineProperty not support function [' + attr + ']')
+        }
+        _createVBProxy(this.object, this);
       }
       if (!this.isAccessor(desc)) {
         if (this.defines[attr]) {
@@ -173,21 +200,15 @@ export function VBProxyFactory(onProxyChange) {
         ret;
       if (define && define.get) {
         return define.get.call(this.proxy);
-      } else {
+      } else
         return this.object[attr];
-      }
     }
 
     set(attr, value) {
       let define = this.defines[attr];
-      if (define && define.set) {
+      if (define && define.set)
         define.set.call(this.proxy, value);
-      }
       this.object[attr] = value;
-    }
-
-    destroy() {
-      this.defines = {};
     }
   }
 
@@ -234,12 +255,8 @@ export function VBProxyFactory(onProxyChange) {
 
     freeVBProxy(object) {
       let desc = api.getVBProxyDesc(object);
-      if (desc) {
-        object = desc.object;
-        desc.destroy();
-        object[DESC_BINDING] = undefined;
+      if (desc)
         onProxyChange(object, undefined);
-      }
       return object;
     }
   }
