@@ -1,6 +1,5 @@
 const observer = require('../index');
 
-observer.init()
 describe("Observer Performance", () => {
   let obj_nr = 1000,
     prop_nr = 4;

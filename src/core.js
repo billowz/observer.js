@@ -1,485 +1,406 @@
-const {VBProxyFactory} = require('./VBProxy'),
-  {proxy, proxyChange, proxyEnable, proxyDisable} = require('./proxyEvent'),
-  _ = require('./util');
+const proxy = require('./proxy'),
+  vbproxy = require('./vbproxy'),
+  timeoutframe = require('./timeoutframe'),
+  _ = require('./util')
 
-const arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
 const config = {
-  lazy: true,
-  animationFrame: true,
-  chromeObserve: true,
-  es6Proxy: true
+    lazy: true,
+    animationFrame: true,
+    observerKey: '__OBSERVER__',
+    expressionKey: '__EXPR_OBSERVER__'
+  }
+
+function abstractFunc() {
+
 }
 
-class Observer {
+const Observer = _.dynamicClass({
 
   constructor(target) {
-    if (target instanceof Array) {
-      this.isArray = true;
-    } else if (target && typeof target == 'object') {
-      this.isArray = false;
-    } else {
-      throw TypeError('can not observe object[' + (typeof target) + ']');
+    this.isArray = _.isArray(target)
+    if (!this.isArray && !_.isObject(target)) {
+      throw TypeError('can not observe object[' + (Object.prototype.toString.call(target)) + ']')
     }
-    this.target = target;
-    this.obj = target;
-    this.listens = {};
-    this.changeRecords = {};
-    this._notify = _.bind.call(this._notify, this);
-    this.watchPropNum = 0;
-    this._init();
-  }
+    this.target = target
+    this.obj = target
+    this.listens = {}
+    this.changeRecords = {}
+    this._notify = this._notify.bind(this)
+    this.watchPropNum = 0
+    this._init()
+  },
 
   _fire(attr, val, oldVal) {
-    if (proxy.eq(val, oldVal))
-      return;
-    let handlers = this.listens[attr];
-    if (!handlers)
-      return;
-    handlers = handlers.slice();
-    for (let i = 0, l = handlers.length; i < l; i++) {
-      handlers[i](attr, val, oldVal, this.target);
-    }
-  }
+    let handlers
+
+    if (proxy.eq(val, oldVal)) return
+    if (!(handlers = this.listens[attr])) return
+
+    _.each(handlers.slice(), (handler) => {
+      handler(attr, val, oldVal, this.target)
+    })
+  },
 
   _notify() {
-    let changeRecords = this.changeRecords;
-    for (let attr in changeRecords) {
-      this._fire(attr, this.obj[attr], changeRecords[attr]);
-    }
-    this.request_frame = undefined;
-    this.changeRecords = {};
-  }
+    let obj = this.obj
+
+    _.each(this.changeRecords, (val, attr) => {
+      this._fire(attr, obj[attr], val)
+    })
+    this.request_frame = undefined
+    this.changeRecords = {}
+  },
 
   _addChangeRecord(attr, oldVal) {
     if (!config.lazy) {
-      this._fire(attr, this.obj[attr], oldVal);
+      this._fire(attr, this.obj[attr], oldVal)
     } else if (!(attr in this.changeRecords)) {
-      this.changeRecords[attr] = oldVal;
-      if (!this.request_frame)
-        this.request_frame = (config.animationFrame ? _.requestAnimationFrame : _.requestTimeoutFrame)(this._notify);
+      this.changeRecords[attr] = oldVal
+      if (!this.request_frame) {
+        this.request_frame = (config.animationFrame ?
+          window.requestAnimationFrame(this._notify) :
+          timeoutframe.requestTimeoutFrame(this._notify))
+      }
     }
-  }
+  },
+
+  checkHandler(handler) {
+    if (!_.isFunc(handler))
+      throw TypeError('Invalid Observe Handler')
+  },
 
   hasListen(attr, handler) {
-    let l = arguments.length,
-      listens = this.listens;
-    if (!l) {
-      return !!this.watchPropNum;
-    } else if (l == 1) {
-      if (typeof attr == 'function') {
-        let handlers;
-        for (let k in listens) {
-          handlers = listens[k]
-          if (handlers && _.indexOf.call(handlers, attr) != -1)
-            return true;
+    switch (arguments.length) {
+      case 0:
+        return !!this.watchPropNum
+      case 1:
+        if (_.isFunc(attr)) {
+          return !_.each(this.listens, (handlers) => {
+            return _.lastIndexOf(handlers, attr) !== -1
+          })
         }
-        return false;
-      } else
-        return !!listens[attr];
-    } else {
-      if (typeof handler != 'function') {
-        throw TypeError('Invalid Observe Handler');
-      }
-      let handlers = listens[attr];
-      return handlers && _.indexOf.call(handlers, handler) != -1;
+        return !!listens[attr]
+      default:
+        this.checkHandler(handler)
+        return _.lastIndexOf(listens[attr], handler) !== -1
     }
-  }
+  },
 
   on(attr, handler) {
-    if (typeof handler != 'function') {
-      throw TypeError('Invalid Observe Handler');
-    }
+    let handlers
 
-    let handlers = this.listens[attr];
-
-    if (!handlers) {
-      this.listens[attr] = [handler];
+    this.checkHandler(handler)
+    if (!(handlers = this.listens[attr])) {
+      this.listens[attr] = [handler]
       this.watchPropNum++;
-      this._watch(attr);
-    } else
-      handlers.push(handler);
-    return this.target;
-  }
+      this._watch(attr)
+    } else {
+      handlers.push(handler)
+    }
+    return this.target
+  },
 
   _cleanListen(attr) {
-    this.listens[attr] = undefined;
+    this.listens[attr] = undefined
     this.watchPropNum--;
-    this._unwatch(attr);
-  }
+    this._unwatch(attr)
+  },
 
   un(attr, handler) {
-    let handlers = this.listens[attr];
+    let handlers = this.listens[attr]
+
     if (handlers) {
       if (arguments.length == 1) {
-        this._cleanListen(attr);
+        this._cleanListen(attr)
       } else {
-        if (typeof handler != 'function')
-          throw TypeError('Invalid Observe Handler');
+        this.checkHandler(handler)
 
-        for (let i = handlers.length - 1; i >= 0; i--) {
+        let i = handlers.length
+        while (i--) {
           if (handlers[i] === handler) {
-            handlers.splice(i, 1);
-            if (!handlers.length)
-              this._cleanListen(attr);
-            break;
+            handlers.splice(i, 1)
+            if (!handlers.length) this._cleanListen(attr)
+            break
           }
         }
       }
     }
-    return this.target;
-  }
+    return this.target
+  },
 
   destroy() {
     if (this.request_frame) {
-      (config.animationFrame ? _.cancelAnimationFrame : _.cancelTimeoutFrame)(this.request_frame);
-      this.request_frame = undefined;
+      config.animationFrame ? window.cancelAnimationFrame(this.request_frame) : timeoutframe.cancelTimeoutFrame(this.request_frame)
+      this.request_frame = undefined
     }
-    this._destroy();
-    this.obj = undefined;
-    this.target = undefined;
-    this.listens = undefined;
-    this.changeRecords = undefined;
+    let obj = this.obj
+    this._destroy()
+    this.obj = undefined
+    this.target = undefined
+    this.listens = undefined
+    this.changeRecords = undefined
+    return obj
+  },
+  _init: abstractFunc,
+  _destroy: abstractFunc,
+  _watch: abstractFunc,
+  _unwatch: abstractFunc
+})
+
+function hasListen(obj, attr, handler) {
+  let observer = obj[config.observerKey]
+
+  return observer ? observer.hasListen.apply(observer, Array.prototype.slice.call(arguments, 1)) : false
+}
+
+function on(obj, attr, handler) {
+  let observer = obj[config.observerKey]
+
+  if (!observer) {
+    obj = proxy.obj(obj)
+    observer = new Observer(obj)
+    obj[config.observerKey] = observer
   }
+  return observer.on(attr, handler)
 }
 
+function un(obj, attr, handler) {
+  let observer = obj[config.observerKey]
 
-function applyProto(name, fn) {
-  Observer.prototype[name] = fn;
-  return fn;
+  if (observer) {
+    obj = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1))
+    if (!observer.hasListen()) {
+      obj[config.observerKey] = undefined
+      return observer.destroy()
+    }
+  }
+  return obj
 }
 
-function chromeObserve() {
-  Observer.policy = 'chromeObserve';
-  proxyDisable();
+const Expression = _.dynamicClass({
 
-  applyProto('_init', function _init() {
-    this._onObserveChanged = _.bind.call(this._onObserveChanged, this);
-    this.chromeObserve = false;
-  });
+  constructor(target, expr, path) {
+    this.expr = expr
+    this.handlers = []
+    this.observers = []
+    this.path = path || _.parseExpr(expr)
+    this.observeHandlers = this._initObserveHandlers()
+    this.target = this._observe(target, 0)
+    this._onTargetProxy = this._onTargetProxy.bind(this)
+    proxy.on(target, this._onTargetProxy)
+  },
 
-  applyProto('_destroy', function _destroy() {
-    if (this.chromeObserve) {
-      Object.unobserve(this.target, this._onObserveChanged);
-      this.chromeObserve = false;
+  _onTargetProxy(obj, proxy) {
+    this.target = proxy;
+  },
+
+  _observe(obj, idx) {
+    let prop = this.path[idx]
+
+    if (idx + 1 < this.path.length) {
+      if (obj[prop])
+        obj[prop] = this._observe(obj[prop], idx + 1)
     }
-  });
+    return on(obj, prop, this.observeHandlers[idx])
+  },
 
-  applyProto('_onObserveChanged', function _onObserveChanged(changes) {
-    let c;
-    for (let i = 0, l = changes.length; i < l; i++) {
-      c = changes[i];
-      if (this.listens[c.name])
-        this._addChangeRecord(c.name, c.oldValue);
-    }
-  });
+  _unobserve(obj, idx) {
+    let prop = this.path[idx]
 
-  applyProto('_watch', function _watch(attr) {
-    if (!this.chromeObserve) {
-      Object.observe(this.target, this._onObserveChanged);
-      this.chromeObserve = true;
-    }
-  });
+    obj = un(obj, prop, this.observeHandlers[idx])
+    if (idx + 1 < this.path.length)
+      obj[prop] = this._unobserve(obj[prop], idx + 1)
+    return obj
+  },
 
-  applyProto('_unwatch', function _unwatch(attr) {
-    if (this.chromeObserve && !this.hasListen()) {
-      Object.unobserve(this.target, this._onObserveChanged);
-      this.chromeObserve = false;
-    }
-  });
-}
+  _initObserveHandlers() {
+    return _.map(this.path, function(prop, i) {
+      return this._createObserveHandler(i)
+    }, this)
+  },
 
-function es6Proxy() {
-  Observer.policy = 'es6Proxy';
+  _createObserveHandler(idx) {
+    let path = this.path.slice(0, idx + 1),
+      rpath = this.path.slice(idx + 1),
+      ridx = this.path.length - idx - 1
 
-  let objProxyLoop = new Map(),
-    proxyObjLoop = new Map();
-
-  proxyEnable();
-
-  proxy.obj = function(proxy) {
-    if (!proxy) return proxy;
-    return proxyObjLoop.get(proxy) || proxy;
-  };
-
-  proxy.eq = function(obj1, obj2) {
-    return proxy.obj(obj1) === proxy.obj(obj2);
-  };
-
-  proxy.proxy = function(obj) {
-    return objProxyLoop.get(obj);
-  };
-
-  applyProto('_init', function _init() {
-    this.obj = proxy.obj(this.target);
-    this.es6proxy = false;
-  });
-
-  applyProto('_destroy', function _destroy() {
-    if (this.es6proxy) {
-      proxyChange(this.obj, undefined);
-      proxyObjLoop['delete'](this.target);
-      objProxyLoop['delete'](this.obj);
-      this.es6proxy = false;
-    }
-  });
-
-  applyProto('_createArrayProxy', function _arrayProxy() {
-    let oldLength = this.target.length;
-    return new Proxy(this.obj, {
-      set: (obj, prop, value) => {
-        if (!this.listens[prop]) {
-          obj[prop] = value;
-          return true;
-        }
-        let oldVal;
-        if (prop === 'length') {
-          oldVal = oldLength;
-          oldLength = value;
+    return (prop, val, oldVal) => {
+      if (ridx) {
+        if (oldVal) {
+          this._unobserve(oldVal, idx + 1);
+          oldVal = _.get(oldVal, rpath);
         } else {
-          oldVal = obj[prop];
+          oldVal = undefined;
         }
-        obj[prop] = value;
-        if (value !== oldVal)
-          this._addChangeRecord(prop, oldVal);
-        return true;
+        if (val) {
+          this._observe(val, idx + 1);
+          val = _.get(val, rpath);
+        } else {
+          val = undefined;
+        }
+        if (proxy.eq(val, oldVal))
+          return;
       }
-    });
-  });
+      _.each(this.handlers.slice(), function(h) {
+        h(this.expr, val, oldVal, this.target)
+      }, this)
+    }
+  },
+  checkHandler(handler) {
+    if (!_.isFunc(handler))
+      throw TypeError('Invalid Observe Handler')
+  },
+  on(handler) {
+    this.checkHandler(handler)
+    this.handlers.push(handler);
+    return this;
+  },
 
-  applyProto('_createObjectProxy', function _arrayProxy() {
-    return new Proxy(this.obj, {
-      set: (obj, prop, value) => {
-        if (!this.listens[prop]) {
-          obj[prop] = value;
-          return true;
+  un(handler) {
+    if (!arguments.length) {
+      this.handlers = [];
+    } else {
+      this.checkHandler(handler)
+
+      let handlers = this.handlers,
+        i = handlers.length;
+
+      while (i--) {
+        if (handlers[i] === handler) {
+          handlers.splice(i, 1);
+          break;
         }
-        let oldVal = obj[prop];
-        obj[prop] = value;
-        if (value !== oldVal)
-          this._addChangeRecord(prop, oldVal);
-        return true;
       }
-    });
-  });
-
-  applyProto('_watch', function _watch(attr) {
-    if (!this.es6proxy) {
-      let proxy = this.isArray ? this._createArrayProxy() : this._createObjectProxy();
-
-      this.target = proxy;
-      proxyObjLoop.set(proxy, this.obj);
-      objProxyLoop.set(this.obj, proxy);
-      proxyChange(this.obj, proxy);
-      this.es6proxy = true;
     }
-  });
+    return this;
+  },
 
-  applyProto('_unwatch', function _unwatch(attr) {
-    if (this.es6proxy && !this.hasListen()) {
-      proxyChange(this.obj, undefined);
-      proxyObjLoop['delete'](this.target);
-      objProxyLoop['delete'](this.obj);
-      this.target = this.obj;
-      this.es6proxy = false;
-    }
-  });
-}
+  hasListen(handler) {
+    if (arguments.length)
+      return _.lastIndexOf(this.handlers, handler) != -1;
+    return !!this.handlers.length;
+  },
 
-function es5DefineProperty() {
-  let init = applyProto('_init', function _init() {
-    this.watchers = {};
-  });
-
-  let destroy = applyProto('_destroy', function _destroy() {
-    for (let attr in this.watchers) {
-      if (this.watchers[attr])
-        this._unwatch(attr);
-    }
-    this.watchers = undefined;
-  });
-
-  applyProto('_hockArrayLength', function _hockArrayLength(method) {
-    let self = this;
-
-    this.obj[method] = function() {
-      let len = this.length;
-
-      Array.prototype[method].apply(this, arguments);
-      if (self.obj.length != len)
-        self._addChangeRecord('length', len);
-    }
-  });
-
-  applyProto('_watch', function _watch(attr) {
-    if (!this.watchers[attr]) {
-      if (this.isArray && attr === 'length') {
-        for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
-          this._hockArrayLength(arrayHockMethods[i]);
-        }
-      } else {
-        this._defineProperty(attr, this.obj[attr]);
-      }
-      this.watchers[attr] = true;
-    }
-  });
-
-  applyProto('_unwatch', function _unwatch(attr) {
-    if (this.watchers[attr]) {
-      if (this.isArray && attr === 'length') {
-        for (let i = 0, l = arrayHockMethods.length; i < l; i++) {
-          delete this.obj[arrayHockMethods[i]];
-        }
-      } else {
-        this._undefineProperty(attr, this.obj[attr]);
-      }
-      this.watchers[attr] = false;
-    }
-  });
-
-  function doesDefinePropertyWork(defineProperty, object) {
-    try {
-      let val;
-      defineProperty(object, 'sentinel', {
-        get() {
-          return val;
-        },
-        set(value) {
-          val = value;
-        }
-      });
-      object.sentinel = 1;
-      return object.sentinel === val;
-    } catch (exception) {
-      return false;
-    }
+  destory() {
+    proxy.un(this.target, this._onTargetProxy);
+    let obj = this._unobserve(this.target, 0);
+    this.target = undefined;
+    this.expr = undefined;
+    this.handlers = undefined;
+    this.path = undefined;
+    this.observers = undefined;
+    this.observeHandlers = undefined;
+    this.target = undefined;
+    return obj;
   }
+})
 
-  if (Object.defineProperty && doesDefinePropertyWork(Object.defineProperty, {})) {
-    Observer.policy = 'es5DefineProperty';
-    proxyDisable();
-    applyProto('_defineProperty', function _defineProperty(attr, value) {
-      Object.defineProperty(this.target, attr, {
-        enumerable: true,
-        configurable: true,
-        get: () => {
-          return value;
-        },
-        set: (val) => {
-          let oldVal = value;
-          value = val;
-          this._addChangeRecord(attr, oldVal);
-        }
-      });
-    });
 
-    applyProto('_undefineProperty', function _undefineProperty(attr, value) {
-      Object.defineProperty(this.target, attr, {
-        enumerable: true,
-        configurable: true,
-        writable: true,
-        value: value
-      });
-    });
-  } else if ('__defineGetter__' in {}) {
-    Observer.policy = 'defineGetterAndSetter';
-    proxyDisable();
-    applyProto('_defineProperty', function _defineProperty(attr, value) {
-      this.target.__defineGetter__(attr, () => {
-        return value;
-      });
-      this.target.__defineSetter__(attr, (val) => {
-        let oldVal = value;
-        value = val;
-        this._addChangeRecord(attr, oldVal);
-      });
-    });
+let policies = [],
+  policyNames = {}
 
-    applyProto('_undefineProperty', function _undefineProperty(attr, value) {
-      this.target.__defineGetter__(attr, () => {
-        return value;
-      });
-      this.target.__defineSetter__(attr, (val) => {
-        value = val;
-      });
-    });
-  } else if (VBProxyFactory.isSupport()) {
-    Observer.policy = 'VBProxy';
-    proxyEnable();
+module.exports = {
+  registerPolicy(name, priority, checker, policy) {
+    let i = policies.length
 
-    let factory = Observer.VBProxyFactory = new VBProxyFactory(proxyChange);
-    proxy.obj = factory.obj;
-    proxy.eq = factory.eq;
-    proxy.proxy = factory.getVBProxy;
-
-    applyProto('_init', function _init() {
-      init.call(this);
-      this.obj = factory.obj(this.target);
-    });
-
-    applyProto('_destroy', function _destroy() {
-      destroy.call(this);
-    });
-
-    applyProto('_defineProperty', function _defineProperty(attr, value) {
-      let obj = this.obj,
-        desc = factory.getVBProxyDesc(obj);
-
-      if (!desc)
-        desc = factory.getVBProxyDesc(factory.createVBProxy(obj))
-      this.target = desc.defineProperty(attr, {
-        set: (val) => {
-          let oldVal = this.obj[attr];
-          this.obj[attr] = val;
-          this._addChangeRecord(attr, oldVal);
-        }
-      });
-    });
-
-    applyProto('_undefineProperty', function _undefineProperty(attr, value) {
-      let obj = this.obj,
-        desc = factory.getVBProxyDesc(obj);
-
-      if (desc) {
-        this.target = desc.defineProperty(attr, {
-          value: value
-        });
-        if (!desc.hasAccessor()) {
-          this.target = factory.freeVBProxy(obj);
-        }
+    policy = {
+      name: name,
+      priority: priority,
+      policy: policy,
+      checker: checker
+    }
+    //console.debug('register policy[%s]: priority = %f', name, priority, policy)
+    while (i--) {
+      if (policies[i].priority < priority) {
+        policies.splice(i, 0, policy)
+        return
       }
-    });
+    }
+    policies.push(policy)
+    return this
+  },
 
-  } else {
-    throw new Error('Not Supported.');
+  config: _.create(config),
+
+  init(cfg) {
+    if (config.policy) return
+    if (cfg) {
+      _.each(cfg, (val, key) => {
+        config[key] = val
+      })
+    }
+    if (_.each(policies, (policy) => {
+        if (policy.checker(config)) {
+          _.each(policy.policy(config), (val, key) => {
+            Observer.prototype[key] = val
+          })
+          config.policy = policy.name
+          //console.debug('apply policy[%s]', policy.name, policy)
+          return false
+        }
+      }) !== false) throw Error('not supported')
+    return this
+  },
+
+  on(obj, expr, handler) {
+    let path = _.parseExpr(expr);
+
+    if (path.length > 1) {
+      let map = obj[config.expressionKey],
+        exp = map ? map[expr] : undefined
+
+      if (!exp) {
+        exp = new Expression(obj, expr, path)
+        if (!map)
+          map = obj[config.expressionKey] = {}
+        map[expr] = exp
+      }
+      exp.on(handler)
+      return exp.target
+    }
+    return on.apply(window, arguments);
+  },
+
+  un(obj, expr, handler) {
+    let path = _.parseExpr(expr);
+
+    if (path.length > 1) {
+      let map = obj[config.expressionKey],
+        exp = map ? map[expr] : undefined
+
+      if (exp) {
+        exp.un.apply(exp, Array.prototype.slice.call(arguments, 2))
+
+        if (!exp.hasListen()) {
+          map[expr] = undefined
+          return exp.destory();
+        }
+        return exp.target;
+      }
+      return proxy.proxy(obj) || obj
+    }
+    return un.apply(window, arguments);
+  },
+
+  hasListen(obj, expr, handler) {
+    let l = arguments.length
+
+    switch (l) {
+      case 1:
+        return hasListen(obj);
+      case 2:
+        if (_.isFunc(expr))
+          return hasListen(obj, expr)
+    }
+
+    let path = _.parseExpr(expr)
+
+    if (path.length > 1) {
+      let map = obj[config.expressionKey],
+        exp = map ? map[expr] : undefined
+
+      return exp ? (l == 2 ? true : exp.hasListen(handler)) : false
+    }
+    return hasListen.apply(window, arguments)
   }
 }
-
-function applyPolicy() {
-  if (Object.observe && config.chromeObserve && Observer.policy != 'chromeObserve') {
-    chromeObserve();
-  } else if (window.Proxy && config.es6Proxy && Observer.policy != 'es6Proxy') {
-    es6Proxy();
-  } else if (!Observer.policy) {
-    es5DefineProperty();
-  }
-}
-
-Observer.setConfig = function setConfig(cfg) {
-  let oldCfg = {};
-  for (let attr in cfg) {
-    if (attr in config) {
-      oldCfg[attr] = config[attr];
-      config[attr] = cfg[attr];
-    }
-  }
-  if (cfg.chromeObserve != oldCfg.chromeObserve || cfg.es6Proxy != oldCfg.es6Proxy) {
-    applyPolicy();
-  }
-  return cfg;
-}
-
-Observer.config = config;
-
-applyPolicy();
-
-module.exports = Observer;

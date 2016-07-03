@@ -1,6 +1,6 @@
 const observer = require('../index');
 
-describe("Observer", () => {
+describe("Observer factory", () => {
   it("Observe changes", function(done) {
     var obj = {
       a: {
