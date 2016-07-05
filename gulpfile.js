@@ -120,7 +120,7 @@ gulp.task('push', function(callback) {
     });
 });
 
-gulp.task('publish', function(){
+gulp.task('publish', function() {
   return run('npm publish').exec();
 });
 
