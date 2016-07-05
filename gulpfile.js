@@ -11,7 +11,9 @@ var gulp = require('gulp'),
   codecov = require('gulp-codecov'),
   bump = require('gulp-bump'),
   git = require('gulp-git'),
-  dist = './dist'
+  through = require('through2'),
+  dist = './dist',
+  pkg = require('./package.json')
 
 gulp.task('build', ['clean'], function() {
   var miniCfg = Object.assign({}, webpackCfg);
@@ -128,6 +130,10 @@ gulp.task('_version', function() {
     .pipe(bump({
       type: args.type || 'patch'
     }))
+    .pipe(through.obj(function(file, enc, cb) {
+      pkg.version = JSON.parse(String(file.contents)).version
+      cb(null, file);
+    }))
     .pipe(gulp.dest('./'));
 });
 
@@ -152,7 +158,6 @@ gulp.task('version', function(callback) {
 });
 
 gulp.task('tag', function(cb) {
-  var pkg = require('./package.json')
   git.tag(pkg.version, 'Created Tag for version: ' + pkg.version, function(error) {
     if (error)
       return cb(error);
