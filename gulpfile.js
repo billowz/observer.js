@@ -132,6 +132,7 @@ gulp.task('_version', function() {
     }))
     .pipe(through.obj(function(file, enc, cb) {
       pkg.version = JSON.parse(String(file.contents)).version
+      console.log('version: ' + pkg.version)
       cb(null, file);
     }))
     .pipe(gulp.dest('./'));
