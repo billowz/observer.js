@@ -6,7 +6,6 @@ var gulp = require('gulp'),
   gulpWebpack = require('gulp-webpack'),
   WebpackDevServer = require('webpack-dev-server'),
   karma = require('karma').Server,
-  webpackCfg = require('./build/webpack.dev.config.js'),
   minimist = require('minimist'),
   codecov = require('gulp-codecov'),
   bump = require('gulp-bump'),
@@ -16,6 +15,7 @@ var gulp = require('gulp'),
   pkg = require('./package.json')
 
 gulp.task('build', ['clean'], function() {
+  var webpackCfg = require('./build/webpack.dev.config.js')
   var miniCfg = Object.assign({}, webpackCfg);
   miniCfg.output = Object.assign({}, webpackCfg.output)
   miniCfg.output.filename = miniCfg.output.filename.replace(/js$/, 'min.js')
@@ -131,8 +131,9 @@ gulp.task('_version', function() {
       type: args.type || 'patch'
     }))
     .pipe(through.obj(function(file, enc, cb) {
+      var oldVer = pkg.version
       pkg.version = JSON.parse(String(file.contents)).version
-      console.log('version: ' + pkg.version)
+      console.log('update version: ' + oldVer + ' to ' + pkg.version)
       cb(null, file);
     }))
     .pipe(gulp.dest('./'));
