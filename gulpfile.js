@@ -144,7 +144,7 @@ gulp.task('_version', function() {
   prerelease: 0.0.1-2
  */
 gulp.task('version', function(callback) {
-  runSequence('build', '_version', '_commit', '_push',
+  runSequence('_version', 'build', '_commit', '_push',
     function(error) {
       if (error)
         console.log(error.message);
@@ -164,8 +164,8 @@ gulp.task('tag', function(cb) {
 
 gulp.task('release', function(callback) {
   runSequence(
-    'build',
     '_version',
+    'build',
     '_commit',
     '_push',
     'tag',
