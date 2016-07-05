@@ -45,6 +45,7 @@ gulp.task('watch', function(event) {
 });
 
 gulp.task('server', function() {
+  var webpackCfg = require('./build/webpack.dev.config.js')
   var devServer = new WebpackDevServer(webpack(webpackCfg), {
     contentBase: webpackCfg.output.contentBase,
     publicPath: webpackCfg.output.publicPath,
