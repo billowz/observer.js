@@ -11,7 +11,6 @@ var gulp = require('gulp'),
   codecov = require('gulp-codecov'),
   bump = require('gulp-bump'),
   git = require('gulp-git'),
-  pkg = require('./package.json'),
   dist = './dist'
 
 gulp.task('build', ['clean'], function() {
@@ -68,6 +67,7 @@ gulp.task('test', function(done) {
     configFile: __dirname + '/build/karma.unit.config.js'
   }, done).start();
 });
+
 gulp.task('cover', function(done) {
   new karma({
     configFile: __dirname + '/build/karma.cover.config.js'
@@ -86,8 +86,6 @@ gulp.task('cover-ci', ['cover'], function() {
 });
 
 gulp.task('ci', ['cover-ci', 'sauce']);
-
-
 
 gulp.task('_commit', function() {
   var args = minimist(process.argv.slice(2));
@@ -120,16 +118,17 @@ gulp.task('push', function(callback) {
     });
 });
 
+gulp.task('publish', function(){
+  return run('npm publish').exec();
+});
+
 gulp.task('_version', function() {
   var args = minimist(process.argv.slice(2));
   return gulp.src('./package.json')
     .pipe(bump({
       type: args.type || 'patch'
-    }).on('error', function(err) {
-      console.log(err)
     }))
-    .pipe(gulp.dest('./'))
-    .pipe(run('npm publish'));
+    .pipe(gulp.dest('./'));
 });
 
 /*
@@ -144,7 +143,7 @@ gulp.task('_version', function() {
   prerelease: 0.0.1-2
  */
 gulp.task('version', function(callback) {
-  runSequence('_version', 'build', '_commit', '_push',
+  runSequence('_version', 'build', 'publish', '_commit', '_push',
     function(error) {
       if (error)
         console.log(error.message);
@@ -153,6 +152,7 @@ gulp.task('version', function(callback) {
 });
 
 gulp.task('tag', function(cb) {
+  var pkg = require('./package.json')
   git.tag(pkg.version, 'Created Tag for version: ' + pkg.version, function(error) {
     if (error)
       return cb(error);
@@ -166,6 +166,7 @@ gulp.task('release', function(callback) {
   runSequence(
     '_version',
     'build',
+    'publish',
     '_commit',
     '_push',
     'tag',
