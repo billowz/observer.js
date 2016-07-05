@@ -1,6 +1,6 @@
 const core = require('./core'),
   proxy = require('./proxy'),
-  _ = require('./util')
+  {util} = require('./utility')
 
 core.registerPolicy('ES6Proxy', 1, function(config) {
   return window.Proxy && config.es6Proxy !== false

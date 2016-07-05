@@ -1,9 +1,9 @@
-const _ = require('./util'),
+const {util} = require('./utility'),
   hasOwn = Object.prototype.hasOwnProperty,
   RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(','),
   RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,indexOf,lastIndexOf,length,map,keys,join,pop,push,reverse,reverseRight,some,shift,slice,sort,splice,toSource,unshift'.split(',')
 
-const VBClassFactory = _.dynamicClass({
+const VBClassFactory = util.dynamicClass({
   constBind: '__VB_CONST__',
   descBind: '__VB_PROXY__',
   classNameGenerator: 0,
@@ -12,6 +12,7 @@ const VBClassFactory = _.dynamicClass({
     this.defPropMap = {}
     this.onProxyChange = onProxyChange
     this.addDefProps(defProps)
+    this.initConstScript()
   },
   setConstBind(constBind) {
     this.constBind = constBind
@@ -24,17 +25,17 @@ const VBClassFactory = _.dynamicClass({
   addDefProps(defProps) {
     let defPropMap = this.defPropMap
 
-    _.each(defProps || [], (prop) => {
+    util.each(defProps || [], (prop) => {
       defPropMap[prop] = true
     })
-    this.defProps = _.keys(defPropMap)
+    this.defProps = util.keys(defPropMap)
     this.initReserveProps()
   },
   initReserveProps() {
-    this.reserveProps = RESERVE_PROPS.concat(_.keys(this.defPropMap) || [])
+    this.reserveProps = RESERVE_PROPS.concat(util.keys(this.defPropMap) || [])
     this.reserveArrayProps = this.reserveProps.concat(RESERVE_ARRAY_PROPS)
-    this.reservePropMap = _.reverseConvert(this.reserveProps)
-    this.reserveArrayPropMap = _.reverseConvert(this.reserveArrayProps)
+    this.reservePropMap = util.reverseConvert(this.reserveProps)
+    this.reserveArrayPropMap = util.reverseConvert(this.reserveArrayProps)
   },
   initConstScript() {
     this.constScript = [
@@ -78,9 +79,9 @@ const VBClassFactory = _.dynamicClass({
     ]
   },
   generateClass(className, props, funcMap) {
-    let buffer = ['Class ', className, '\r\n', this.constBind, '\r\n']
+    let buffer = ['Class ', className, '\r\n', this.constScript, '\r\n']
 
-    _.each(props, function(attr) {
+    util.each(props, (attr) => {
       if (funcMap[attr]) {
         buffer.push('\tPublic [' + attr + ']\r\n')
       } else {
@@ -120,22 +121,22 @@ const VBClassFactory = _.dynamicClass({
       descBind = this.descBind
 
     function addProp(prop) {
-      if (_.isFunc(obj[prop])) {
+      if (util.isFunc(obj[prop])) {
         funcMap[prop] = true
         funcs.push(prop)
       }
       props.push(prop)
     }
 
-    if (_.isArray(obj)) {
+    if (util.isArray(obj)) {
       protoProps = this.reserveArrayProps
       protoPropMap = this.reserveArrayPropMap
     } else {
-      protoProps = OBJECT_PROTO_PROPS
+      protoProps = this.reserveProps
       protoPropMap = this.reservePropMap
     }
-    _.each(protoProps, addProp)
-    _.each(obj, function(val, prop) {
+    util.each(protoProps, addProp)
+    util.each(obj, (val, prop) => {
       if (prop !== descBind && !(prop in protoPropMap))
         addProp(prop)
     }, obj, false)
@@ -149,8 +150,8 @@ const VBClassFactory = _.dynamicClass({
       }
     }
 
-    proxy = window[this.generateClassConstructor(props, funcMap, funcArray)](desc)
-    _.each(funcArray, (prop) => {
+    proxy = window[this.generateClassConstructor(props, funcMap, funcs)](desc)
+    util.each(funcs, (prop) => {
       proxy[prop] = this.funcProxy(obj[prop], proxy)
     })
     desc.proxy = proxy
@@ -198,11 +199,11 @@ const VBClassFactory = _.dynamicClass({
   }
 })
 
-const ObjectDescriptor = _.dynamicClass({
+const ObjectDescriptor = util.dynamicClass({
   constructor(obj, props, classGenerator) {
     this.classGenerator = classGenerator
     this.obj = obj
-    this.defines = _.reverseConvert(props, () => false)
+    this.defines = util.reverseConvert(props, () => false)
     obj[classGenerator.descBind] = this
     this.accessorNR = 0
   },
@@ -219,7 +220,7 @@ const ObjectDescriptor = _.dynamicClass({
     if (!(attr in defines)) {
       if (!(attr in obj)) {
         obj[attr] = undefined
-      } else if (_.isFunc(obj[attr])) {
+      } else if (util.isFunc(obj[attr])) {
         console.warn('defineProperty not support function [' + attr + ']')
       }
       this.classGenerator.create(this.obj, this)
@@ -234,7 +235,8 @@ const ObjectDescriptor = _.dynamicClass({
     } else {
       defines[attr] = desc
       this.accessorNR++;
-      obj[attr] = desc.get ? desc.get() : desc.value
+      if (desc.get)
+        obj[attr] = desc.get()
     }
     return this.proxy
   },

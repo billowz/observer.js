@@ -44,8 +44,16 @@ gulp.task('watch', function(event) {
 });
 
 gulp.task('server', function() {
-  webpackCfg.devtool = 'source-map'
-  var devServer = new WebpackDevServer(webpack(webpackCfg));
+  var devServer = new WebpackDevServer(webpack(webpackCfg), {
+    contentBase: webpackCfg.output.contentBase,
+    publicPath: webpackCfg.output.publicPath,
+    hot: false,
+    noInfo: false,
+    inline: false,
+    stats: {
+      colors: true
+    }
+  });
   devServer.listen(webpackCfg.devServer.port, webpackCfg.devServer.host, function(err, result) {
     if (err) {
       console.log(err);
@@ -124,6 +132,17 @@ gulp.task('_version', function() {
     .pipe(run('npm publish'));
 });
 
+/*
+  MAJOR ("major") version when you make incompatible API changes
+  MINOR ("minor") version when you add functionality in a backwards-compatible manner
+  PATCH ("patch") version when you make backwards-compatible bug fixes.
+  PRERELEASE ("prerelease") a pre-release version
+  Version example
+  major: 1.0.0
+  minor: 0.1.0
+  patch: 0.0.2
+  prerelease: 0.0.1-2
+ */
 gulp.task('version', function(callback) {
   runSequence('build', '_version', '_commit', '_push',
     function(error) {

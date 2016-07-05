@@ -1,14 +1,14 @@
 window.observer = require('./core')
-const _ = require('./util'),
+const utility = require('./utility'),
+  {util} = utility,
   proxy = require('./proxy')
 
-_.assignIf(observer, {
-  util: _,
-  timeoutframe: require('./timeoutframe'),
+util.assignIf(observer, utility, {
   eq: proxy.eq,
   obj: proxy.obj,
   proxy: proxy
 })
 require('./es6proxy')
 require('./es5defprop')
+
 module.exports = observer
