@@ -1,6 +1,6 @@
 let lastTime;
 
-export function requestTimeoutFrame(callback) {
+export function request(callback) {
   let currTime = new Date().getTime(),
     timeToCall = Math.max(0, 16 - (currTime - lastTime)),
     reqId = setTimeout(function() {
@@ -10,6 +10,6 @@ export function requestTimeoutFrame(callback) {
   return reqId;
 }
 
-export function cancelTimeoutFrame(reqId) {
+export function cancel(reqId) {
   clearTimeout(reqId);
 }

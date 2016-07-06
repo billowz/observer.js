@@ -1,24 +1,26 @@
 const proxy = require('./proxy'),
   vbproxy = require('./vbproxy'),
-  timeoutframe = require('./timeoutframe'),
-  _ = require('./util')
+  {
+    util,
+    timeoutframe
+  } = require('./utility')
 
 const config = {
-    lazy: true,
-    animationFrame: true,
-    observerKey: '__OBSERVER__',
-    expressionKey: '__EXPR_OBSERVER__'
-  }
+  lazy: true,
+  animationFrame: true,
+  observerKey: '__OBSERVER__',
+  expressionKey: '__EXPR_OBSERVER__'
+}
 
 function abstractFunc() {
 
 }
 
-const Observer = _.dynamicClass({
+const Observer = util.dynamicClass({
 
   constructor(target) {
-    this.isArray = _.isArray(target)
-    if (!this.isArray && !_.isObject(target)) {
+    this.isArray = util.isArray(target)
+    if (!this.isArray && !util.isObject(target)) {
       throw TypeError('can not observe object[' + (Object.prototype.toString.call(target)) + ']')
     }
     this.target = target
@@ -36,7 +38,7 @@ const Observer = _.dynamicClass({
     if (proxy.eq(val, oldVal)) return
     if (!(handlers = this.listens[attr])) return
 
-    _.each(handlers.slice(), (handler) => {
+    util.each(handlers.slice(), (handler) => {
       handler(attr, val, oldVal, this.target)
     })
   },
@@ -44,7 +46,7 @@ const Observer = _.dynamicClass({
   _notify() {
     let obj = this.obj
 
-    _.each(this.changeRecords, (val, attr) => {
+    util.each(this.changeRecords, (val, attr) => {
       this._fire(attr, obj[attr], val)
     })
     this.request_frame = undefined
@@ -59,13 +61,13 @@ const Observer = _.dynamicClass({
       if (!this.request_frame) {
         this.request_frame = (config.animationFrame ?
           window.requestAnimationFrame(this._notify) :
-          timeoutframe.requestTimeoutFrame(this._notify))
+          timeoutframe.request(this._notify))
       }
     }
   },
 
   checkHandler(handler) {
-    if (!_.isFunc(handler))
+    if (!util.isFunc(handler))
       throw TypeError('Invalid Observe Handler')
   },
 
@@ -74,15 +76,15 @@ const Observer = _.dynamicClass({
       case 0:
         return !!this.watchPropNum
       case 1:
-        if (_.isFunc(attr)) {
-          return !_.each(this.listens, (handlers) => {
-            return _.lastIndexOf(handlers, attr) !== -1
+        if (util.isFunc(attr)) {
+          return !util.each(this.listens, (handlers) => {
+            return util.lastIndexOf(handlers, attr) !== -1
           })
         }
         return !!listens[attr]
       default:
         this.checkHandler(handler)
-        return _.lastIndexOf(listens[attr], handler) !== -1
+        return util.lastIndexOf(listens[attr], handler) !== -1
     }
   },
 
@@ -130,7 +132,7 @@ const Observer = _.dynamicClass({
 
   destroy() {
     if (this.request_frame) {
-      config.animationFrame ? window.cancelAnimationFrame(this.request_frame) : timeoutframe.cancelTimeoutFrame(this.request_frame)
+      config.animationFrame ? window.cancelAnimationFrame(this.request_frame) : timeoutframe.cancel(this.request_frame)
       this.request_frame = undefined
     }
     let obj = this.obj
@@ -148,13 +150,13 @@ const Observer = _.dynamicClass({
 })
 
 function hasListen(obj, attr, handler) {
-  let observer = obj[config.observerKey]
+  let observer = util.getOwnProp(obj, config.observerKey)
 
   return observer ? observer.hasListen.apply(observer, Array.prototype.slice.call(arguments, 1)) : false
 }
 
 function on(obj, attr, handler) {
-  let observer = obj[config.observerKey]
+  let observer = util.getOwnProp(obj, config.observerKey)
 
   if (!observer) {
     obj = proxy.obj(obj)
@@ -165,7 +167,7 @@ function on(obj, attr, handler) {
 }
 
 function un(obj, attr, handler) {
-  let observer = obj[config.observerKey]
+  let observer = util.getOwnProp(obj, config.observerKey)
 
   if (observer) {
     obj = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1))
@@ -177,13 +179,13 @@ function un(obj, attr, handler) {
   return obj
 }
 
-const Expression = _.dynamicClass({
+const Expression = util.dynamicClass({
 
   constructor(target, expr, path) {
     this.expr = expr
     this.handlers = []
     this.observers = []
-    this.path = path || _.parseExpr(expr)
+    this.path = path || util.parseExpr(expr)
     this.observeHandlers = this._initObserveHandlers()
     this.target = this._observe(target, 0)
     this._onTargetProxy = this._onTargetProxy.bind(this)
@@ -195,26 +197,28 @@ const Expression = _.dynamicClass({
   },
 
   _observe(obj, idx) {
-    let prop = this.path[idx]
+    let prop = this.path[idx],
+      o
 
-    if (idx + 1 < this.path.length) {
-      if (obj[prop])
-        obj[prop] = this._observe(obj[prop], idx + 1)
+    if (idx + 1 < this.path.length && (o = obj[prop])) {
+      obj[prop] = this._observe(o, idx + 1)
     }
     return on(obj, prop, this.observeHandlers[idx])
   },
 
   _unobserve(obj, idx) {
-    let prop = this.path[idx]
+    let prop = this.path[idx],
+      o
 
     obj = un(obj, prop, this.observeHandlers[idx])
-    if (idx + 1 < this.path.length)
-      obj[prop] = this._unobserve(obj[prop], idx + 1)
+    if (idx + 1 < this.path.length && (o = obj[prop])) {
+      obj[prop] = this._unobserve(o, idx + 1)
+    }
     return obj
   },
 
   _initObserveHandlers() {
-    return _.map(this.path, function(prop, i) {
+    return util.map(this.path, function(prop, i) {
       return this._createObserveHandler(i)
     }, this)
   },
@@ -228,26 +232,26 @@ const Expression = _.dynamicClass({
       if (ridx) {
         if (oldVal) {
           this._unobserve(oldVal, idx + 1);
-          oldVal = _.get(oldVal, rpath);
+          oldVal = util.get(oldVal, rpath);
         } else {
           oldVal = undefined;
         }
         if (val) {
           this._observe(val, idx + 1);
-          val = _.get(val, rpath);
+          val = util.get(val, rpath);
         } else {
           val = undefined;
         }
         if (proxy.eq(val, oldVal))
           return;
       }
-      _.each(this.handlers.slice(), function(h) {
+      util.each(this.handlers.slice(), function(h) {
         h(this.expr, val, oldVal, this.target)
       }, this)
     }
   },
   checkHandler(handler) {
-    if (!_.isFunc(handler))
+    if (!util.isFunc(handler))
       throw TypeError('Invalid Observe Handler')
   },
   on(handler) {
@@ -277,7 +281,7 @@ const Expression = _.dynamicClass({
 
   hasListen(handler) {
     if (arguments.length)
-      return _.lastIndexOf(this.handlers, handler) != -1;
+      return util.lastIndexOf(this.handlers, handler) != -1;
     return !!this.handlers.length;
   },
 
@@ -299,6 +303,8 @@ const Expression = _.dynamicClass({
 let policies = [],
   policyNames = {}
 
+let inited = false
+
 module.exports = {
   registerPolicy(name, priority, checker, policy) {
     let i = policies.length
@@ -309,7 +315,6 @@ module.exports = {
       policy: policy,
       checker: checker
     }
-    //console.debug('register policy[%s]: priority = %f', name, priority, policy)
     while (i--) {
       if (policies[i].priority < priority) {
         policies.splice(i, 0, policy)
@@ -320,33 +325,38 @@ module.exports = {
     return this
   },
 
-  config: _.create(config),
+  registerConfig(name, defVal) {
+    config[name] = defVal
+  },
+
+  config: util.create(config),
 
   init(cfg) {
-    if (config.policy) return
-    if (cfg) {
-      _.each(cfg, (val, key) => {
-        config[key] = val
-      })
+    if (!inited) {
+      if (cfg)
+        util.each(config, (val, key) => {
+          if (util.hasOwnProp(cfg, key))
+            config[key] = cfg[key]
+        })
+      if (util.each(policies, (policy) => {
+          if (policy.checker(config)) {
+            util.each(policy.policy(config), (val, key) => {
+              Observer.prototype[key] = val
+            })
+            config.policy = policy.name
+            return false
+          }
+        }) !== false) throw Error('not supported')
+      inited = true
     }
-    if (_.each(policies, (policy) => {
-        if (policy.checker(config)) {
-          _.each(policy.policy(config), (val, key) => {
-            Observer.prototype[key] = val
-          })
-          config.policy = policy.name
-          //console.debug('apply policy[%s]', policy.name, policy)
-          return false
-        }
-      }) !== false) throw Error('not supported')
     return this
   },
 
   on(obj, expr, handler) {
-    let path = _.parseExpr(expr);
+    let path = util.parseExpr(expr);
 
     if (path.length > 1) {
-      let map = obj[config.expressionKey],
+      let map = util.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       if (!exp) {
@@ -362,10 +372,10 @@ module.exports = {
   },
 
   un(obj, expr, handler) {
-    let path = _.parseExpr(expr);
+    let path = util.parseExpr(expr);
 
     if (path.length > 1) {
-      let map = obj[config.expressionKey],
+      let map = util.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       if (exp) {
@@ -389,14 +399,14 @@ module.exports = {
       case 1:
         return hasListen(obj);
       case 2:
-        if (_.isFunc(expr))
+        if (util.isFunc(expr))
           return hasListen(obj, expr)
     }
 
-    let path = _.parseExpr(expr)
+    let path = util.parseExpr(expr)
 
     if (path.length > 1) {
-      let map = obj[config.expressionKey],
+      let map = util.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       return exp ? (l == 2 ? true : exp.hasListen(handler)) : false

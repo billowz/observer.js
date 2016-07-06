@@ -1,10 +1,5 @@
-const toStr = Object.prototype.toString
-
-function isFunc(func) {
-  return toStr.call(func) != '[object Function]'
-}
-
-function emptyFunc() {}
+const toStr = Object.prototype.toString,
+  {util} = require('./utility')
 
 const defaultPolicy = {
   eq(o1, o2) {
@@ -29,21 +24,22 @@ const proxy = {
   disable() {
     applyPolicy(defaultPolicy)
   },
-  change(obj, proxy) {
+  change(obj, p) {
     let handlers = obj[proxy.listenKey]
 
     if (handlers) {
-      for (let i = handlers.length - 1; i >= 0; i--) {
-        handlers[i](obj, proxy)
+      let i = handlers.length
+      while (i--) {
+        handlers[i](obj, p)
       }
     }
   }
 }
 
 function applyPolicy(policy) {
-  let bindPolicy,unbindPolicy,cleanPolicy
+  let bindPolicy, unbindPolicy, cleanPolicy
 
-  bindPolicy = unbindPolicy = cleanPolicy = emptyFunc
+  bindPolicy = unbindPolicy = cleanPolicy = util.emptyFunc
   if (policy !== defaultPolicy) {
     bindPolicy = bind
     unbindPolicy = unbind
@@ -58,7 +54,7 @@ function applyPolicy(policy) {
 }
 
 function bind(obj, handler) {
-  if (!isFunc(func))
+  if (!util.isFunc(handler))
     throw TypeError(`Invalid Proxy Event Handler[${handler}`)
   let handlers = obj[proxy.listenKey]
 
@@ -71,7 +67,7 @@ function unbind(obj, handler) {
   let handlers = obj[proxy.listenKey]
 
   if (handlers) {
-    if (isFunc(func)) {
+    if (util.isFunc(handler)) {
       let i = handlers.length
 
       while (i-- > 0) {

@@ -1,10 +1,8 @@
-require('./polyfill')
-const proxy = require('./proxy'),
-  toStr = Object.prototype.toString,
+const toStr = Object.prototype.toString,
   hasOwn = Object.prototype.hasOwnProperty
 
 export function hasOwnProp(obj, prop) {
-  return hasOwn.call(proxy.obj(obj), prop)
+  return hasOwn.call(obj, prop)
 }
 
 // ==============================================
@@ -19,6 +17,7 @@ export const dateType = '[object Date]'
 export const stringType = '[object String]'
 export const objectType = '[object Object]'
 export const regexpType = '[object RegExp]'
+export const nodeListType = '[object NodeList]'
 
 export function isDefine(obj) {
   return obj === undefined
@@ -74,8 +73,13 @@ export function isArrayLike(obj) {
     case argsType:
     case arrayType:
     case stringType:
+    case nodeListType:
       return true
     default:
+      if(obj){
+        let length = obj.length
+        return isNumber(length) && length > 0 && ( length - 1 ) in obj
+      }
       return false
   }
 }
@@ -267,6 +271,174 @@ export function trim(str) {
   return str.replace(regTrim, '')
 }
 
+const regFormat = /%%|%(\d+\$)?([-+#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuidfegpEGP])/g
+
+function pad(str, len, chr, leftJustify) {
+  let padding = (str.length >= len) ? '' : Array(1 + len - str.length >>> 0).join(chr)
+
+  return leftJustify ? str + padding : padding + str
+}
+
+function justify(value, prefix, leftJustify, minWidth, zeroPad) {
+  var diff = minWidth - value.length
+
+  if (diff > 0)
+    return leftJustify || !zeroPad ?
+      pad(value, minWidth, ' ', leftJustify) :
+      value.slice(0, prefix.length) + pad('', diff, '0', true) + value.slice(prefix.length)
+  return value
+}
+
+export function format(str){
+  return _format(str, Array.prototype.slice.call(arguments, 1)).format
+}
+
+export function _format(str, args) {
+  let i = 0
+  str = str.replace(regFormat, function(substring, valueIndex, flags, minWidth, _, precision, type) {
+    if (substring == '%%') return '%'
+
+    let leftJustify = false,
+      positivePrefix = '',
+      zeroPad = false,
+      prefixBaseX = false
+
+    if (flags)
+      each(flags, function(c) {
+        switch (c) {
+          case ' ':
+            positivePrefix = ' '
+            break
+          case '+':
+            positivePrefix = '+'
+            break
+          case '-':
+            leftJustify = true
+            break
+          case '0':
+            zeroPad = true
+            break
+          case '#':
+            prefixBaseX = true
+            break
+        }
+      })
+
+    if (!minWidth) {
+      minWidth = 0
+    } else if (minWidth == '*') {
+      minWidth = +args[i++]
+    } else if (minWidth.charAt(0) == '*') {
+      minWidth = +args[minWidth.slice(1, -1)]
+    } else {
+      minWidth = +minWidth
+    }
+
+    if (minWidth < 0) {
+      minWidth = -minWidth
+      leftJustify = true
+    }
+
+    if (!isFinite(minWidth))
+      throw new Error('sprintf: (minimum-)width must be finite')
+
+    if (precision && precision.charAt(0) == '*') {
+      precision = +args[(precision == '*') ? i++ : precision.slice(1, -1)]
+      if (precision < 0)
+        precision = null
+    }
+
+    if (precision == null) {
+      precision = 'fFeE'.indexOf(type) > -1 ? 6 : (type == 'd') ? 0 : void(0)
+    } else {
+      precision = +precision
+    }
+
+    let value = valueIndex ? args[valueIndex.slice(0, -1)] : args[i++],
+      prefix, base
+
+    switch (type) {
+      case 'c':
+        value = String.fromCharCode(+value)
+      case 's':
+        {
+          value = String(value)
+          if (precision != null)
+            value = value.slice(0, precision)
+          prefix = ''
+          break
+        }
+      case 'b':
+        base = 2
+        break
+      case 'o':
+        base = 8
+        break
+      case 'u':
+        base = 10
+        break
+      case 'x':
+      case 'X':
+        base = 16
+        break
+      case 'i':
+      case 'd':
+        {
+          let number = parseInt(+value)
+          if (isNaN(number))
+            return ''
+          prefix = number < 0 ? '-' : positivePrefix
+          value = prefix + pad(String(Math.abs(number)), precision, '0', false)
+          break
+        }
+      case 'e':
+      case 'E':
+      case 'f':
+      case 'F':
+      case 'g':
+      case 'G':
+      case 'p':
+      case 'P':
+        {
+          let number = +value
+          if (isNaN(number))
+            return ''
+          prefix = number < 0 ? '-' : positivePrefix
+          let method
+          if ('p' != type.toLowerCase()) {
+            method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())]
+          } else {
+            // Count significant-figures, taking special-care of zeroes ('0' vs '0.00' etc.)
+            let sf = String(value).replace(/[eE].*|[^\d]/g, '')
+            sf = (number ? sf.replace(/^0+/, '') : sf).length
+            precision = precision ? Math.min(precision, sf) : precision
+            method = (!precision || precision <= sf) ? 'toPrecision' : 'toExponential'
+          }
+          let number_str = Math.abs(number)[method](precision)
+          // number_str = thousandSeparation ? thousand_separate(number_str): number_str
+          value = prefix + number_str
+          break
+        }
+      case 'n':
+        return ''
+      default:
+        return substring
+    }
+
+    if (base) {
+      var number = value >>> 0
+      prefix = prefixBaseX && base != 10 && number && ['0b', '0', '0x'][base >> 3] || ''
+      value = prefix + pad(number.toString(base), precision || 0, '0', false)
+    }
+    var justified = justify(value, prefix, leftJustify, minWidth, zeroPad)
+    return ('EFGPX'.indexOf(type) > -1) ? justified.toUpperCase() : justified
+  })
+  return {
+    format: str,
+    formatArgCount: i
+  }
+}
+
 // ==============================================
 // object utils
 // ==============================================
@@ -340,6 +512,10 @@ export function set(obj, expr, value) {
   return obj
 }
 
+export function getOwnProp(obj, key){
+  return hasOwnProp(obj, key) ? obj[key] : undefined
+}
+
 export let prototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function getPrototypeOf(obj) {
   return obj.__proto__
 }
@@ -394,7 +570,7 @@ export let create = Object.create || function(parent, props) {
 }
 
 export function isExtendOf(cls, parent) {
-  if (isFunc(cls))
+  if (!isFunc(cls))
     return (cls instanceof parent)
 
   let proto = cls
@@ -456,4 +632,3 @@ export function dynamicClass(cfg, options) {
   })
   return cls
 }
-

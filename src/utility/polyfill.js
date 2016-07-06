@@ -5,14 +5,14 @@ window.requestAnimationFrame = window.requestAnimationFrame ||
   window.mozRequestAnimationFrame ||
   window.oRequestAnimationFrame ||
   window.msRequestAnimationFrame ||
-  tf.requestTimeoutFrame
+  tf.request
 
 window.cancelAnimationFrame = window.cancelAnimationFrame ||
   window.webkitCancelAnimationFrame ||
   window.mozCancelAnimationFrame ||
   window.oCancelAnimationFrame ||
   window.msCancelAnimationFrame ||
-  tf.cancelTimeoutFrame
+  tf.cancel
 
 function fixProto(Type, prop, val) {
   if (!Type.prototype[prop])

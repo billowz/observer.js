@@ -1,7 +1,7 @@
 const core = require('./core'),
   proxyPro = require('./proxy'),
   VBClassFactory = require('./vbproxy'),
-  _ = require('./util'),
+  {util} = require('./utility'),
   arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
   policy = {
     _init() {
@@ -28,7 +28,7 @@ const core = require('./core'),
     _watch(attr) {
       if (!this.watchers[attr]) {
         if (this.isArray && attr === 'length') {
-          _.each(arrayHockMethods, (method) => {
+          util.each(arrayHockMethods, (method) => {
             this._hockArrayLength(method)
           })
         } else {
@@ -40,7 +40,7 @@ const core = require('./core'),
     _unwatch(attr) {
       if (this.watchers[attr]) {
         if (this.isArray && attr === 'length') {
-          _.each(arrayHockMethods, (method) => {
+          util.each(arrayHockMethods, (method) => {
             delete this.obj[method]
           })
         } else {
@@ -70,7 +70,7 @@ core.registerPolicy('ES5DefineProperty', 10, function(config) {
   return false
 }, function(config) {
   proxyPro.disable()
-  return _.assignIf({
+  return util.assignIf({
     _defineProperty(attr, value) {
       Object.defineProperty(this.target, attr, {
         enumerable: true,
@@ -102,7 +102,7 @@ core.registerPolicy('DefineGetterAndSetter', 20, function(config) {
   return '__defineGetter__' in {}
 }, function(config) {
   proxyPro.disable()
-  return _.assignIf({
+  return util.assignIf({
     _defineProperty(attr, value) {
       this.target.__defineGetter__(attr, () => {
         return value
@@ -143,7 +143,7 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
     }
   })
 
-  return _.assignIf({
+  return util.assignIf({
     _init() {
       init.call(this)
       this.obj = factory.obj(this.target)

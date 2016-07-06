@@ -1,7 +1,7 @@
 {
   "name": "observer.js",
   "description": "Simple utility for watching object changes.",
-  "version": "0.0.12",
+  "version": "0.2.1",
   "homepage": "https://github.com/tao-zeng/observer.js",
   "author": "Tao Zeng <tao.zeng.zt@gmail.com>",
   "bugs": {
@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "run-sequence":"^1.1.5",
+    "through2":"^2.0.0",
     "minimist":"^1.2.0",
     "gulp-bump":"^2.0.1",
     "gulp-git":"^1.7.0",
