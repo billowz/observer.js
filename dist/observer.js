@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.2.2 built in Wed, 06 Jul 2016 14:14:42 GMT
+ * observer.js v0.2.2 built in Wed, 06 Jul 2016 14:40:09 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -1700,13 +1700,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  proxy.enable({
 	    obj: function obj(_obj) {
-	      return util.getOwnProp(_obj, es6SourceKey) || _obj;
+	      return _obj ? util.getOwnProp(_obj, es6SourceKey) || _obj : _obj;
 	    },
 	    eq: function eq(o1, o2) {
-	      return proxy.obj(o1) === proxy.obj(o2);
+	      return o1 === o2 || o1 && o2 && proxy.obj(o1) === proxy.obj(o2);
 	    },
 	    proxy: function proxy(obj) {
-	      return util.getOwnProp(obj, es6ProxyKey);
+	      return obj ? util.getOwnProp(obj, es6ProxyKey) : undefined;
 	    }
 	  });
 	
@@ -1937,13 +1937,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  proxyPro.enable({
 	    obj: function obj(_obj) {
-	      return factory.obj(_obj);
+	      return _obj ? factory.obj(_obj) : _obj;
 	    },
 	    eq: function eq(o1, o2) {
-	      return factory.eq(o1, o2);
+	      return o1 === o2 || o1 && o2 && factory.obj(o1) === factory.obj(o2);
 	    },
 	    proxy: function proxy(obj) {
-	      return factory.proxy(obj);
+	      return obj ? factory.proxy(obj) : undefined;
 	    }
 	  });
 	

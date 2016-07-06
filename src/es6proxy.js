@@ -13,13 +13,13 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
 
   proxy.enable({
     obj(obj) {
-      return util.getOwnProp(obj, es6SourceKey) || obj
+      return obj ? util.getOwnProp(obj, es6SourceKey) || obj : obj
     },
     eq(o1, o2) {
-      return proxy.obj(o1) === proxy.obj(o2)
+      return o1===o2 || (o1 && o2 && proxy.obj(o1) === proxy.obj(o2))
     },
     proxy(obj) {
-      return util.getOwnProp(obj, es6ProxyKey)
+      return obj ? util.getOwnProp(obj, es6ProxyKey) : undefined
     }
   })
 

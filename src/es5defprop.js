@@ -133,13 +133,13 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
 
   proxyPro.enable({
     obj(obj) {
-      return factory.obj(obj)
+      return obj ? factory.obj(obj) : obj
     },
     eq(o1, o2) {
-      return factory.eq(o1, o2)
+      return o1===o2 || (o1 && o2 && factory.obj(o1) === factory.obj(o2))
     },
     proxy(obj) {
-      return factory.proxy(obj)
+      return obj ? factory.proxy(obj) : undefined
     }
   })
 
