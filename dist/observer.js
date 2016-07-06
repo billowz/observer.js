@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.2.1 built in Wed, 06 Jul 2016 11:25:56 GMT
+ * observer.js v0.2.2 built in Wed, 06 Jul 2016 14:14:42 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -120,9 +120,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _fire: function _fire(attr, val, oldVal) {
 	    var _this = this;
 	
-	    var handlers = void 0;
+	    var handlers = undefined;
 	
-	    if (proxy.eq(val, oldVal)) return;
+	    if (proxy.eq(val, oldVal) && !(this.isArray && attr === 'length')) return;
 	    if (!(handlers = this.listens[attr])) return;
 	
 	    util.each(handlers.slice(), function (handler) {
@@ -170,7 +170,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  on: function on(attr, handler) {
-	    var handlers = void 0;
+	    var handlers = undefined;
 	
 	    this.checkHandler(handler);
 	    if (!(handlers = this.listens[attr])) {
@@ -274,7 +274,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  },
 	  _observe: function _observe(obj, idx) {
 	    var prop = this.path[idx],
-	        o = void 0;
+	        o = undefined;
 	
 	    if (idx + 1 < this.path.length && (o = obj[prop])) {
 	      obj[prop] = this._observe(o, idx + 1);
@@ -283,7 +283,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  },
 	  _unobserve: function _unobserve(obj, idx) {
 	    var prop = this.path[idx],
-	        o = void 0;
+	        o = undefined;
 	
 	    obj = _un(obj, prop, this.observeHandlers[idx]);
 	    if (idx + 1 < this.path.length && (o = obj[prop])) {
@@ -375,21 +375,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	module.exports = {
 	  registerPolicy: function registerPolicy(name, priority, checker, policy) {
-	    var i = policies.length;
-	
-	    policy = {
+	    policies.push({
 	      name: name,
 	      priority: priority,
 	      policy: policy,
 	      checker: checker
-	    };
-	    while (i--) {
-	      if (policies[i].priority < priority) {
-	        policies.splice(i, 0, policy);
-	        return;
-	      }
-	    }
-	    policies.push(policy);
+	    });
+	    policies.sort(function (p1, p2) {
+	      return p1.priority - p2.priority;
+	    });
 	    return this;
 	  },
 	  registerConfig: function registerConfig(name, defVal) {
@@ -525,9 +519,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	
 	function applyPolicy(policy) {
-	  var bindPolicy = void 0,
-	      unbindPolicy = void 0,
-	      cleanPolicy = void 0;
+	  var bindPolicy = undefined,
+	      unbindPolicy = undefined,
+	      cleanPolicy = undefined;
 	
 	  bindPolicy = unbindPolicy = cleanPolicy = util.emptyFunc;
 	  if (policy !== defaultPolicy) {
@@ -625,7 +619,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.__esModule = true;
 	exports.request = request;
 	exports.cancel = cancel;
-	var lastTime = void 0;
+	var lastTime = undefined;
 	
 	function request(callback) {
 	  var currTime = new Date().getTime(),
@@ -779,8 +773,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	// array utils
 	// ==============================================
 	function _eachObj(obj, callback, scope, own) {
-	  var key = void 0,
-	      isOwn = void 0;
+	  var key = undefined,
+	      isOwn = undefined;
 	
 	  scope = scope || obj;
 	  for (key in obj) {
@@ -813,7 +807,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function map(obj, callback, scope, own) {
-	  var ret = void 0;
+	  var ret = undefined;
 	
 	  function cb(val, key) {
 	    ret[key] = callback.apply(this, arguments);
@@ -830,7 +824,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function filter(obj, callback, scope, own) {
-	  var ret = void 0;
+	  var ret = undefined;
 	
 	  if (isArrayLike(obj)) {
 	    ret = [];
@@ -1031,8 +1025,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    var value = valueIndex ? args[valueIndex.slice(0, -1)] : args[i++],
-	        prefix = void 0,
-	        base = void 0;
+	        prefix = undefined,
+	        base = undefined;
 	
 	    switch (type) {
 	      case 'c':
@@ -1078,7 +1072,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var _number2 = +value;
 	          if (isNaN(_number2)) return '';
 	          prefix = _number2 < 0 ? '-' : positivePrefix;
-	          var method = void 0;
+	          var method = undefined;
 	          if ('p' != type.toLowerCase()) {
 	            method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
 	          } else {
@@ -1149,7 +1143,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var i = 0,
 	      path = parseExpr(expr, true),
 	      l = path.length - 1,
-	      prop = void 0;
+	      prop = undefined;
 	
 	  while (!isNil(obj) && i < l) {
 	    prop = path[i++];
@@ -1164,7 +1158,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var i = 0,
 	      path = parseExpr(expr, true),
 	      l = path.length - 1,
-	      prop = void 0;
+	      prop = undefined;
 	
 	  while (!isNil(obj) && i < l) {
 	    prop = path[i++];
@@ -1203,8 +1197,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	
 	var assign = exports.assign = Object.assign || function assign(target) {
-	  var source = void 0,
-	      key = void 0,
+	  var source = undefined,
+	      key = undefined,
 	      i = 1,
 	      l = arguments.length;
 	
@@ -1218,8 +1212,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	
 	function assignIf(target) {
-	  var source = void 0,
-	      key = void 0,
+	  var source = undefined,
+	      key = undefined,
 	      i = 1,
 	      l = arguments.length;
 	
@@ -1261,11 +1255,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    classOptionExtendKey = 'extend';
 	
 	function dynamicClass(cfg, options) {
-	  var constructorKey = void 0,
-	      extendKey = void 0,
-	      constructor = void 0,
-	      superCls = void 0,
-	      cls = void 0;
+	  var constructorKey = undefined,
+	      extendKey = undefined,
+	      constructor = undefined,
+	      superCls = undefined,
+	      cls = undefined;
 	
 	  if (!isObject(cfg)) throw TypeError('Invalid Class Config: ' + cfg);
 	
@@ -1520,8 +1514,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  create: function create(obj, desc) {
 	    var _this2 = this;
 	
-	    var protoProps = void 0,
-	        protoPropMap = void 0,
+	    var protoProps = undefined,
+	        protoPropMap = undefined,
 	        props = [],
 	        funcs = [],
 	        funcMap = {},
@@ -1735,7 +1729,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        this.target = _proxy;
 	        obj[es6ProxyKey] = _proxy;
 	        obj[es6ProxyKey] = obj;
-	        _proxy.change(obj, _proxy);
+	        proxy.change(obj, _proxy);
 	        this.es6proxy = true;
 	      }
 	    },
@@ -1748,7 +1742,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return new Proxy(this.obj, {
 	        set: function set(obj, prop, value) {
 	          if (_this.listens[prop]) {
-	            var oldVal = void 0;
+	            var oldVal = undefined;
 	
 	            if (prop === 'length') {
 	              oldVal = oldLength;
@@ -1855,7 +1849,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if (Object.defineProperty) {
 	    try {
 	      var _ret = function () {
-	        var val = void 0,
+	        var val = undefined,
 	            obj = {};
 	        Object.defineProperty(obj, 'sentinel', {
 	          get: function get() {

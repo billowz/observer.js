@@ -36,13 +36,13 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
     },
     _watch(attr) {
       if (!this.es6proxy) {
-        let proxy = this.isArray ? this._arrayProxy() : this._objectProxy(),
+        let _proxy = this.isArray ? this._arrayProxy() : this._objectProxy(),
           obj = this.obj
 
-        this.target = proxy
-        obj[es6ProxyKey] = proxy
+        this.target = _proxy
+        obj[es6ProxyKey] = _proxy
         obj[es6ProxyKey] = obj
-        proxy.change(obj, proxy)
+        proxy.change(obj, _proxy)
         this.es6proxy = true
       }
     },

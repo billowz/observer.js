@@ -15,34 +15,31 @@
 
 <script>
 var app = {
-    databases: []
+    databases: ENV.generateData().toArray()
 }
 
-observer.init()
+observer.init({
+  //lazy: false,
+  es6Proxy: false
+})
 
-function handler() {}
+function handler() {
+  //console.log(arguments)
+}
+
+for (var j = 0; j < app.databases.length; j++) {
+    app = observer.on(app, 'databases['+j+'].dbname', handler);
+    app = observer.on(app, 'databases['+j+'].lastSample.nbQueries', handler);
+    for (var i = 0; i < 5; i++) {
+        app = observer.on(app, 'databases['+j+'].lastSample.topFiveQueries[' + i + '].formatElapsed', handler);
+        app = observer.on(app, 'databases['+j+'].lastSample.topFiveQueries[' + i + '].query', handler);
+    }
+}
 
 function loadSamples() {
-    for (var j = 0; j < app.databases.length; j++) {
-        var db = app.databases[j];
-        observer.un(db, 'dbname', handler);
-        observer.un(db, 'lastSample.nbQueries', handler);
-        for (var i = 0; i < 5; i++) {
-            observer.un(db, 'lastSample.topFiveQueries[' + i + '].formatElapsed', handler);
-            observer.un(db, 'lastSample.topFiveQueries[' + i + '].query', handler);
-        }
-    }
 
-    app.databases = ENV.generateData().toArray().slice(0, 10);
-    for (var j = 0; j < app.databases.length; j++) {
-        var db = app.databases[j];
-        observer.on(db, 'dbname', handler);
-        observer.on(db, 'lastSample.nbQueries', handler);
-        for (var i = 0; i < 5; i++) {
-            observer.on(db, 'lastSample.topFiveQueries[' + i + '].formatElapsed', handler);
-            observer.on(db, 'lastSample.topFiveQueries[' + i + '].query', handler);
-        }
-    }
+    app.databases = ENV.generateData().toArray();
+
     Monitoring.renderRate.ping();
     setTimeout(loadSamples, ENV.timeout);
 }

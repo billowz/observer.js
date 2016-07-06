@@ -35,7 +35,7 @@ const Observer = util.dynamicClass({
   _fire(attr, val, oldVal) {
     let handlers
 
-    if (proxy.eq(val, oldVal)) return
+    if (proxy.eq(val, oldVal) && !(this.isArray && attr === 'length')) return
     if (!(handlers = this.listens[attr])) return
 
     util.each(handlers.slice(), (handler) => {
@@ -307,21 +307,15 @@ let inited = false
 
 module.exports = {
   registerPolicy(name, priority, checker, policy) {
-    let i = policies.length
-
-    policy = {
+    policies.push({
       name: name,
       priority: priority,
       policy: policy,
       checker: checker
-    }
-    while (i--) {
-      if (policies[i].priority < priority) {
-        policies.splice(i, 0, policy)
-        return
-      }
-    }
-    policies.push(policy)
+    })
+    policies.sort((p1, p2)=>{
+      return p1.priority - p2.priority
+    })
     return this
   },
 
