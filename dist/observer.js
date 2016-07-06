@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.2.0 built in Tue, 05 Jul 2016 08:47:58 GMT
+ * observer.js v0.2.1 built in Wed, 06 Jul 2016 11:25:56 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -229,13 +229,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 	
 	function _hasListen(obj, attr, handler) {
-	  var observer = obj[config.observerKey];
+	  var observer = util.getOwnProp(obj, config.observerKey);
 	
 	  return observer ? observer.hasListen.apply(observer, Array.prototype.slice.call(arguments, 1)) : false;
 	}
 	
 	function _on(obj, attr, handler) {
-	  var observer = obj[config.observerKey];
+	  var observer = util.getOwnProp(obj, config.observerKey);
 	
 	  if (!observer) {
 	    obj = proxy.obj(obj);
@@ -246,7 +246,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function _un(obj, attr, handler) {
-	  var observer = obj[config.observerKey];
+	  var observer = util.getOwnProp(obj, config.observerKey);
 	
 	  if (observer) {
 	    obj = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1));
@@ -371,6 +371,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	var policies = [],
 	    policyNames = {};
 	
+	var inited = false;
+	
 	module.exports = {
 	  registerPolicy: function registerPolicy(name, priority, checker, policy) {
 	    var i = policies.length;
@@ -390,33 +392,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	    policies.push(policy);
 	    return this;
 	  },
+	  registerConfig: function registerConfig(name, defVal) {
+	    config[name] = defVal;
+	  },
 	
 	
 	  config: util.create(config),
 	
 	  init: function init(cfg) {
-	    if (config.policy) return;
-	    if (cfg) {
-	      util.each(cfg, function (val, key) {
-	        config[key] = val;
+	    if (!inited) {
+	      if (cfg) util.each(config, function (val, key) {
+	        if (util.hasOwnProp(cfg, key)) config[key] = cfg[key];
 	      });
+	      if (util.each(policies, function (policy) {
+	        if (policy.checker(config)) {
+	          util.each(policy.policy(config), function (val, key) {
+	            Observer.prototype[key] = val;
+	          });
+	          config.policy = policy.name;
+	          return false;
+	        }
+	      }) !== false) throw Error('not supported');
+	      inited = true;
 	    }
-	    if (util.each(policies, function (policy) {
-	      if (policy.checker(config)) {
-	        util.each(policy.policy(config), function (val, key) {
-	          Observer.prototype[key] = val;
-	        });
-	        config.policy = policy.name;
-	        return false;
-	      }
-	    }) !== false) throw Error('not supported');
 	    return this;
 	  },
 	  on: function on(obj, expr, handler) {
 	    var path = util.parseExpr(expr);
 	
 	    if (path.length > 1) {
-	      var map = obj[config.expressionKey],
+	      var map = util.getOwnProp(obj, config.expressionKey),
 	          exp = map ? map[expr] : undefined;
 	
 	      if (!exp) {
@@ -433,7 +438,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = util.parseExpr(expr);
 	
 	    if (path.length > 1) {
-	      var map = obj[config.expressionKey],
+	      var map = util.getOwnProp(obj, config.expressionKey),
 	          exp = map ? map[expr] : undefined;
 	
 	      if (exp) {
@@ -462,7 +467,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    var path = util.parseExpr(expr);
 	
 	    if (path.length > 1) {
-	      var map = obj[config.expressionKey],
+	      var map = util.getOwnProp(obj, config.expressionKey),
 	          exp = map ? map[expr] : undefined;
 	
 	      return exp ? l == 2 ? true : exp.hasListen(handler) : false;
@@ -679,6 +684,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.get = get;
 	exports.has = has;
 	exports.set = set;
+	exports.getOwnProp = getOwnProp;
 	exports.assignIf = assignIf;
 	exports.emptyFunc = emptyFunc;
 	exports.isExtendOf = isExtendOf;
@@ -702,6 +708,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	var stringType = exports.stringType = '[object String]';
 	var objectType = exports.objectType = '[object Object]';
 	var regexpType = exports.regexpType = '[object RegExp]';
+	var nodeListType = exports.nodeListType = '[object NodeList]';
 	
 	function isDefine(obj) {
 	  return obj === undefined;
@@ -757,8 +764,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	    case argsType:
 	    case arrayType:
 	    case stringType:
+	    case nodeListType:
 	      return true;
 	    default:
+	      if (obj) {
+	        var length = obj.length;
+	        return isNumber(length) && length > 0 && length - 1 in obj;
+	      }
 	      return false;
 	  }
 	}
@@ -1178,6 +1190,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return obj;
 	}
 	
+	function getOwnProp(obj, key) {
+	  return hasOwnProp(obj, key) ? obj[key] : undefined;
+	}
+	
 	var prototypeOf = exports.prototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function getPrototypeOf(obj) {
 	  return obj.__proto__;
 	};
@@ -1231,7 +1247,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	
 	function isExtendOf(cls, parent) {
-	  if (isFunc(cls)) return cls instanceof parent;
+	  if (!isFunc(cls)) return cls instanceof parent;
 	
 	  var proto = cls;
 	
@@ -1677,21 +1693,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	var util = _require.util;
 	
 	
+	core.registerConfig('es6Proxy', true);
+	core.registerConfig('es6SourceKey', '__ES6_PROXY_SOURCE__');
+	core.registerConfig('es6ProxyKey', '__ES6_PROXY__');
+	
 	core.registerPolicy('ES6Proxy', 1, function (config) {
 	  return window.Proxy && config.es6Proxy !== false;
 	}, function (config) {
-	  config.es6SourceKey = config.es6SourceKey || '__ES6_PROXY_SOURCE__';
-	  config.es6ProxyKey = config.es6ProxyKey || '__ES6_PROXY__';
+	  var es6SourceKey = config.es6SourceKey;
+	  var es6ProxyKey = config.es6ProxyKey;
+	
 	
 	  proxy.enable({
 	    obj: function obj(_obj) {
-	      return _obj[config.es6SourceKey] || _obj;
+	      return util.getOwnProp(_obj, es6SourceKey) || _obj;
 	    },
 	    eq: function eq(o1, o2) {
 	      return proxy.obj(o1) === proxy.obj(o2);
 	    },
 	    proxy: function proxy(obj) {
-	      return obj[config.es6ProxyKey];
+	      return util.getOwnProp(obj, es6ProxyKey);
 	    }
 	  });
 	
@@ -1702,8 +1723,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    },
 	    _destroy: function _destroy() {
 	      this.es6proxy = false;
-	      this.obj[config.es6ProxyKey] = undefined;
-	      this.obj[config.es6SourceKey] = undefined;
+	      this.obj[es6ProxyKey] = undefined;
+	      this.obj[es6SourceKey] = undefined;
 	      proxy.change(this.obj, undefined);
 	    },
 	    _watch: function _watch(attr) {
@@ -1712,8 +1733,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	            obj = this.obj;
 	
 	        this.target = _proxy;
-	        obj[config.es6ProxyKey] = _proxy;
-	        obj[config.es6ProxyKey] = obj;
+	        obj[es6ProxyKey] = _proxy;
+	        obj[es6ProxyKey] = obj;
 	        _proxy.change(obj, _proxy);
 	        this.es6proxy = true;
 	      }

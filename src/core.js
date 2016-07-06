@@ -1,6 +1,9 @@
 const proxy = require('./proxy'),
   vbproxy = require('./vbproxy'),
-  {util, timeoutframe} = require('./utility')
+  {
+    util,
+    timeoutframe
+  } = require('./utility')
 
 const config = {
   lazy: true,
@@ -147,13 +150,13 @@ const Observer = util.dynamicClass({
 })
 
 function hasListen(obj, attr, handler) {
-  let observer = obj[config.observerKey]
+  let observer = util.getOwnProp(obj, config.observerKey)
 
   return observer ? observer.hasListen.apply(observer, Array.prototype.slice.call(arguments, 1)) : false
 }
 
 function on(obj, attr, handler) {
-  let observer = obj[config.observerKey]
+  let observer = util.getOwnProp(obj, config.observerKey)
 
   if (!observer) {
     obj = proxy.obj(obj)
@@ -164,7 +167,7 @@ function on(obj, attr, handler) {
 }
 
 function un(obj, attr, handler) {
-  let observer = obj[config.observerKey]
+  let observer = util.getOwnProp(obj, config.observerKey)
 
   if (observer) {
     obj = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1))
@@ -300,6 +303,8 @@ const Expression = util.dynamicClass({
 let policies = [],
   policyNames = {}
 
+let inited = false
+
 module.exports = {
   registerPolicy(name, priority, checker, policy) {
     let i = policies.length
@@ -320,24 +325,30 @@ module.exports = {
     return this
   },
 
+  registerConfig(name, defVal) {
+    config[name] = defVal
+  },
+
   config: util.create(config),
 
   init(cfg) {
-    if (config.policy) return
-    if (cfg) {
-      util.each(cfg, (val, key) => {
-        config[key] = val
-      })
+    if (!inited) {
+      if (cfg)
+        util.each(config, (val, key) => {
+          if (util.hasOwnProp(cfg, key))
+            config[key] = cfg[key]
+        })
+      if (util.each(policies, (policy) => {
+          if (policy.checker(config)) {
+            util.each(policy.policy(config), (val, key) => {
+              Observer.prototype[key] = val
+            })
+            config.policy = policy.name
+            return false
+          }
+        }) !== false) throw Error('not supported')
+      inited = true
     }
-    if (util.each(policies, (policy) => {
-        if (policy.checker(config)) {
-          util.each(policy.policy(config), (val, key) => {
-            Observer.prototype[key] = val
-          })
-          config.policy = policy.name
-          return false
-        }
-      }) !== false) throw Error('not supported')
     return this
   },
 
@@ -345,7 +356,7 @@ module.exports = {
     let path = util.parseExpr(expr);
 
     if (path.length > 1) {
-      let map = obj[config.expressionKey],
+      let map = util.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       if (!exp) {
@@ -364,7 +375,7 @@ module.exports = {
     let path = util.parseExpr(expr);
 
     if (path.length > 1) {
-      let map = obj[config.expressionKey],
+      let map = util.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       if (exp) {
@@ -395,7 +406,7 @@ module.exports = {
     let path = util.parseExpr(expr)
 
     if (path.length > 1) {
-      let map = obj[config.expressionKey],
+      let map = util.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       return exp ? (l == 2 ? true : exp.hasListen(handler)) : false

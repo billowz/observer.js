@@ -17,6 +17,7 @@ export const dateType = '[object Date]'
 export const stringType = '[object String]'
 export const objectType = '[object Object]'
 export const regexpType = '[object RegExp]'
+export const nodeListType = '[object NodeList]'
 
 export function isDefine(obj) {
   return obj === undefined
@@ -72,8 +73,13 @@ export function isArrayLike(obj) {
     case argsType:
     case arrayType:
     case stringType:
+    case nodeListType:
       return true
     default:
+      if(obj){
+        let length = obj.length
+        return isNumber(length) && length > 0 && ( length - 1 ) in obj
+      }
       return false
   }
 }
@@ -506,6 +512,10 @@ export function set(obj, expr, value) {
   return obj
 }
 
+export function getOwnProp(obj, key){
+  return hasOwnProp(obj, key) ? obj[key] : undefined
+}
+
 export let prototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function getPrototypeOf(obj) {
   return obj.__proto__
 }
@@ -560,7 +570,7 @@ export let create = Object.create || function(parent, props) {
 }
 
 export function isExtendOf(cls, parent) {
-  if (isFunc(cls))
+  if (!isFunc(cls))
     return (cls instanceof parent)
 
   let proto = cls

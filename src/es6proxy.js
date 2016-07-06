@@ -2,21 +2,24 @@ const core = require('./core'),
   proxy = require('./proxy'),
   {util} = require('./utility')
 
+core.registerConfig('es6Proxy', true)
+core.registerConfig('es6SourceKey', '__ES6_PROXY_SOURCE__')
+core.registerConfig('es6ProxyKey', '__ES6_PROXY__')
+
 core.registerPolicy('ES6Proxy', 1, function(config) {
   return window.Proxy && config.es6Proxy !== false
 }, function(config) {
-  config.es6SourceKey = config.es6SourceKey || '__ES6_PROXY_SOURCE__'
-  config.es6ProxyKey = config.es6ProxyKey || '__ES6_PROXY__'
+  let {es6SourceKey, es6ProxyKey} = config
 
   proxy.enable({
     obj(obj) {
-      return obj[config.es6SourceKey] || obj
+      return util.getOwnProp(obj, es6SourceKey) || obj
     },
     eq(o1, o2) {
       return proxy.obj(o1) === proxy.obj(o2)
     },
     proxy(obj) {
-      return obj[config.es6ProxyKey]
+      return util.getOwnProp(obj, es6ProxyKey)
     }
   })
 
@@ -27,8 +30,8 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
     },
     _destroy() {
       this.es6proxy = false
-      this.obj[config.es6ProxyKey] = undefined
-      this.obj[config.es6SourceKey] = undefined
+      this.obj[es6ProxyKey] = undefined
+      this.obj[es6SourceKey] = undefined
       proxy.change(this.obj, undefined)
     },
     _watch(attr) {
@@ -37,8 +40,8 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
           obj = this.obj
 
         this.target = proxy
-        obj[config.es6ProxyKey] = proxy
-        obj[config.es6ProxyKey] = obj
+        obj[es6ProxyKey] = proxy
+        obj[es6ProxyKey] = obj
         proxy.change(obj, proxy)
         this.es6proxy = true
       }
