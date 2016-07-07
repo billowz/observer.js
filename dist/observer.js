@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.2.2 built in Wed, 06 Jul 2016 14:40:09 GMT
+ * observer.js v0.2.3 built in Thu, 07 Jul 2016 10:37:51 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -67,15 +67,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	window.observer = __webpack_require__(1);
 	var utility = __webpack_require__(3);
 	var util = utility.util;
-	var proxy = __webpack_require__(2);
+	var _proxy = __webpack_require__(2);
 	
 	util.assignIf(observer, utility, {
-	  eq: proxy.eq,
-	  obj: proxy.obj,
-	  proxy: proxy
+	  eq: function eq(o1, o2) {
+	    return _proxy.eq(o1, o2);
+	  },
+	  obj: function obj(o) {
+	    return _proxy.obj(o);
+	  },
+	  onproxy: function onproxy(o) {
+	    return _proxy.on(o);
+	  },
+	  unproxy: function unproxy(o) {
+	    return _proxy.un(o);
+	  },
+	
+	  proxy: _proxy,
+	  config: __webpack_require__(9).get()
 	});
-	__webpack_require__(9);
-	__webpack_require__(10);
+	util.assignIf(observer.proxy, _proxy);
+	__webpack_require__(11);
+	__webpack_require__(12);
 	
 	module.exports = observer;
 
@@ -86,29 +99,28 @@ return /******/ (function(modules) { // webpackBootstrap
 	'use strict';
 	
 	var proxy = __webpack_require__(2);
-	var vbproxy = __webpack_require__(8);
+	var vbproxy = __webpack_require__(10);
 	
 	var _require = __webpack_require__(3);
 	
 	var util = _require.util;
 	var timeoutframe = _require.timeoutframe;
+	var configuration = __webpack_require__(9);
+	var config = configuration.cfg;
 	
-	
-	var config = {
+	configuration.register({
 	  lazy: true,
 	  animationFrame: true,
 	  observerKey: '__OBSERVER__',
 	  expressionKey: '__EXPR_OBSERVER__'
-	};
+	});
 	
 	function abstractFunc() {}
 	
 	var Observer = util.dynamicClass({
 	  constructor: function constructor(target) {
 	    this.isArray = util.isArray(target);
-	    if (!this.isArray && !util.isObject(target)) {
-	      throw TypeError('can not observe object[' + Object.prototype.toString.call(target) + ']');
-	    }
+	    if (!this.isArray && !util.isObject(target)) throw TypeError('can not observe object[' + Object.prototype.toString.call(target) + ']');
 	    this.target = target;
 	    this.obj = target;
 	    this.listens = {};
@@ -120,7 +132,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  _fire: function _fire(attr, val, oldVal) {
 	    var _this = this;
 	
-	    var handlers = undefined;
+	    var handlers = void 0;
 	
 	    if (proxy.eq(val, oldVal) && !(this.isArray && attr === 'length')) return;
 	    if (!(handlers = this.listens[attr])) return;
@@ -170,7 +182,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  on: function on(attr, handler) {
-	    var handlers = undefined;
+	    var handlers = void 0;
 	
 	    this.checkHandler(handler);
 	    if (!(handlers = this.listens[attr])) {
@@ -231,7 +243,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	function _hasListen(obj, attr, handler) {
 	  var observer = util.getOwnProp(obj, config.observerKey);
 	
-	  return observer ? observer.hasListen.apply(observer, Array.prototype.slice.call(arguments, 1)) : false;
+	  return observer ? arguments.length == 1 ? observer.hasListen() : arguments.length == 2 ? observer.hasListen(attr) : observer.hasListen(attr, handler) : false;
 	}
 	
 	function _on(obj, attr, handler) {
@@ -249,7 +261,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var observer = util.getOwnProp(obj, config.observerKey);
 	
 	  if (observer) {
-	    obj = observer.un.apply(observer, Array.prototype.slice.call(arguments, 1));
+	    obj = arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler);
 	    if (!observer.hasListen()) {
 	      obj[config.observerKey] = undefined;
 	      return observer.destroy();
@@ -258,14 +270,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return obj;
 	}
 	
+	var expressionIdGenerator = 0;
+	
 	var Expression = util.dynamicClass({
 	  constructor: function constructor(target, expr, path) {
+	    this.id = expressionIdGenerator++;
 	    this.expr = expr;
 	    this.handlers = [];
 	    this.observers = [];
 	    this.path = path || util.parseExpr(expr);
 	    this.observeHandlers = this._initObserveHandlers();
-	    this.target = this._observe(target, 0);
+	    this.obj = proxy.obj(target);
+	    this.target = this._observe(this.obj, 0);
 	    this._onTargetProxy = this._onTargetProxy.bind(this);
 	    proxy.on(target, this._onTargetProxy);
 	  },
@@ -274,22 +290,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	  },
 	  _observe: function _observe(obj, idx) {
 	    var prop = this.path[idx],
-	        o = undefined;
+	        o = void 0;
 	
-	    if (idx + 1 < this.path.length && (o = obj[prop])) {
-	      obj[prop] = this._observe(o, idx + 1);
-	    }
+	    if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._observe(proxy.obj(o), idx + 1);
 	    return _on(obj, prop, this.observeHandlers[idx]);
 	  },
 	  _unobserve: function _unobserve(obj, idx) {
 	    var prop = this.path[idx],
-	        o = undefined;
+	        o = void 0,
+	        ret = void 0;
 	
-	    obj = _un(obj, prop, this.observeHandlers[idx]);
-	    if (idx + 1 < this.path.length && (o = obj[prop])) {
-	      obj[prop] = this._unobserve(o, idx + 1);
-	    }
-	    return obj;
+	    ret = _un(obj, prop, this.observeHandlers[idx]);
+	    if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._unobserve(proxy.obj(o), idx + 1);
+	    return ret;
 	  },
 	  _initObserveHandlers: function _initObserveHandlers() {
 	    return util.map(this.path, function (prop, i) {
@@ -306,12 +319,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return function (prop, val, oldVal) {
 	      if (ridx) {
 	        if (oldVal) {
+	          oldVal = proxy.obj(oldVal);
 	          _this3._unobserve(oldVal, idx + 1);
 	          oldVal = util.get(oldVal, rpath);
 	        } else {
 	          oldVal = undefined;
 	        }
 	        if (val) {
+	          val = proxy.obj(val);
 	          _this3._observe(val, idx + 1);
 	          val = util.get(val, rpath);
 	        } else {
@@ -351,12 +366,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return this;
 	  },
 	  hasListen: function hasListen(handler) {
-	    if (arguments.length) return util.lastIndexOf(this.handlers, handler) != -1;
-	    return !!this.handlers.length;
+	    return arguments.length ? util.lastIndexOf(this.handlers, handler) != -1 : !!this.handlers.length;
 	  },
 	  destory: function destory() {
 	    proxy.un(this.target, this._onTargetProxy);
-	    var obj = this._unobserve(this.target, 0);
+	    var obj = this._unobserve(this.obj, 0);
+	    this.obj = undefined;
 	    this.target = undefined;
 	    this.expr = undefined;
 	    this.handlers = undefined;
@@ -386,18 +401,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    });
 	    return this;
 	  },
-	  registerConfig: function registerConfig(name, defVal) {
-	    config[name] = defVal;
-	  },
-	
-	
-	  config: util.create(config),
-	
 	  init: function init(cfg) {
 	    if (!inited) {
-	      if (cfg) util.each(config, function (val, key) {
-	        if (util.hasOwnProp(cfg, key)) config[key] = cfg[key];
-	      });
+	      configuration.config(cfg);
 	      if (util.each(policies, function (policy) {
 	        if (policy.checker(config)) {
 	          util.each(policy.policy(config), function (val, key) {
@@ -426,7 +432,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      exp.on(handler);
 	      return exp.target;
 	    }
-	    return _on.apply(window, arguments);
+	    return _on(obj, expr, handler);
 	  },
 	  un: function un(obj, expr, handler) {
 	    var path = util.parseExpr(expr);
@@ -436,8 +442,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          exp = map ? map[expr] : undefined;
 	
 	      if (exp) {
-	        exp.un.apply(exp, Array.prototype.slice.call(arguments, 2));
-	
+	        arguments.length == 2 ? exp.un() : expr.un(handler);
 	        if (!exp.hasListen()) {
 	          map[expr] = undefined;
 	          return exp.destory();
@@ -446,7 +451,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      }
 	      return proxy.proxy(obj) || obj;
 	    }
-	    return _un.apply(window, arguments);
+	    return arguments.length == 2 ? _un(obj, expr) : _un(obj, expr, handler);
 	  },
 	  hasListen: function hasListen(obj, expr, handler) {
 	    var l = arguments.length;
@@ -481,7 +486,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _require = __webpack_require__(3);
 	
 	var util = _require.util;
+	var hasOwnProp = util.hasOwnProp;
+	var configuration = __webpack_require__(9);
+	var LISTEN_CONFIG = 'proxyListenKey';
 	
+	configuration.register(LISTEN_CONFIG, '__PROXY_LISTENERS__');
 	
 	var defaultPolicy = {
 	  eq: function eq(o1, o2) {
@@ -493,10 +502,53 @@ return /******/ (function(modules) { // webpackBootstrap
 	  proxy: function proxy(o) {
 	    return o;
 	  }
+	},
+	    apply = {
+	  change: function change(obj, p) {
+	    var handlers = util.getOwnProp(obj, configuration.get(LISTEN_CONFIG));
+	
+	    if (handlers) {
+	      var i = handlers.length;
+	      while (i--) {
+	        handlers[i](obj, p);
+	      }
+	    }
+	  },
+	  on: function on(obj, handler) {
+	    if (!util.isFunc(handler)) throw TypeError('Invalid Proxy Event Handler[' + handler);
+	    var key = configuration.get(LISTEN_CONFIG),
+	        handlers = util.getOwnProp(obj, key);
+	
+	    if (!handlers) obj[key] = handlers = [];
+	    handlers.push(handler);
+	  },
+	  un: function un(obj, handler) {
+	    var handlers = util.getOwnProp(obj, configuration.get(LISTEN_CONFIG));
+	
+	    if (handlers) {
+	      if (util.isFunc(handler)) {
+	        var i = handlers.length;
+	
+	        while (i-- > 0) {
+	          if (handlers[i] === handler) {
+	            handlers.splice(i, 1);
+	            return true;
+	          }
+	        }
+	      }
+	    }
+	    return false;
+	  },
+	  clean: function clean(obj) {
+	    if (obj[proxy.listenKey]) obj[proxy.listenKey] = undefined;
+	  }
 	};
 	
-	var proxy = {
-	  listenKey: '__PROXY_LISTENERS__',
+	function proxy(o) {
+	  return proxy.proxy(o);
+	}
+	
+	util.assign(proxy, {
 	  isEnable: function isEnable() {
 	    return policy === defaultPolicy;
 	  },
@@ -505,70 +557,43 @@ return /******/ (function(modules) { // webpackBootstrap
 	  },
 	  disable: function disable() {
 	    applyPolicy(defaultPolicy);
-	  },
-	  change: function change(obj, p) {
-	    var handlers = obj[proxy.listenKey];
-	
-	    if (handlers) {
-	      var i = handlers.length;
-	      while (i--) {
-	        handlers[i](obj, p);
-	      }
-	    }
 	  }
-	};
+	});
 	
 	function applyPolicy(policy) {
-	  var bindPolicy = undefined,
-	      unbindPolicy = undefined,
-	      cleanPolicy = undefined;
-	
-	  bindPolicy = unbindPolicy = cleanPolicy = util.emptyFunc;
-	  if (policy !== defaultPolicy) {
-	    bindPolicy = bind;
-	    unbindPolicy = unbind;
-	    cleanPolicy = clean;
-	  }
-	  proxy.on = bindPolicy;
-	  proxy.un = unbindPolicy;
-	  proxy.clean = cleanPolicy;
-	  proxy.eq = policy.eq;
-	  proxy.obj = policy.obj;
-	  proxy.proxy = policy.proxy;
-	}
-	
-	function bind(obj, handler) {
-	  if (!util.isFunc(handler)) throw TypeError('Invalid Proxy Event Handler[' + handler);
-	  var handlers = obj[proxy.listenKey];
-	
-	  if (!handlers) obj[proxy.listenKey] = handlers = [];
-	  handlers.push(handler);
-	}
-	
-	function unbind(obj, handler) {
-	  var handlers = obj[proxy.listenKey];
-	
-	  if (handlers) {
-	    if (util.isFunc(handler)) {
-	      var i = handlers.length;
-	
-	      while (i-- > 0) {
-	        if (handlers[i] === handler) {
-	          handlers.splice(i, 1);
-	          return true;
-	        }
-	      }
-	    }
-	  }
-	  return false;
-	}
-	
-	function clean(obj) {
-	  if (obj[proxy.listenKey]) obj[proxy.listenKey] = undefined;
+	  var _apply = policy !== defaultPolicy ? function (fn, name) {
+	    proxy[name] = fn;
+	  } : function (fn, name) {
+	    proxy[name] = util.emptyFunc;
+	  };
+	  util.each(apply, _apply);
+	  util.each(policy, function (fn, name) {
+	    proxy[name] = fn;
+	  });
 	}
 	
 	proxy.disable();
 	
+	util.get = function (obj, expr, defVal, lastOwn, own) {
+	  var i = 0,
+	      path = util.parseExpr(expr, true),
+	      l = path.length - 1,
+	      prop = void 0;
+	
+	  while (!util.isNil(obj) && i < l) {
+	    prop = path[i++];
+	    obj = proxy.obj(obj);
+	    if (own && !hasOwnProp(obj, prop)) return defVal;
+	    obj = obj[prop];
+	  }
+	  obj = proxy.obj(obj);
+	  prop = path[i];
+	  return i == l && !util.isNil(obj) && (own ? hasOwnProp(obj, prop) : prop in obj) ? obj[prop] : defVal;
+	};
+	
+	util.hasOwnProp = function (obj, prop) {
+	  return hasOwnProp(proxy.obj(obj), prop);
+	};
 	module.exports = proxy;
 
 /***/ },
@@ -582,8 +607,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	module.exports = util.assignIf({
 	  util: __webpack_require__(6),
-	  timeoutframe: __webpack_require__(5)
-	}, __webpack_require__(7));
+	  timeoutframe: __webpack_require__(5),
+	  Configuration: __webpack_require__(7)
+	}, __webpack_require__(8));
 
 /***/ },
 /* 4 */
@@ -619,7 +645,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	exports.__esModule = true;
 	exports.request = request;
 	exports.cancel = cancel;
-	var lastTime = undefined;
+	var lastTime = void 0;
 	
 	function request(callback) {
 	  var currTime = new Date().getTime(),
@@ -773,8 +799,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	// array utils
 	// ==============================================
 	function _eachObj(obj, callback, scope, own) {
-	  var key = undefined,
-	      isOwn = undefined;
+	  var key = void 0,
+	      isOwn = void 0;
 	
 	  scope = scope || obj;
 	  for (key in obj) {
@@ -807,7 +833,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function map(obj, callback, scope, own) {
-	  var ret = undefined;
+	  var ret = void 0;
 	
 	  function cb(val, key) {
 	    ret[key] = callback.apply(this, arguments);
@@ -824,7 +850,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 	
 	function filter(obj, callback, scope, own) {
-	  var ret = undefined;
+	  var ret = void 0;
 	
 	  if (isArrayLike(obj)) {
 	    ret = [];
@@ -1025,8 +1051,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    var value = valueIndex ? args[valueIndex.slice(0, -1)] : args[i++],
-	        prefix = undefined,
-	        base = undefined;
+	        prefix = void 0,
+	        base = void 0;
 	
 	    switch (type) {
 	      case 'c':
@@ -1072,7 +1098,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var _number2 = +value;
 	          if (isNaN(_number2)) return '';
 	          prefix = _number2 < 0 ? '-' : positivePrefix;
-	          var method = undefined;
+	          var method = void 0;
 	          if ('p' != type.toLowerCase()) {
 	            method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
 	          } else {
@@ -1143,7 +1169,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var i = 0,
 	      path = parseExpr(expr, true),
 	      l = path.length - 1,
-	      prop = undefined;
+	      prop = void 0;
 	
 	  while (!isNil(obj) && i < l) {
 	    prop = path[i++];
@@ -1158,7 +1184,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  var i = 0,
 	      path = parseExpr(expr, true),
 	      l = path.length - 1,
-	      prop = undefined;
+	      prop = void 0;
 	
 	  while (!isNil(obj) && i < l) {
 	    prop = path[i++];
@@ -1197,8 +1223,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	
 	var assign = exports.assign = Object.assign || function assign(target) {
-	  var source = undefined,
-	      key = undefined,
+	  var source = void 0,
+	      key = void 0,
 	      i = 1,
 	      l = arguments.length;
 	
@@ -1212,8 +1238,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	};
 	
 	function assignIf(target) {
-	  var source = undefined,
-	      key = undefined,
+	  var source = void 0,
+	      key = void 0,
 	      i = 1,
 	      l = arguments.length;
 	
@@ -1255,11 +1281,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	    classOptionExtendKey = 'extend';
 	
 	function dynamicClass(cfg, options) {
-	  var constructorKey = undefined,
-	      extendKey = undefined,
-	      constructor = undefined,
-	      superCls = undefined,
-	      cls = undefined;
+	  var constructorKey = void 0,
+	      extendKey = void 0,
+	      constructor = void 0,
+	      superCls = void 0,
+	      cls = void 0;
 	
 	  if (!isObject(cfg)) throw TypeError('Invalid Class Config: ' + cfg);
 	
@@ -1303,6 +1329,44 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	var _ = __webpack_require__(6);
+	
+	var Configuration = _.dynamicClass({
+	  constructor: function constructor(def) {
+	    this.cfg = def || {};
+	  },
+	  register: function register(name, defVal) {
+	    var _this = this;
+	
+	    if (arguments.length == 1) {
+	      _.each(name, function (val, name) {
+	        _this.cfg[name] = val;
+	      });
+	    } else {
+	      this.cfg[name] = defVal;
+	    }
+	    return this;
+	  },
+	  config: function config(cfg) {
+	    var _this2 = this;
+	
+	    if (cfg) _.each(this.cfg, function (val, key) {
+	      if (_.hasOwnProp(cfg, key)) _this2.cfg[key] = cfg[key];
+	    });
+	    return this;
+	  },
+	  get: function get(name) {
+	    return arguments.length ? this.cfg[name] : _.create(this.cfg);
+	  }
+	});
+	module.exports = Configuration;
+
+/***/ },
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1417,7 +1481,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	var logger = exports.logger = new Logger('default', 'info');
 
 /***/ },
-/* 8 */
+/* 9 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	var _require = __webpack_require__(3);
+	
+	var Configuration = _require.Configuration;
+	
+	
+	module.exports = new Configuration();
+
+/***/ },
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1514,8 +1591,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  create: function create(obj, desc) {
 	    var _this2 = this;
 	
-	    var protoProps = undefined,
-	        protoPropMap = undefined,
+	    var protoProps = void 0,
+	        protoPropMap = void 0,
 	        props = [],
 	        funcs = [],
 	        funcMap = {},
@@ -1674,7 +1751,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = VBClassFactory;
 
 /***/ },
-/* 9 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1685,11 +1762,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	var _require = __webpack_require__(3);
 	
 	var util = _require.util;
+	var configuration = __webpack_require__(9);
 	
-	
-	core.registerConfig('es6Proxy', true);
-	core.registerConfig('es6SourceKey', '__ES6_PROXY_SOURCE__');
-	core.registerConfig('es6ProxyKey', '__ES6_PROXY__');
+	configuration.register({
+	  es6Proxy: true,
+	  es6SourceKey: '__ES6_PROXY_SOURCE__',
+	  es6ProxyKey: '__ES6_PROXY__'
+	});
 	
 	core.registerPolicy('ES6Proxy', 1, function (config) {
 	  return window.Proxy && config.es6Proxy !== false;
@@ -1728,7 +1807,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	        this.target = _proxy;
 	        obj[es6ProxyKey] = _proxy;
-	        obj[es6ProxyKey] = obj;
+	        obj[es6SourceKey] = obj;
 	        proxy.change(obj, _proxy);
 	        this.es6proxy = true;
 	      }
@@ -1742,7 +1821,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return new Proxy(this.obj, {
 	        set: function set(obj, prop, value) {
 	          if (_this.listens[prop]) {
-	            var oldVal = undefined;
+	            var oldVal = void 0;
 	
 	            if (prop === 'length') {
 	              oldVal = oldLength;
@@ -1780,7 +1859,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 /***/ },
-/* 10 */
+/* 12 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
@@ -1789,7 +1868,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var core = __webpack_require__(1);
 	var proxyPro = __webpack_require__(2);
-	var VBClassFactory = __webpack_require__(8);
+	var VBClassFactory = __webpack_require__(10);
 	
 	var _require = __webpack_require__(3);
 	
@@ -1849,7 +1928,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  if (Object.defineProperty) {
 	    try {
 	      var _ret = function () {
-	        var val = undefined,
+	        var val = void 0,
 	            obj = {};
 	        Object.defineProperty(obj, 'sentinel', {
 	          get: function get() {

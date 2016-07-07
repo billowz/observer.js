@@ -20,11 +20,13 @@ var app = {
 
 observer.init({
   //lazy: false,
-  es6Proxy: false
+  //es6Proxy: false
 })
 
+var i = 0
 function handler() {
-  //console.log(arguments)
+  while(i++ % 1000 == 0)
+    console.log(arguments)
 }
 
 for (var j = 0; j < app.databases.length; j++) {
@@ -37,9 +39,7 @@ for (var j = 0; j < app.databases.length; j++) {
 }
 
 function loadSamples() {
-
     app.databases = ENV.generateData().toArray();
-
     Monitoring.renderRate.ping();
     setTimeout(loadSamples, ENV.timeout);
 }

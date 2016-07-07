@@ -3,5 +3,6 @@ const util = require('./util')
 
 module.exports = util.assignIf({
   util: require('./util'),
-  timeoutframe: require('./timeoutframe')
+  timeoutframe: require('./timeoutframe'),
+  Configuration: require('./configuration')
 }, require('./log'))

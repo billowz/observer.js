@@ -1,10 +1,13 @@
 const core = require('./core'),
   proxy = require('./proxy'),
-  {util} = require('./utility')
+  {util} = require('./utility'),
+  configuration = require('./configuration')
 
-core.registerConfig('es6Proxy', true)
-core.registerConfig('es6SourceKey', '__ES6_PROXY_SOURCE__')
-core.registerConfig('es6ProxyKey', '__ES6_PROXY__')
+configuration.register({
+  es6Proxy: true,
+  es6SourceKey: '__ES6_PROXY_SOURCE__',
+  es6ProxyKey: '__ES6_PROXY__'
+})
 
 core.registerPolicy('ES6Proxy', 1, function(config) {
   return window.Proxy && config.es6Proxy !== false
@@ -41,7 +44,7 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
 
         this.target = _proxy
         obj[es6ProxyKey] = _proxy
-        obj[es6ProxyKey] = obj
+        obj[es6SourceKey] = obj
         proxy.change(obj, _proxy)
         this.es6proxy = true
       }
