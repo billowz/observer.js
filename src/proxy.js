@@ -1,6 +1,8 @@
 const toStr = Object.prototype.toString,
-  {util} = require('./utility'),
-  {hasOwnProp} = util,
+  _ = require('utility'),
+  {
+    hasOwnProp
+  } = _,
   configuration = require('./configuration'),
   LISTEN_CONFIG = 'proxyListenKey'
 
@@ -19,7 +21,7 @@ const defaultPolicy = {
   },
   apply = {
     change(obj, p) {
-      let handlers = util.getOwnProp(obj, configuration.get(LISTEN_CONFIG))
+      let handlers = _.getOwnProp(obj, configuration.get(LISTEN_CONFIG))
 
       if (handlers) {
         let i = handlers.length
@@ -29,20 +31,20 @@ const defaultPolicy = {
       }
     },
     on(obj, handler) {
-      if (!util.isFunc(handler))
+      if (!_.isFunc(handler))
         throw TypeError(`Invalid Proxy Event Handler[${handler}`)
       let key = configuration.get(LISTEN_CONFIG),
-        handlers = util.getOwnProp(obj, key)
+        handlers = _.getOwnProp(obj, key)
 
       if (!handlers)
         obj[key] = handlers = []
       handlers.push(handler)
     },
     un(obj, handler) {
-      let handlers = util.getOwnProp(obj, configuration.get(LISTEN_CONFIG))
+      let handlers = _.getOwnProp(obj, configuration.get(LISTEN_CONFIG))
 
       if (handlers) {
-        if (util.isFunc(handler)) {
+        if (_.isFunc(handler)) {
           let i = handlers.length
 
           while (i-- > 0) {
@@ -65,7 +67,7 @@ function proxy(o) {
   return proxy.proxy(o)
 }
 
-util.assign(proxy, {
+_.assign(proxy, {
   isEnable() {
     return policy === defaultPolicy
   },
@@ -82,10 +84,10 @@ function applyPolicy(policy) {
   let _apply = policy !== defaultPolicy ? function(fn, name) {
     proxy[name] = fn
   } : function(fn, name) {
-    proxy[name] = util.emptyFunc
+    proxy[name] = _.emptyFunc
   }
-  util.each(apply, _apply)
-  util.each(policy, (fn, name) => {
+  _.each(apply, _apply)
+  _.each(policy, (fn, name) => {
     proxy[name] = fn
   })
 }
@@ -93,13 +95,13 @@ function applyPolicy(policy) {
 
 proxy.disable()
 
-util.get = function(obj, expr, defVal, lastOwn, own) {
+_.get = function(obj, expr, defVal, lastOwn, own) {
   let i = 0,
-    path = util.parseExpr(expr, true),
+    path = _.parseExpr(expr, true),
     l = path.length - 1,
     prop
 
-  while (!util.isNil(obj) && i < l) {
+  while (!_.isNil(obj) && i < l) {
     prop = path[i++]
     obj = proxy.obj(obj)
     if (own && !hasOwnProp(obj, prop))
@@ -108,10 +110,10 @@ util.get = function(obj, expr, defVal, lastOwn, own) {
   }
   obj = proxy.obj(obj)
   prop = path[i]
-  return (i == l && !util.isNil(obj) && (own ? hasOwnProp(obj, prop) : prop in obj)) ? obj[prop] : defVal
+  return (i == l && !_.isNil(obj) && (own ? hasOwnProp(obj, prop) : prop in obj)) ? obj[prop] : defVal
 }
 
-util.hasOwnProp = function(obj, prop) {
+_.hasOwnProp = function(obj, prop) {
   return hasOwnProp(proxy.obj(obj), prop)
 }
 module.exports = proxy

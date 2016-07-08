@@ -1,7 +1,7 @@
 const core = require('./core'),
   proxyPro = require('./proxy'),
   VBClassFactory = require('./vbproxy'),
-  {util} = require('./utility'),
+  _ = require('utility'),
   arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
   policy = {
     _init() {
@@ -28,7 +28,7 @@ const core = require('./core'),
     _watch(attr) {
       if (!this.watchers[attr]) {
         if (this.isArray && attr === 'length') {
-          util.each(arrayHockMethods, (method) => {
+          _.each(arrayHockMethods, (method) => {
             this._hockArrayLength(method)
           })
         } else {
@@ -40,7 +40,7 @@ const core = require('./core'),
     _unwatch(attr) {
       if (this.watchers[attr]) {
         if (this.isArray && attr === 'length') {
-          util.each(arrayHockMethods, (method) => {
+          _.each(arrayHockMethods, (method) => {
             delete this.obj[method]
           })
         } else {
@@ -70,7 +70,7 @@ core.registerPolicy('ES5DefineProperty', 10, function(config) {
   return false
 }, function(config) {
   proxyPro.disable()
-  return util.assignIf({
+  return _.assignIf({
     _defineProperty(attr, value) {
       Object.defineProperty(this.target, attr, {
         enumerable: true,
@@ -102,7 +102,7 @@ core.registerPolicy('DefineGetterAndSetter', 20, function(config) {
   return '__defineGetter__' in {}
 }, function(config) {
   proxyPro.disable()
-  return util.assignIf({
+  return _.assignIf({
     _defineProperty(attr, value) {
       this.target.__defineGetter__(attr, () => {
         return value
@@ -136,14 +136,14 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
       return obj ? factory.obj(obj) : obj
     },
     eq(o1, o2) {
-      return o1===o2 || (o1 && o2 && factory.obj(o1) === factory.obj(o2))
+      return o1 === o2 || (o1 && o2 && factory.obj(o1) === factory.obj(o2))
     },
     proxy(obj) {
       return obj ? factory.proxy(obj) : undefined
     }
   })
 
-  return util.assignIf({
+  return _.assignIf({
     _init() {
       init.call(this)
       this.obj = factory.obj(this.target)

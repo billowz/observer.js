@@ -28,6 +28,9 @@
       "transform-es3-property-literals"
     ]
   },
+  "dependencies": {
+    "utility.js": "~0.0.0"
+  },
   "devDependencies": {
     "run-sequence":"^1.1.5",
     "through2":"^2.0.0",

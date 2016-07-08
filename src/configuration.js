@@ -1,3 +1,5 @@
-const {Configuration} = require('./utility')
+const {
+  Configuration
+} = require('utility')
 
 module.exports = new Configuration()

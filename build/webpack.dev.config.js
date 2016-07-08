@@ -27,10 +27,19 @@ var config = {
     libraryTarget: 'umd'
   },
   externals: {
+    utility: {
+      root: 'utility',
+      commonjs: 'utility',
+      commonjs2: 'utility',
+      amd: 'utility'
+    }
   },
   resolve: {
     modulesDirectories: [path.resolve(__dirname, '../node_modules')],
-    extensions: ['', '.js']
+    extensions: ['', '.js'],
+    alias: {
+      'utility': 'utility.js'
+    }
   },
   module: {
     loaders: [{

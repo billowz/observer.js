@@ -14,22 +14,42 @@ var gulp = require('gulp'),
   dist = './dist',
   pkg = require('./package.json')
 
-gulp.task('build', ['clean'], function() {
-  var webpackCfg = require('./build/webpack.dev.config.js')
+
+function miniConfig(webpackCfg) {
   var miniCfg = Object.assign({}, webpackCfg);
-  miniCfg.output = Object.assign({}, webpackCfg.output)
-  miniCfg.output.filename = miniCfg.output.filename.replace(/js$/, 'min.js')
+  miniCfg.output = Object.assign({}, webpackCfg.output, {
+    filename: webpackCfg.output.filename.replace(/js$/, 'min.js')
+  })
   miniCfg.plugins = (miniCfg.plugins || [])
     .concat(new webpack.optimize.UglifyJsPlugin({
       compress: {
         warnings: false
       }
     }));
-  webpackCfg.devtool = 'source-map'
+  delete miniCfg.devtool;
+  return miniCfg;
+}
+
+function allConfig(webpackCfg) {
+  var cfg = Object.assign({}, webpackCfg);
+  cfg.output = Object.assign({}, webpackCfg.output, {
+    filename: webpackCfg.output.filename.replace(/js$/, 'all.js')
+  })
+  cfg.externals = Object.assign({}, webpackCfg.externals)
+  delete cfg.externals.observer
+  return cfg;
+}
+
+gulp.task('build', ['clean'], function() {
+  var webpackCfg = require('./build/webpack.dev.config.js')
   return gulp.src('./')
     .pipe(gulpWebpack(webpackCfg))
     .pipe(gulp.dest(dist))
-    .pipe(gulpWebpack(miniCfg))
+    .pipe(gulpWebpack(miniConfig(webpackCfg)))
+    .pipe(gulp.dest(dist))
+    .pipe(gulpWebpack(allConfig(webpackCfg)))
+    .pipe(gulp.dest(dist))
+    .pipe(gulpWebpack(miniConfig(allConfig(webpackCfg))))
     .pipe(gulp.dest(dist))
 });
 

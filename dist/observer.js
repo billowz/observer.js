@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.2.3 built in Thu, 07 Jul 2016 10:37:51 GMT
+ * observer.js v0.2.3 built in Fri, 08 Jul 2016 04:01:15 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -64,12 +64,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	window.observer = __webpack_require__(1);
-	var utility = __webpack_require__(3);
-	var util = utility.util;
-	var _proxy = __webpack_require__(2);
+	var _ = __webpack_require__(1),
+	    observer = __webpack_require__(7),
+	    _proxy = __webpack_require__(8),
+	    configuration = __webpack_require__(9);
 	
-	util.assignIf(observer, utility, {
+	__webpack_require__(11);
+	__webpack_require__(12);
+	
+	_.assignIf(observer, _, {
 	  eq: function eq(o1, o2) {
 	    return _proxy.eq(o1, o2);
 	  },
@@ -84,11 +87,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	  },
 	
 	  proxy: _proxy,
-	  config: __webpack_require__(9).get()
+	  config: configuration.get()
 	});
-	util.assignIf(observer.proxy, _proxy);
-	__webpack_require__(11);
-	__webpack_require__(12);
 	
 	module.exports = observer;
 
@@ -98,382 +98,13 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	var proxy = __webpack_require__(2);
-	var vbproxy = __webpack_require__(10);
+	__webpack_require__(2);
+	var _ = __webpack_require__(4);
 	
-	var _require = __webpack_require__(3);
-	
-	var util = _require.util;
-	var timeoutframe = _require.timeoutframe;
-	var configuration = __webpack_require__(9);
-	var config = configuration.cfg;
-	
-	configuration.register({
-	  lazy: true,
-	  animationFrame: true,
-	  observerKey: '__OBSERVER__',
-	  expressionKey: '__EXPR_OBSERVER__'
-	});
-	
-	function abstractFunc() {}
-	
-	var Observer = util.dynamicClass({
-	  constructor: function constructor(target) {
-	    this.isArray = util.isArray(target);
-	    if (!this.isArray && !util.isObject(target)) throw TypeError('can not observe object[' + Object.prototype.toString.call(target) + ']');
-	    this.target = target;
-	    this.obj = target;
-	    this.listens = {};
-	    this.changeRecords = {};
-	    this._notify = this._notify.bind(this);
-	    this.watchPropNum = 0;
-	    this._init();
-	  },
-	  _fire: function _fire(attr, val, oldVal) {
-	    var _this = this;
-	
-	    var handlers = void 0;
-	
-	    if (proxy.eq(val, oldVal) && !(this.isArray && attr === 'length')) return;
-	    if (!(handlers = this.listens[attr])) return;
-	
-	    util.each(handlers.slice(), function (handler) {
-	      handler(attr, val, oldVal, _this.target);
-	    });
-	  },
-	  _notify: function _notify() {
-	    var _this2 = this;
-	
-	    var obj = this.obj;
-	
-	    util.each(this.changeRecords, function (val, attr) {
-	      _this2._fire(attr, obj[attr], val);
-	    });
-	    this.request_frame = undefined;
-	    this.changeRecords = {};
-	  },
-	  _addChangeRecord: function _addChangeRecord(attr, oldVal) {
-	    if (!config.lazy) {
-	      this._fire(attr, this.obj[attr], oldVal);
-	    } else if (!(attr in this.changeRecords)) {
-	      this.changeRecords[attr] = oldVal;
-	      if (!this.request_frame) {
-	        this.request_frame = config.animationFrame ? window.requestAnimationFrame(this._notify) : timeoutframe.request(this._notify);
-	      }
-	    }
-	  },
-	  checkHandler: function checkHandler(handler) {
-	    if (!util.isFunc(handler)) throw TypeError('Invalid Observe Handler');
-	  },
-	  hasListen: function hasListen(attr, handler) {
-	    switch (arguments.length) {
-	      case 0:
-	        return !!this.watchPropNum;
-	      case 1:
-	        if (util.isFunc(attr)) {
-	          return !util.each(this.listens, function (handlers) {
-	            return util.lastIndexOf(handlers, attr) !== -1;
-	          });
-	        }
-	        return !!listens[attr];
-	      default:
-	        this.checkHandler(handler);
-	        return util.lastIndexOf(listens[attr], handler) !== -1;
-	    }
-	  },
-	  on: function on(attr, handler) {
-	    var handlers = void 0;
-	
-	    this.checkHandler(handler);
-	    if (!(handlers = this.listens[attr])) {
-	      this.listens[attr] = [handler];
-	      this.watchPropNum++;
-	      this._watch(attr);
-	    } else {
-	      handlers.push(handler);
-	    }
-	    return this.target;
-	  },
-	  _cleanListen: function _cleanListen(attr) {
-	    this.listens[attr] = undefined;
-	    this.watchPropNum--;
-	    this._unwatch(attr);
-	  },
-	  un: function un(attr, handler) {
-	    var handlers = this.listens[attr];
-	
-	    if (handlers) {
-	      if (arguments.length == 1) {
-	        this._cleanListen(attr);
-	      } else {
-	        this.checkHandler(handler);
-	
-	        var i = handlers.length;
-	        while (i--) {
-	          if (handlers[i] === handler) {
-	            handlers.splice(i, 1);
-	            if (!handlers.length) this._cleanListen(attr);
-	            break;
-	          }
-	        }
-	      }
-	    }
-	    return this.target;
-	  },
-	  destroy: function destroy() {
-	    if (this.request_frame) {
-	      config.animationFrame ? window.cancelAnimationFrame(this.request_frame) : timeoutframe.cancel(this.request_frame);
-	      this.request_frame = undefined;
-	    }
-	    var obj = this.obj;
-	    this._destroy();
-	    this.obj = undefined;
-	    this.target = undefined;
-	    this.listens = undefined;
-	    this.changeRecords = undefined;
-	    return obj;
-	  },
-	
-	  _init: abstractFunc,
-	  _destroy: abstractFunc,
-	  _watch: abstractFunc,
-	  _unwatch: abstractFunc
-	});
-	
-	function _hasListen(obj, attr, handler) {
-	  var observer = util.getOwnProp(obj, config.observerKey);
-	
-	  return observer ? arguments.length == 1 ? observer.hasListen() : arguments.length == 2 ? observer.hasListen(attr) : observer.hasListen(attr, handler) : false;
-	}
-	
-	function _on(obj, attr, handler) {
-	  var observer = util.getOwnProp(obj, config.observerKey);
-	
-	  if (!observer) {
-	    obj = proxy.obj(obj);
-	    observer = new Observer(obj);
-	    obj[config.observerKey] = observer;
-	  }
-	  return observer.on(attr, handler);
-	}
-	
-	function _un(obj, attr, handler) {
-	  var observer = util.getOwnProp(obj, config.observerKey);
-	
-	  if (observer) {
-	    obj = arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler);
-	    if (!observer.hasListen()) {
-	      obj[config.observerKey] = undefined;
-	      return observer.destroy();
-	    }
-	  }
-	  return obj;
-	}
-	
-	var expressionIdGenerator = 0;
-	
-	var Expression = util.dynamicClass({
-	  constructor: function constructor(target, expr, path) {
-	    this.id = expressionIdGenerator++;
-	    this.expr = expr;
-	    this.handlers = [];
-	    this.observers = [];
-	    this.path = path || util.parseExpr(expr);
-	    this.observeHandlers = this._initObserveHandlers();
-	    this.obj = proxy.obj(target);
-	    this.target = this._observe(this.obj, 0);
-	    this._onTargetProxy = this._onTargetProxy.bind(this);
-	    proxy.on(target, this._onTargetProxy);
-	  },
-	  _onTargetProxy: function _onTargetProxy(obj, proxy) {
-	    this.target = proxy;
-	  },
-	  _observe: function _observe(obj, idx) {
-	    var prop = this.path[idx],
-	        o = void 0;
-	
-	    if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._observe(proxy.obj(o), idx + 1);
-	    return _on(obj, prop, this.observeHandlers[idx]);
-	  },
-	  _unobserve: function _unobserve(obj, idx) {
-	    var prop = this.path[idx],
-	        o = void 0,
-	        ret = void 0;
-	
-	    ret = _un(obj, prop, this.observeHandlers[idx]);
-	    if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._unobserve(proxy.obj(o), idx + 1);
-	    return ret;
-	  },
-	  _initObserveHandlers: function _initObserveHandlers() {
-	    return util.map(this.path, function (prop, i) {
-	      return this._createObserveHandler(i);
-	    }, this);
-	  },
-	  _createObserveHandler: function _createObserveHandler(idx) {
-	    var _this3 = this;
-	
-	    var path = this.path.slice(0, idx + 1),
-	        rpath = this.path.slice(idx + 1),
-	        ridx = this.path.length - idx - 1;
-	
-	    return function (prop, val, oldVal) {
-	      if (ridx) {
-	        if (oldVal) {
-	          oldVal = proxy.obj(oldVal);
-	          _this3._unobserve(oldVal, idx + 1);
-	          oldVal = util.get(oldVal, rpath);
-	        } else {
-	          oldVal = undefined;
-	        }
-	        if (val) {
-	          val = proxy.obj(val);
-	          _this3._observe(val, idx + 1);
-	          val = util.get(val, rpath);
-	        } else {
-	          val = undefined;
-	        }
-	        if (proxy.eq(val, oldVal)) return;
-	      }
-	      util.each(_this3.handlers.slice(), function (h) {
-	        h(this.expr, val, oldVal, this.target);
-	      }, _this3);
-	    };
-	  },
-	  checkHandler: function checkHandler(handler) {
-	    if (!util.isFunc(handler)) throw TypeError('Invalid Observe Handler');
-	  },
-	  on: function on(handler) {
-	    this.checkHandler(handler);
-	    this.handlers.push(handler);
-	    return this;
-	  },
-	  un: function un(handler) {
-	    if (!arguments.length) {
-	      this.handlers = [];
-	    } else {
-	      this.checkHandler(handler);
-	
-	      var handlers = this.handlers,
-	          i = handlers.length;
-	
-	      while (i--) {
-	        if (handlers[i] === handler) {
-	          handlers.splice(i, 1);
-	          break;
-	        }
-	      }
-	    }
-	    return this;
-	  },
-	  hasListen: function hasListen(handler) {
-	    return arguments.length ? util.lastIndexOf(this.handlers, handler) != -1 : !!this.handlers.length;
-	  },
-	  destory: function destory() {
-	    proxy.un(this.target, this._onTargetProxy);
-	    var obj = this._unobserve(this.obj, 0);
-	    this.obj = undefined;
-	    this.target = undefined;
-	    this.expr = undefined;
-	    this.handlers = undefined;
-	    this.path = undefined;
-	    this.observers = undefined;
-	    this.observeHandlers = undefined;
-	    this.target = undefined;
-	    return obj;
-	  }
-	});
-	
-	var policies = [],
-	    policyNames = {};
-	
-	var inited = false;
-	
-	module.exports = {
-	  registerPolicy: function registerPolicy(name, priority, checker, policy) {
-	    policies.push({
-	      name: name,
-	      priority: priority,
-	      policy: policy,
-	      checker: checker
-	    });
-	    policies.sort(function (p1, p2) {
-	      return p1.priority - p2.priority;
-	    });
-	    return this;
-	  },
-	  init: function init(cfg) {
-	    if (!inited) {
-	      configuration.config(cfg);
-	      if (util.each(policies, function (policy) {
-	        if (policy.checker(config)) {
-	          util.each(policy.policy(config), function (val, key) {
-	            Observer.prototype[key] = val;
-	          });
-	          config.policy = policy.name;
-	          return false;
-	        }
-	      }) !== false) throw Error('not supported');
-	      inited = true;
-	    }
-	    return this;
-	  },
-	  on: function on(obj, expr, handler) {
-	    var path = util.parseExpr(expr);
-	
-	    if (path.length > 1) {
-	      var map = util.getOwnProp(obj, config.expressionKey),
-	          exp = map ? map[expr] : undefined;
-	
-	      if (!exp) {
-	        exp = new Expression(obj, expr, path);
-	        if (!map) map = obj[config.expressionKey] = {};
-	        map[expr] = exp;
-	      }
-	      exp.on(handler);
-	      return exp.target;
-	    }
-	    return _on(obj, expr, handler);
-	  },
-	  un: function un(obj, expr, handler) {
-	    var path = util.parseExpr(expr);
-	
-	    if (path.length > 1) {
-	      var map = util.getOwnProp(obj, config.expressionKey),
-	          exp = map ? map[expr] : undefined;
-	
-	      if (exp) {
-	        arguments.length == 2 ? exp.un() : expr.un(handler);
-	        if (!exp.hasListen()) {
-	          map[expr] = undefined;
-	          return exp.destory();
-	        }
-	        return exp.target;
-	      }
-	      return proxy.proxy(obj) || obj;
-	    }
-	    return arguments.length == 2 ? _un(obj, expr) : _un(obj, expr, handler);
-	  },
-	  hasListen: function hasListen(obj, expr, handler) {
-	    var l = arguments.length;
-	
-	    switch (l) {
-	      case 1:
-	        return _hasListen(obj);
-	      case 2:
-	        if (util.isFunc(expr)) return _hasListen(obj, expr);
-	    }
-	
-	    var path = util.parseExpr(expr);
-	
-	    if (path.length > 1) {
-	      var map = util.getOwnProp(obj, config.expressionKey),
-	          exp = map ? map[expr] : undefined;
-	
-	      return exp ? l == 2 ? true : exp.hasListen(handler) : false;
-	    }
-	    return _hasListen.apply(window, arguments);
-	  }
-	};
+	module.exports = _.assignIf(_, {
+	  timeoutframe: __webpack_require__(3),
+	  Configuration: __webpack_require__(5)
+	}, __webpack_require__(6));
 
 /***/ },
 /* 2 */
@@ -481,143 +112,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	var toStr = Object.prototype.toString;
-	
-	var _require = __webpack_require__(3);
-	
-	var util = _require.util;
-	var hasOwnProp = util.hasOwnProp;
-	var configuration = __webpack_require__(9);
-	var LISTEN_CONFIG = 'proxyListenKey';
-	
-	configuration.register(LISTEN_CONFIG, '__PROXY_LISTENERS__');
-	
-	var defaultPolicy = {
-	  eq: function eq(o1, o2) {
-	    return o1 === o2;
-	  },
-	  obj: function obj(o) {
-	    return o;
-	  },
-	  proxy: function proxy(o) {
-	    return o;
-	  }
-	},
-	    apply = {
-	  change: function change(obj, p) {
-	    var handlers = util.getOwnProp(obj, configuration.get(LISTEN_CONFIG));
-	
-	    if (handlers) {
-	      var i = handlers.length;
-	      while (i--) {
-	        handlers[i](obj, p);
-	      }
-	    }
-	  },
-	  on: function on(obj, handler) {
-	    if (!util.isFunc(handler)) throw TypeError('Invalid Proxy Event Handler[' + handler);
-	    var key = configuration.get(LISTEN_CONFIG),
-	        handlers = util.getOwnProp(obj, key);
-	
-	    if (!handlers) obj[key] = handlers = [];
-	    handlers.push(handler);
-	  },
-	  un: function un(obj, handler) {
-	    var handlers = util.getOwnProp(obj, configuration.get(LISTEN_CONFIG));
-	
-	    if (handlers) {
-	      if (util.isFunc(handler)) {
-	        var i = handlers.length;
-	
-	        while (i-- > 0) {
-	          if (handlers[i] === handler) {
-	            handlers.splice(i, 1);
-	            return true;
-	          }
-	        }
-	      }
-	    }
-	    return false;
-	  },
-	  clean: function clean(obj) {
-	    if (obj[proxy.listenKey]) obj[proxy.listenKey] = undefined;
-	  }
-	};
-	
-	function proxy(o) {
-	  return proxy.proxy(o);
-	}
-	
-	util.assign(proxy, {
-	  isEnable: function isEnable() {
-	    return policy === defaultPolicy;
-	  },
-	  enable: function enable(policy) {
-	    applyPolicy(policy);
-	  },
-	  disable: function disable() {
-	    applyPolicy(defaultPolicy);
-	  }
-	});
-	
-	function applyPolicy(policy) {
-	  var _apply = policy !== defaultPolicy ? function (fn, name) {
-	    proxy[name] = fn;
-	  } : function (fn, name) {
-	    proxy[name] = util.emptyFunc;
-	  };
-	  util.each(apply, _apply);
-	  util.each(policy, function (fn, name) {
-	    proxy[name] = fn;
-	  });
-	}
-	
-	proxy.disable();
-	
-	util.get = function (obj, expr, defVal, lastOwn, own) {
-	  var i = 0,
-	      path = util.parseExpr(expr, true),
-	      l = path.length - 1,
-	      prop = void 0;
-	
-	  while (!util.isNil(obj) && i < l) {
-	    prop = path[i++];
-	    obj = proxy.obj(obj);
-	    if (own && !hasOwnProp(obj, prop)) return defVal;
-	    obj = obj[prop];
-	  }
-	  obj = proxy.obj(obj);
-	  prop = path[i];
-	  return i == l && !util.isNil(obj) && (own ? hasOwnProp(obj, prop) : prop in obj) ? obj[prop] : defVal;
-	};
-	
-	util.hasOwnProp = function (obj, prop) {
-	  return hasOwnProp(proxy.obj(obj), prop);
-	};
-	module.exports = proxy;
-
-/***/ },
-/* 3 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	__webpack_require__(4);
-	var util = __webpack_require__(6);
-	
-	module.exports = util.assignIf({
-	  util: __webpack_require__(6),
-	  timeoutframe: __webpack_require__(5),
-	  Configuration: __webpack_require__(7)
-	}, __webpack_require__(8));
-
-/***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	'use strict';
-	
-	var tf = __webpack_require__(5);
+	var tf = __webpack_require__(3);
 	
 	window.requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || tf.request;
 	
@@ -637,7 +132,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	});
 
 /***/ },
-/* 5 */
+/* 3 */
 /***/ function(module, exports) {
 
 	"use strict";
@@ -662,7 +157,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 6 */
+/* 4 */
 /***/ function(module, exports) {
 
 	'use strict';
@@ -1328,12 +823,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	}
 
 /***/ },
-/* 7 */
+/* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
-	var _ = __webpack_require__(6);
+	var _ = __webpack_require__(4);
 	
 	var Configuration = _.dynamicClass({
 	  constructor: function constructor(def) {
@@ -1366,13 +861,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	module.exports = Configuration;
 
 /***/ },
-/* 8 */
+/* 6 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 	
 	exports.__esModule = true;
-	var _ = __webpack_require__(6);
+	var _ = __webpack_require__(4);
 	
 	var logLevels = ['debug', 'info', 'warn', 'error'],
 	    tmpEl = document.createElement('div'),
@@ -1478,7 +973,506 @@ return /******/ (function(modules) { // webpackBootstrap
 	    console.appendTo(document.body);
 	  }
 	};
+	
 	var logger = exports.logger = new Logger('default', 'info');
+
+/***/ },
+/* 7 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	var proxy = __webpack_require__(8);
+	var vbproxy = __webpack_require__(10);
+	var _ = __webpack_require__(1);
+	var timeoutframe = _.timeoutframe;
+	var configuration = __webpack_require__(9);
+	var config = configuration.cfg;
+	
+	configuration.register({
+	  lazy: true,
+	  animationFrame: true,
+	  observerKey: '__OBSERVER__',
+	  expressionKey: '__EXPR_OBSERVER__'
+	});
+	
+	function abstractFunc() {}
+	
+	var Observer = _.dynamicClass({
+	  constructor: function constructor(target) {
+	    this.isArray = _.isArray(target);
+	    if (!this.isArray && !_.isObject(target)) throw TypeError('can not observe object[' + Object.prototype.toString.call(target) + ']');
+	    this.target = target;
+	    this.obj = target;
+	    this.listens = {};
+	    this.changeRecords = {};
+	    this._notify = this._notify.bind(this);
+	    this.watchPropNum = 0;
+	    this._init();
+	  },
+	  _fire: function _fire(attr, val, oldVal) {
+	    var _this = this;
+	
+	    var handlers = void 0;
+	
+	    if (proxy.eq(val, oldVal) && !(this.isArray && attr === 'length')) return;
+	    if (!(handlers = this.listens[attr])) return;
+	
+	    _.each(handlers.slice(), function (handler) {
+	      handler(attr, val, oldVal, _this.target);
+	    });
+	  },
+	  _notify: function _notify() {
+	    var _this2 = this;
+	
+	    var obj = this.obj;
+	
+	    _.each(this.changeRecords, function (val, attr) {
+	      _this2._fire(attr, obj[attr], val);
+	    });
+	    this.request_frame = undefined;
+	    this.changeRecords = {};
+	  },
+	  _addChangeRecord: function _addChangeRecord(attr, oldVal) {
+	    if (!config.lazy) {
+	      this._fire(attr, this.obj[attr], oldVal);
+	    } else if (!(attr in this.changeRecords)) {
+	      this.changeRecords[attr] = oldVal;
+	      if (!this.request_frame) {
+	        this.request_frame = config.animationFrame ? window.requestAnimationFrame(this._notify) : timeoutframe.request(this._notify);
+	      }
+	    }
+	  },
+	  checkHandler: function checkHandler(handler) {
+	    if (!_.isFunc(handler)) throw TypeError('Invalid Observe Handler');
+	  },
+	  hasListen: function hasListen(attr, handler) {
+	    switch (arguments.length) {
+	      case 0:
+	        return !!this.watchPropNum;
+	      case 1:
+	        if (_.isFunc(attr)) {
+	          return !_.each(this.listens, function (handlers) {
+	            return _.lastIndexOf(handlers, attr) !== -1;
+	          });
+	        }
+	        return !!listens[attr];
+	      default:
+	        this.checkHandler(handler);
+	        return _.lastIndexOf(listens[attr], handler) !== -1;
+	    }
+	  },
+	  on: function on(attr, handler) {
+	    var handlers = void 0;
+	
+	    this.checkHandler(handler);
+	    if (!(handlers = this.listens[attr])) {
+	      this.listens[attr] = [handler];
+	      this.watchPropNum++;
+	      this._watch(attr);
+	    } else {
+	      handlers.push(handler);
+	    }
+	    return this.target;
+	  },
+	  _cleanListen: function _cleanListen(attr) {
+	    this.listens[attr] = undefined;
+	    this.watchPropNum--;
+	    this._unwatch(attr);
+	  },
+	  un: function un(attr, handler) {
+	    var handlers = this.listens[attr];
+	
+	    if (handlers) {
+	      if (arguments.length == 1) {
+	        this._cleanListen(attr);
+	      } else {
+	        this.checkHandler(handler);
+	
+	        var i = handlers.length;
+	        while (i--) {
+	          if (handlers[i] === handler) {
+	            handlers.splice(i, 1);
+	            if (!handlers.length) this._cleanListen(attr);
+	            break;
+	          }
+	        }
+	      }
+	    }
+	    return this.target;
+	  },
+	  destroy: function destroy() {
+	    if (this.request_frame) {
+	      config.animationFrame ? window.cancelAnimationFrame(this.request_frame) : timeoutframe.cancel(this.request_frame);
+	      this.request_frame = undefined;
+	    }
+	    var obj = this.obj;
+	    this._destroy();
+	    this.obj = undefined;
+	    this.target = undefined;
+	    this.listens = undefined;
+	    this.changeRecords = undefined;
+	    return obj;
+	  },
+	
+	  _init: abstractFunc,
+	  _destroy: abstractFunc,
+	  _watch: abstractFunc,
+	  _unwatch: abstractFunc
+	});
+	
+	function _hasListen(obj, attr, handler) {
+	  var observer = _.getOwnProp(obj, config.observerKey);
+	
+	  return observer ? arguments.length == 1 ? observer.hasListen() : arguments.length == 2 ? observer.hasListen(attr) : observer.hasListen(attr, handler) : false;
+	}
+	
+	function _on(obj, attr, handler) {
+	  var observer = _.getOwnProp(obj, config.observerKey);
+	
+	  if (!observer) {
+	    obj = proxy.obj(obj);
+	    observer = new Observer(obj);
+	    obj[config.observerKey] = observer;
+	  }
+	  return observer.on(attr, handler);
+	}
+	
+	function _un(obj, attr, handler) {
+	  var observer = _.getOwnProp(obj, config.observerKey);
+	
+	  if (observer) {
+	    obj = arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler);
+	    if (!observer.hasListen()) {
+	      obj[config.observerKey] = undefined;
+	      return observer.destroy();
+	    }
+	  }
+	  return obj;
+	}
+	
+	var expressionIdGenerator = 0;
+	
+	var Expression = _.dynamicClass({
+	  constructor: function constructor(target, expr, path) {
+	    this.id = expressionIdGenerator++;
+	    this.expr = expr;
+	    this.handlers = [];
+	    this.observers = [];
+	    this.path = path || _.parseExpr(expr);
+	    this.observeHandlers = this._initObserveHandlers();
+	    this.obj = proxy.obj(target);
+	    this.target = this._observe(this.obj, 0);
+	    this._onTargetProxy = this._onTargetProxy.bind(this);
+	    proxy.on(target, this._onTargetProxy);
+	  },
+	  _onTargetProxy: function _onTargetProxy(obj, proxy) {
+	    this.target = proxy;
+	  },
+	  _observe: function _observe(obj, idx) {
+	    var prop = this.path[idx],
+	        o = void 0;
+	
+	    if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._observe(proxy.obj(o), idx + 1);
+	    return _on(obj, prop, this.observeHandlers[idx]);
+	  },
+	  _unobserve: function _unobserve(obj, idx) {
+	    var prop = this.path[idx],
+	        o = void 0,
+	        ret = void 0;
+	
+	    ret = _un(obj, prop, this.observeHandlers[idx]);
+	    if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._unobserve(proxy.obj(o), idx + 1);
+	    return ret;
+	  },
+	  _initObserveHandlers: function _initObserveHandlers() {
+	    return _.map(this.path, function (prop, i) {
+	      return this._createObserveHandler(i);
+	    }, this);
+	  },
+	  _createObserveHandler: function _createObserveHandler(idx) {
+	    var _this3 = this;
+	
+	    var path = this.path.slice(0, idx + 1),
+	        rpath = this.path.slice(idx + 1),
+	        ridx = this.path.length - idx - 1;
+	
+	    return function (prop, val, oldVal) {
+	      if (ridx) {
+	        if (oldVal) {
+	          oldVal = proxy.obj(oldVal);
+	          _this3._unobserve(oldVal, idx + 1);
+	          oldVal = _.get(oldVal, rpath);
+	        } else {
+	          oldVal = undefined;
+	        }
+	        if (val) {
+	          val = proxy.obj(val);
+	          _this3._observe(val, idx + 1);
+	          val = _.get(val, rpath);
+	        } else {
+	          val = undefined;
+	        }
+	        if (proxy.eq(val, oldVal)) return;
+	      }
+	      _.each(_this3.handlers.slice(), function (h) {
+	        h(this.expr, val, oldVal, this.target);
+	      }, _this3);
+	    };
+	  },
+	  checkHandler: function checkHandler(handler) {
+	    if (!_.isFunc(handler)) throw TypeError('Invalid Observe Handler');
+	  },
+	  on: function on(handler) {
+	    this.checkHandler(handler);
+	    this.handlers.push(handler);
+	    return this;
+	  },
+	  un: function un(handler) {
+	    if (!arguments.length) {
+	      this.handlers = [];
+	    } else {
+	      this.checkHandler(handler);
+	
+	      var handlers = this.handlers,
+	          i = handlers.length;
+	
+	      while (i--) {
+	        if (handlers[i] === handler) {
+	          handlers.splice(i, 1);
+	          break;
+	        }
+	      }
+	    }
+	    return this;
+	  },
+	  hasListen: function hasListen(handler) {
+	    return arguments.length ? _.lastIndexOf(this.handlers, handler) != -1 : !!this.handlers.length;
+	  },
+	  destory: function destory() {
+	    proxy.un(this.target, this._onTargetProxy);
+	    var obj = this._unobserve(this.obj, 0);
+	    this.obj = undefined;
+	    this.target = undefined;
+	    this.expr = undefined;
+	    this.handlers = undefined;
+	    this.path = undefined;
+	    this.observers = undefined;
+	    this.observeHandlers = undefined;
+	    this.target = undefined;
+	    return obj;
+	  }
+	});
+	
+	var policies = [],
+	    policyNames = {};
+	
+	var inited = false;
+	
+	module.exports = {
+	  registerPolicy: function registerPolicy(name, priority, checker, policy) {
+	    policies.push({
+	      name: name,
+	      priority: priority,
+	      policy: policy,
+	      checker: checker
+	    });
+	    policies.sort(function (p1, p2) {
+	      return p1.priority - p2.priority;
+	    });
+	    return this;
+	  },
+	  init: function init(cfg) {
+	    if (!inited) {
+	      configuration.config(cfg);
+	      if (_.each(policies, function (policy) {
+	        if (policy.checker(config)) {
+	          _.each(policy.policy(config), function (val, key) {
+	            Observer.prototype[key] = val;
+	          });
+	          config.policy = policy.name;
+	          return false;
+	        }
+	      }) !== false) throw Error('not supported');
+	      inited = true;
+	    }
+	    return this;
+	  },
+	  on: function on(obj, expr, handler) {
+	    var path = _.parseExpr(expr);
+	
+	    if (path.length > 1) {
+	      var map = _.getOwnProp(obj, config.expressionKey),
+	          exp = map ? map[expr] : undefined;
+	
+	      if (!exp) {
+	        exp = new Expression(obj, expr, path);
+	        if (!map) map = obj[config.expressionKey] = {};
+	        map[expr] = exp;
+	      }
+	      exp.on(handler);
+	      return exp.target;
+	    }
+	    return _on(obj, expr, handler);
+	  },
+	  un: function un(obj, expr, handler) {
+	    var path = _.parseExpr(expr);
+	
+	    if (path.length > 1) {
+	      var map = _.getOwnProp(obj, config.expressionKey),
+	          exp = map ? map[expr] : undefined;
+	
+	      if (exp) {
+	        arguments.length == 2 ? exp.un() : expr.un(handler);
+	        if (!exp.hasListen()) {
+	          map[expr] = undefined;
+	          return exp.destory();
+	        }
+	        return exp.target;
+	      }
+	      return proxy.proxy(obj) || obj;
+	    }
+	    return arguments.length == 2 ? _un(obj, expr) : _un(obj, expr, handler);
+	  },
+	  hasListen: function hasListen(obj, expr, handler) {
+	    var l = arguments.length;
+	
+	    switch (l) {
+	      case 1:
+	        return _hasListen(obj);
+	      case 2:
+	        if (_.isFunc(expr)) return _hasListen(obj, expr);
+	    }
+	
+	    var path = _.parseExpr(expr);
+	
+	    if (path.length > 1) {
+	      var map = _.getOwnProp(obj, config.expressionKey),
+	          exp = map ? map[expr] : undefined;
+	
+	      return exp ? l == 2 ? true : exp.hasListen(handler) : false;
+	    }
+	    return _hasListen.apply(window, arguments);
+	  }
+	};
+
+/***/ },
+/* 8 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
+	
+	var toStr = Object.prototype.toString;
+	var _ = __webpack_require__(1);
+	var hasOwnProp = _.hasOwnProp;
+	var configuration = __webpack_require__(9);
+	var LISTEN_CONFIG = 'proxyListenKey';
+	
+	configuration.register(LISTEN_CONFIG, '__PROXY_LISTENERS__');
+	
+	var defaultPolicy = {
+	  eq: function eq(o1, o2) {
+	    return o1 === o2;
+	  },
+	  obj: function obj(o) {
+	    return o;
+	  },
+	  proxy: function proxy(o) {
+	    return o;
+	  }
+	},
+	    apply = {
+	  change: function change(obj, p) {
+	    var handlers = _.getOwnProp(obj, configuration.get(LISTEN_CONFIG));
+	
+	    if (handlers) {
+	      var i = handlers.length;
+	      while (i--) {
+	        handlers[i](obj, p);
+	      }
+	    }
+	  },
+	  on: function on(obj, handler) {
+	    if (!_.isFunc(handler)) throw TypeError('Invalid Proxy Event Handler[' + handler);
+	    var key = configuration.get(LISTEN_CONFIG),
+	        handlers = _.getOwnProp(obj, key);
+	
+	    if (!handlers) obj[key] = handlers = [];
+	    handlers.push(handler);
+	  },
+	  un: function un(obj, handler) {
+	    var handlers = _.getOwnProp(obj, configuration.get(LISTEN_CONFIG));
+	
+	    if (handlers) {
+	      if (_.isFunc(handler)) {
+	        var i = handlers.length;
+	
+	        while (i-- > 0) {
+	          if (handlers[i] === handler) {
+	            handlers.splice(i, 1);
+	            return true;
+	          }
+	        }
+	      }
+	    }
+	    return false;
+	  },
+	  clean: function clean(obj) {
+	    if (obj[proxy.listenKey]) obj[proxy.listenKey] = undefined;
+	  }
+	};
+	
+	function proxy(o) {
+	  return proxy.proxy(o);
+	}
+	
+	_.assign(proxy, {
+	  isEnable: function isEnable() {
+	    return policy === defaultPolicy;
+	  },
+	  enable: function enable(policy) {
+	    applyPolicy(policy);
+	  },
+	  disable: function disable() {
+	    applyPolicy(defaultPolicy);
+	  }
+	});
+	
+	function applyPolicy(policy) {
+	  var _apply = policy !== defaultPolicy ? function (fn, name) {
+	    proxy[name] = fn;
+	  } : function (fn, name) {
+	    proxy[name] = _.emptyFunc;
+	  };
+	  _.each(apply, _apply);
+	  _.each(policy, function (fn, name) {
+	    proxy[name] = fn;
+	  });
+	}
+	
+	proxy.disable();
+	
+	_.get = function (obj, expr, defVal, lastOwn, own) {
+	  var i = 0,
+	      path = _.parseExpr(expr, true),
+	      l = path.length - 1,
+	      prop = void 0;
+	
+	  while (!_.isNil(obj) && i < l) {
+	    prop = path[i++];
+	    obj = proxy.obj(obj);
+	    if (own && !hasOwnProp(obj, prop)) return defVal;
+	    obj = obj[prop];
+	  }
+	  obj = proxy.obj(obj);
+	  prop = path[i];
+	  return i == l && !_.isNil(obj) && (own ? hasOwnProp(obj, prop) : prop in obj) ? obj[prop] : defVal;
+	};
+	
+	_.hasOwnProp = function (obj, prop) {
+	  return hasOwnProp(proxy.obj(obj), prop);
+	};
+	module.exports = proxy;
 
 /***/ },
 /* 9 */
@@ -1486,7 +1480,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	var _require = __webpack_require__(3);
+	var _require = __webpack_require__(1);
 	
 	var Configuration = _require.Configuration;
 	
@@ -1499,14 +1493,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	var _require = __webpack_require__(3);
+	var _ = __webpack_require__(1),
+	    hasOwn = Object.prototype.hasOwnProperty,
+	    RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(','),
+	    RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,indexOf,lastIndexOf,length,map,keys,join,pop,push,reverse,reverseRight,some,shift,slice,sort,splice,toSource,unshift'.split(',');
 	
-	var util = _require.util;
-	var hasOwn = Object.prototype.hasOwnProperty;
-	var RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(',');
-	var RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,indexOf,lastIndexOf,length,map,keys,join,pop,push,reverse,reverseRight,some,shift,slice,sort,splice,toSource,unshift'.split(',');
-	
-	var VBClassFactory = util.dynamicClass({
+	var VBClassFactory = _.dynamicClass({
 	  constBind: '__VB_CONST__',
 	  descBind: '__VB_PROXY__',
 	  classNameGenerator: 0,
@@ -1528,17 +1520,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	  addDefProps: function addDefProps(defProps) {
 	    var defPropMap = this.defPropMap;
 	
-	    util.each(defProps || [], function (prop) {
+	    _.each(defProps || [], function (prop) {
 	      defPropMap[prop] = true;
 	    });
-	    this.defProps = util.keys(defPropMap);
+	    this.defProps = _.keys(defPropMap);
 	    this.initReserveProps();
 	  },
 	  initReserveProps: function initReserveProps() {
-	    this.reserveProps = RESERVE_PROPS.concat(util.keys(this.defPropMap) || []);
+	    this.reserveProps = RESERVE_PROPS.concat(_.keys(this.defPropMap) || []);
 	    this.reserveArrayProps = this.reserveProps.concat(RESERVE_ARRAY_PROPS);
-	    this.reservePropMap = util.reverseConvert(this.reserveProps);
-	    this.reserveArrayPropMap = util.reverseConvert(this.reserveArrayProps);
+	    this.reservePropMap = _.reverseConvert(this.reserveProps);
+	    this.reserveArrayPropMap = _.reverseConvert(this.reserveArrayProps);
 	  },
 	  initConstScript: function initConstScript() {
 	    this.constScript = ['\tPublic [', this.descBind, ']\r\n', '\tPublic Default Function [', this.constBind, '](desc)\r\n', '\t\tset [', this.descBind, '] = desc\r\n', '\t\tSet [', this.constBind, '] = Me\r\n', '\tEnd Function\r\n'].join('');
@@ -1564,7 +1556,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    var buffer = ['Class ', className, '\r\n', this.constScript, '\r\n'];
 	
-	    util.each(props, function (attr) {
+	    _.each(props, function (attr) {
 	      if (funcMap[attr]) {
 	        buffer.push('\tPublic [' + attr + ']\r\n');
 	      } else {
@@ -1599,22 +1591,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	        descBind = this.descBind;
 	
 	    function addProp(prop) {
-	      if (util.isFunc(obj[prop])) {
+	      if (_.isFunc(obj[prop])) {
 	        funcMap[prop] = true;
 	        funcs.push(prop);
 	      }
 	      props.push(prop);
 	    }
 	
-	    if (util.isArray(obj)) {
+	    if (_.isArray(obj)) {
 	      protoProps = this.reserveArrayProps;
 	      protoPropMap = this.reserveArrayPropMap;
 	    } else {
 	      protoProps = this.reserveProps;
 	      protoPropMap = this.reservePropMap;
 	    }
-	    util.each(protoProps, addProp);
-	    util.each(obj, function (val, prop) {
+	    _.each(protoProps, addProp);
+	    _.each(obj, function (val, prop) {
 	      if (prop !== descBind && !(prop in protoPropMap)) addProp(prop);
 	    }, obj, false);
 	
@@ -1628,7 +1620,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	
 	    proxy = window[this.generateClassConstructor(props, funcMap, funcs)](desc);
-	    util.each(funcs, function (prop) {
+	    _.each(funcs, function (prop) {
 	      proxy[prop] = _this2.funcProxy(obj[prop], proxy);
 	    });
 	    desc.proxy = proxy;
@@ -1676,11 +1668,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	});
 	
-	var ObjectDescriptor = util.dynamicClass({
+	var ObjectDescriptor = _.dynamicClass({
 	  constructor: function constructor(obj, props, classGenerator) {
 	    this.classGenerator = classGenerator;
 	    this.obj = obj;
-	    this.defines = util.reverseConvert(props, function () {
+	    this.defines = _.reverseConvert(props, function () {
 	      return false;
 	    });
 	    obj[classGenerator.descBind] = this;
@@ -1699,7 +1691,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    if (!(attr in defines)) {
 	      if (!(attr in obj)) {
 	        obj[attr] = undefined;
-	      } else if (util.isFunc(obj[attr])) {
+	      } else if (_.isFunc(obj[attr])) {
 	        console.warn('defineProperty not support function [' + attr + ']');
 	      }
 	      this.classGenerator.create(this.obj, this);
@@ -1756,13 +1748,10 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	'use strict';
 	
-	var core = __webpack_require__(1);
-	var proxy = __webpack_require__(2);
-	
-	var _require = __webpack_require__(3);
-	
-	var util = _require.util;
-	var configuration = __webpack_require__(9);
+	var core = __webpack_require__(7),
+	    proxy = __webpack_require__(8),
+	    _ = __webpack_require__(1),
+	    configuration = __webpack_require__(9);
 	
 	configuration.register({
 	  es6Proxy: true,
@@ -1779,13 +1768,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	  proxy.enable({
 	    obj: function obj(_obj) {
-	      return _obj ? util.getOwnProp(_obj, es6SourceKey) || _obj : _obj;
+	      return _obj ? _.getOwnProp(_obj, es6SourceKey) || _obj : _obj;
 	    },
 	    eq: function eq(o1, o2) {
 	      return o1 === o2 || o1 && o2 && proxy.obj(o1) === proxy.obj(o2);
 	    },
 	    proxy: function proxy(obj) {
-	      return obj ? util.getOwnProp(obj, es6ProxyKey) : undefined;
+	      return obj ? _.getOwnProp(obj, es6ProxyKey) : undefined;
 	    }
 	  });
 	
@@ -1866,15 +1855,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 	
-	var core = __webpack_require__(1);
-	var proxyPro = __webpack_require__(2);
-	var VBClassFactory = __webpack_require__(10);
-	
-	var _require = __webpack_require__(3);
-	
-	var util = _require.util;
-	var arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'];
-	var policy = {
+	var core = __webpack_require__(7),
+	    proxyPro = __webpack_require__(8),
+	    VBClassFactory = __webpack_require__(10),
+	    _ = __webpack_require__(1),
+	    arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
+	    policy = {
 	  _init: function _init() {
 	    this.watchers = {};
 	  },
@@ -1895,12 +1881,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    };
 	  },
 	  _watch: function _watch(attr) {
-	    var _this4 = this;
+	    var _this = this;
 	
 	    if (!this.watchers[attr]) {
 	      if (this.isArray && attr === 'length') {
-	        util.each(arrayHockMethods, function (method) {
-	          _this4._hockArrayLength(method);
+	        _.each(arrayHockMethods, function (method) {
+	          _this._hockArrayLength(method);
 	        });
 	      } else {
 	        this._defineProperty(attr, this.obj[attr]);
@@ -1909,12 +1895,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  },
 	  _unwatch: function _unwatch(attr) {
-	    var _this5 = this;
+	    var _this2 = this;
 	
 	    if (this.watchers[attr]) {
 	      if (this.isArray && attr === 'length') {
-	        util.each(arrayHockMethods, function (method) {
-	          delete _this5.obj[method];
+	        _.each(arrayHockMethods, function (method) {
+	          delete _this2.obj[method];
 	        });
 	      } else {
 	        this._undefineProperty(attr, this.obj[attr]);
@@ -1950,9 +1936,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return false;
 	}, function (config) {
 	  proxyPro.disable();
-	  return util.assignIf({
+	  return _.assignIf({
 	    _defineProperty: function _defineProperty(attr, value) {
-	      var _this = this;
+	      var _this3 = this;
 	
 	      Object.defineProperty(this.target, attr, {
 	        enumerable: true,
@@ -1964,7 +1950,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          var oldVal = value;
 	
 	          value = val;
-	          _this._addChangeRecord(attr, oldVal);
+	          _this3._addChangeRecord(attr, oldVal);
 	        }
 	      });
 	    },
@@ -1983,9 +1969,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return '__defineGetter__' in {};
 	}, function (config) {
 	  proxyPro.disable();
-	  return util.assignIf({
+	  return _.assignIf({
 	    _defineProperty: function _defineProperty(attr, value) {
-	      var _this2 = this;
+	      var _this4 = this;
 	
 	      this.target.__defineGetter__(attr, function () {
 	        return value;
@@ -1994,7 +1980,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        var oldVal = value;
 	
 	        value = val;
-	        _this2._addChangeRecord(attr, oldVal);
+	        _this4._addChangeRecord(attr, oldVal);
 	      });
 	    },
 	    _undefineProperty: function _undefineProperty(attr, value) {
@@ -2026,13 +2012,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	  });
 	
-	  return util.assignIf({
+	  return _.assignIf({
 	    _init: function _init() {
 	      init.call(this);
 	      this.obj = factory.obj(this.target);
 	    },
 	    _defineProperty: function _defineProperty(attr, value) {
-	      var _this3 = this;
+	      var _this5 = this;
 	
 	      var obj = this.obj,
 	          desc = factory.descriptor(obj);
@@ -2041,9 +2027,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	      this.target = desc.defineProperty(attr, {
 	        set: function set(val) {
-	          var oldVal = _this3.obj[attr];
-	          _this3.obj[attr] = val;
-	          _this3._addChangeRecord(attr, oldVal);
+	          var oldVal = _this5.obj[attr];
+	          _this5.obj[attr] = val;
+	          _this5._addChangeRecord(attr, oldVal);
 	        }
 	      });
 	    },

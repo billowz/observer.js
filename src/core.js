@@ -1,9 +1,9 @@
 const proxy = require('./proxy'),
   vbproxy = require('./vbproxy'),
+  _ = require('utility'),
   {
-    util,
     timeoutframe
-  } = require('./utility'),
+  } = _,
   configuration = require('./configuration'),
   config = configuration.cfg
 
@@ -18,10 +18,10 @@ function abstractFunc() {
 
 }
 
-const Observer = util.dynamicClass({
+const Observer = _.dynamicClass({
   constructor(target) {
-    this.isArray = util.isArray(target)
-    if (!this.isArray && !util.isObject(target))
+    this.isArray = _.isArray(target)
+    if (!this.isArray && !_.isObject(target))
       throw TypeError('can not observe object[' + (Object.prototype.toString.call(target)) + ']')
     this.target = target
     this.obj = target
@@ -38,7 +38,7 @@ const Observer = util.dynamicClass({
     if (proxy.eq(val, oldVal) && !(this.isArray && attr === 'length')) return
     if (!(handlers = this.listens[attr])) return
 
-    util.each(handlers.slice(), (handler) => {
+    _.each(handlers.slice(), (handler) => {
       handler(attr, val, oldVal, this.target)
     })
   },
@@ -46,7 +46,7 @@ const Observer = util.dynamicClass({
   _notify() {
     let obj = this.obj
 
-    util.each(this.changeRecords, (val, attr) => {
+    _.each(this.changeRecords, (val, attr) => {
       this._fire(attr, obj[attr], val)
     })
     this.request_frame = undefined
@@ -67,7 +67,7 @@ const Observer = util.dynamicClass({
   },
 
   checkHandler(handler) {
-    if (!util.isFunc(handler))
+    if (!_.isFunc(handler))
       throw TypeError('Invalid Observe Handler')
   },
 
@@ -76,15 +76,15 @@ const Observer = util.dynamicClass({
       case 0:
         return !!this.watchPropNum
       case 1:
-        if (util.isFunc(attr)) {
-          return !util.each(this.listens, (handlers) => {
-            return util.lastIndexOf(handlers, attr) !== -1
+        if (_.isFunc(attr)) {
+          return !_.each(this.listens, (handlers) => {
+            return _.lastIndexOf(handlers, attr) !== -1
           })
         }
         return !!listens[attr]
       default:
         this.checkHandler(handler)
-        return util.lastIndexOf(listens[attr], handler) !== -1
+        return _.lastIndexOf(listens[attr], handler) !== -1
     }
   },
 
@@ -150,14 +150,14 @@ const Observer = util.dynamicClass({
 })
 
 function hasListen(obj, attr, handler) {
-  let observer = util.getOwnProp(obj, config.observerKey)
+  let observer = _.getOwnProp(obj, config.observerKey)
 
   return observer ? arguments.length == 1 ? observer.hasListen() :
     arguments.length == 2 ? observer.hasListen(attr) : observer.hasListen(attr, handler) : false
 }
 
 function on(obj, attr, handler) {
-  let observer = util.getOwnProp(obj, config.observerKey)
+  let observer = _.getOwnProp(obj, config.observerKey)
 
   if (!observer) {
     obj = proxy.obj(obj)
@@ -168,7 +168,7 @@ function on(obj, attr, handler) {
 }
 
 function un(obj, attr, handler) {
-  let observer = util.getOwnProp(obj, config.observerKey)
+  let observer = _.getOwnProp(obj, config.observerKey)
 
   if (observer) {
     obj = arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler)
@@ -182,14 +182,14 @@ function un(obj, attr, handler) {
 
 let expressionIdGenerator = 0
 
-const Expression = util.dynamicClass({
+const Expression = _.dynamicClass({
 
   constructor(target, expr, path) {
     this.id = expressionIdGenerator++
       this.expr = expr
     this.handlers = []
     this.observers = []
-    this.path = path || util.parseExpr(expr)
+    this.path = path || _.parseExpr(expr)
     this.observeHandlers = this._initObserveHandlers()
     this.obj = proxy.obj(target)
     this.target = this._observe(this.obj, 0)
@@ -221,7 +221,7 @@ const Expression = util.dynamicClass({
   },
 
   _initObserveHandlers() {
-    return util.map(this.path, function(prop, i) {
+    return _.map(this.path, function(prop, i) {
       return this._createObserveHandler(i)
     }, this)
   },
@@ -236,27 +236,27 @@ const Expression = util.dynamicClass({
         if (oldVal) {
           oldVal = proxy.obj(oldVal)
           this._unobserve(oldVal, idx + 1)
-          oldVal = util.get(oldVal, rpath)
+          oldVal = _.get(oldVal, rpath)
         } else {
           oldVal = undefined
         }
         if (val) {
           val = proxy.obj(val)
           this._observe(val, idx + 1)
-          val = util.get(val, rpath)
+          val = _.get(val, rpath)
         } else {
           val = undefined
         }
         if (proxy.eq(val, oldVal))
           return
       }
-      util.each(this.handlers.slice(), function(h) {
+      _.each(this.handlers.slice(), function(h) {
         h(this.expr, val, oldVal, this.target)
       }, this)
     }
   },
   checkHandler(handler) {
-    if (!util.isFunc(handler))
+    if (!_.isFunc(handler))
       throw TypeError('Invalid Observe Handler')
   },
   on(handler) {
@@ -285,7 +285,7 @@ const Expression = util.dynamicClass({
   },
 
   hasListen(handler) {
-    return arguments.length ? util.lastIndexOf(this.handlers, handler) != -1 : !!this.handlers.length
+    return arguments.length ? _.lastIndexOf(this.handlers, handler) != -1 : !!this.handlers.length
   },
 
   destory() {
@@ -325,9 +325,9 @@ module.exports = {
   init(cfg) {
     if (!inited) {
       configuration.config(cfg)
-      if (util.each(policies, (policy) => {
+      if (_.each(policies, (policy) => {
           if (policy.checker(config)) {
-            util.each(policy.policy(config), (val, key) => {
+            _.each(policy.policy(config), (val, key) => {
               Observer.prototype[key] = val
             })
             config.policy = policy.name
@@ -340,10 +340,10 @@ module.exports = {
   },
 
   on(obj, expr, handler) {
-    let path = util.parseExpr(expr)
+    let path = _.parseExpr(expr)
 
     if (path.length > 1) {
-      let map = util.getOwnProp(obj, config.expressionKey),
+      let map = _.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       if (!exp) {
@@ -359,10 +359,10 @@ module.exports = {
   },
 
   un(obj, expr, handler) {
-    let path = util.parseExpr(expr)
+    let path = _.parseExpr(expr)
 
     if (path.length > 1) {
-      let map = util.getOwnProp(obj, config.expressionKey),
+      let map = _.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       if (exp) {
@@ -385,14 +385,14 @@ module.exports = {
       case 1:
         return hasListen(obj)
       case 2:
-        if (util.isFunc(expr))
+        if (_.isFunc(expr))
           return hasListen(obj, expr)
     }
 
-    let path = util.parseExpr(expr)
+    let path = _.parseExpr(expr)
 
     if (path.length > 1) {
-      let map = util.getOwnProp(obj, config.expressionKey),
+      let map = _.getOwnProp(obj, config.expressionKey),
         exp = map ? map[expr] : undefined
 
       return exp ? (l == 2 ? true : exp.hasListen(handler)) : false

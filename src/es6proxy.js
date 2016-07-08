@@ -1,6 +1,6 @@
 const core = require('./core'),
   proxy = require('./proxy'),
-  {util} = require('./utility'),
+  _ = require('utility'),
   configuration = require('./configuration')
 
 configuration.register({
@@ -12,17 +12,20 @@ configuration.register({
 core.registerPolicy('ES6Proxy', 1, function(config) {
   return window.Proxy && config.es6Proxy !== false
 }, function(config) {
-  let {es6SourceKey, es6ProxyKey} = config
+  let {
+    es6SourceKey,
+    es6ProxyKey
+  } = config
 
   proxy.enable({
     obj(obj) {
-      return obj ? util.getOwnProp(obj, es6SourceKey) || obj : obj
+      return obj ? _.getOwnProp(obj, es6SourceKey) || obj : obj
     },
     eq(o1, o2) {
-      return o1===o2 || (o1 && o2 && proxy.obj(o1) === proxy.obj(o2))
+      return o1 === o2 || (o1 && o2 && proxy.obj(o1) === proxy.obj(o2))
     },
     proxy(obj) {
-      return obj ? util.getOwnProp(obj, es6ProxyKey) : undefined
+      return obj ? _.getOwnProp(obj, es6ProxyKey) : undefined
     }
   })
 
