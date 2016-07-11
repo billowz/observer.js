@@ -35,8 +35,10 @@ function allConfig(webpackCfg) {
   cfg.output = Object.assign({}, webpackCfg.output, {
     filename: webpackCfg.output.filename.replace(/js$/, 'all.js')
   })
-  cfg.externals = Object.assign({}, webpackCfg.externals)
-  delete cfg.externals.observer
+  cfg.externals = {};
+  (webpackCfg.allExternals || []).forEach(function(name){
+    cfg.externals[name] = webpackCfg.externals[name]
+  });
   return cfg;
 }
 
@@ -65,7 +67,7 @@ gulp.task('watch', function(event) {
 });
 
 gulp.task('server', function() {
-  var webpackCfg = require('./build/webpack.dev.config.js')
+  var webpackCfg = allConfig(require('./build/webpack.dev.config.js'))
   var devServer = new WebpackDevServer(webpack(webpackCfg), {
     contentBase: webpackCfg.output.contentBase,
     publicPath: webpackCfg.output.publicPath,

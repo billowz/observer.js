@@ -34,6 +34,7 @@ var config = {
       amd: 'utility'
     }
   },
+  allExternals: [],
   resolve: {
     modulesDirectories: [path.resolve(__dirname, '../node_modules')],
     extensions: ['', '.js'],
@@ -47,7 +48,8 @@ var config = {
       loader: 'babel'
     }]
   },
-  plugins: [new webpack.BannerPlugin(bannar)]
+  plugins: [new webpack.BannerPlugin(bannar)],
+  devtool: 'source-map'
 }
 
 module.exports = config;

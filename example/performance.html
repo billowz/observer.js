@@ -9,21 +9,18 @@
 <body>
 <a href="../index.html">Back</a>
 </body>
-<script src="../dist/observer.js"></script>
+<script src="../dist/observer.all.js"></script>
 <script src="../lib/ENV.js"></script>
 <script src="../lib/monitor.js"></script>
 
 <script>
+
+observer.init({})
+
 var app = {
     databases: ENV.generateData().toArray()
-}
+},i = 0
 
-observer.init({
-  //lazy: false,
-  //es6Proxy: false
-})
-
-var i = 0
 function handler() {
   while(i++ % 1000 == 0)
     console.log(arguments)
@@ -44,6 +41,7 @@ function loadSamples() {
     setTimeout(loadSamples, ENV.timeout);
 }
 loadSamples()
+
 </script>
 
 </html>
