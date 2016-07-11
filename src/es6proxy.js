@@ -37,7 +37,6 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
     _destroy() {
       this.es6proxy = false
       this.obj[es6ProxyKey] = undefined
-      this.obj[es6SourceKey] = undefined
       proxy.change(this.obj, undefined)
     },
     _watch(attr) {

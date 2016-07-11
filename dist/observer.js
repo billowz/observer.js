@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.2.4 built in Mon, 11 Jul 2016 02:17:23 GMT
+ * observer.js v0.2.5 built in Mon, 11 Jul 2016 04:48:12 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -79,11 +79,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	  obj: function obj(o) {
 	    return _proxy.obj(o);
 	  },
-	  onproxy: function onproxy(o) {
-	    return _proxy.on(o);
+	  onproxy: function onproxy(o, h) {
+	    return _proxy.on(o, h);
 	  },
-	  unproxy: function unproxy(o) {
-	    return _proxy.un(o);
+	  unproxy: function unproxy(o, h) {
+	    return _proxy.un(o, h);
 	  },
 	
 	  proxy: _proxy,
@@ -445,7 +445,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	          exp = map ? map[expr] : undefined;
 	
 	      if (exp) {
-	        arguments.length == 2 ? exp.un() : expr.un(handler);
+	        arguments.length == 2 ? exp.un() : exp.un(handler);
 	        if (!exp.hasListen()) {
 	          map[expr] = undefined;
 	          return exp.destory();
@@ -908,7 +908,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    _destroy: function _destroy() {
 	      this.es6proxy = false;
 	      this.obj[es6ProxyKey] = undefined;
-	      this.obj[es6SourceKey] = undefined;
 	      proxy.change(this.obj, undefined);
 	    },
 	    _watch: function _watch(attr) {

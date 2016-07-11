@@ -366,7 +366,7 @@ module.exports = {
         exp = map ? map[expr] : undefined
 
       if (exp) {
-        arguments.length == 2 ? exp.un() : expr.un(handler)
+        arguments.length == 2 ? exp.un() : exp.un(handler)
         if (!exp.hasListen()) {
           map[expr] = undefined
           return exp.destory()

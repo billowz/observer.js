@@ -13,11 +13,11 @@ _.assignIf(observer, _, {
   obj(o) {
     return _proxy.obj(o)
   },
-  onproxy(o) {
-    return _proxy.on(o)
+  onproxy(o, h) {
+    return _proxy.on(o, h)
   },
-  unproxy(o) {
-    return _proxy.un(o)
+  unproxy(o, h) {
+    return _proxy.un(o, h)
   },
   proxy: _proxy,
   config: configuration.get()
