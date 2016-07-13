@@ -155,6 +155,8 @@ const VBClassFactory = _.dynamicClass({
       proxy[prop] = this.funcProxy(obj[prop], proxy)
     })
     desc.proxy = proxy
+
+    this.onProxyChange(obj, proxy)
     return proxy
   },
   funcProxy(fn, proxy) {

@@ -129,7 +129,7 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
   return VBClassFactory.isSupport()
 }, function(config) {
   let init = policy._init,
-    factory = core.vbfactory = new VBClassFactory([proxyPro.listenKey, config.observerKey, config.expressionKey], proxyPro.change)
+    factory
 
   proxyPro.enable({
     obj(obj) {
@@ -142,6 +142,7 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
       return obj ? factory.proxy(obj) : undefined
     }
   })
+  factory = core.vbfactory = new VBClassFactory([proxyPro.listenKey, config.observerKey, config.expressionKey], proxyPro.change)
 
   return _.assignIf({
     _init() {
