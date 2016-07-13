@@ -1,5 +1,5 @@
 /*!
- * observer.js v0.2.5 built in Mon, 11 Jul 2016 04:48:12 GMT
+ * observer.js v0.2.6 built in Wed, 13 Jul 2016 06:45:07 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -1624,6 +1624,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      proxy[prop] = _this2.funcProxy(obj[prop], proxy);
 	    });
 	    desc.proxy = proxy;
+	
+	    this.onProxyChange(obj, proxy);
 	    return proxy;
 	  },
 	  funcProxy: function funcProxy(fn, proxy) {
@@ -1997,7 +1999,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  return VBClassFactory.isSupport();
 	}, function (config) {
 	  var init = policy._init,
-	      factory = core.vbfactory = new VBClassFactory([proxyPro.listenKey, config.observerKey, config.expressionKey], proxyPro.change);
+	      factory = void 0;
 	
 	  proxyPro.enable({
 	    obj: function obj(_obj) {
@@ -2010,6 +2012,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      return obj ? factory.proxy(obj) : undefined;
 	    }
 	  });
+	  factory = core.vbfactory = new VBClassFactory([proxyPro.listenKey, config.observerKey, config.expressionKey], proxyPro.change);
 	
 	  return _.assignIf({
 	    _init: function _init() {
