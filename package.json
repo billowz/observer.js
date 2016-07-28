@@ -1,7 +1,20 @@
 {
   "name": "observer.js",
+  "module": "observer",
+  "main": "dist/observer.js",
+  "entry": "src/index.js",
   "description": "Simple utility for watching object changes.",
   "version": "0.2.7",
+  "scripts": {
+    "lint": "eslint src build",
+    "build": "npm run lint && npm run signle-unit && node build/build.js",
+    "unit": "karma start build/karma.unit.config.js",
+    "signle-unit": "karma start build/karma.unit.config.js --single-run",
+    "ci-sauce": "karma start build/karma.sauce.config.js",
+    "ci-codecov": "cat coverage/*/lcov.info | codecov",
+    "ci-unit": "karma start build/karma.config.js",
+    "ci": "npm run ci-unit && npm run ci-codecov"
+  },
   "homepage": "https://github.com/tao-zeng/observer.js",
   "author": "Tao Zeng <tao.zeng.zt@gmail.com>",
   "bugs": {
@@ -18,50 +31,30 @@
   ],
   "private": false,
   "license": "MIT",
-  "main": "src/index.js",
-  "babel": {
-    "presets": [
-      "es2015-loose"
-    ],
-    "plugins": [
-      "transform-es3-member-expression-literals",
-      "transform-es3-property-literals"
-    ]
-  },
   "dependencies": {
-    "utility.js": "~0.0.0"
+    "utility.js": "~0.0.2"
   },
   "devDependencies": {
-    "run-sequence":"^1.1.5",
-    "through2":"^2.0.0",
-    "minimist":"^1.2.0",
-    "gulp-bump":"^2.0.1",
-    "gulp-git":"^1.7.0",
-    "babel-core": "^6.0.0",
-    "babel-loader": "^6.0.0",
-    "babel-plugin-transform-es3-member-expression-literals": "^6.0.0",
-    "babel-plugin-transform-es3-property-literals": "^6.0.0",
-    "babel-preset-es2015": "^6.0.0",
-    "babel-preset-es2015-loose": "^6.0.0",
+    "babel-plugin-transform-es3-member-expression-literals": "",
+    "babel-plugin-transform-es3-property-literals": "",
+    "babel-preset-es2015-loose-rollup": "",
     "codecov": "^1.0.1",
-    "expect.js": "^0.3.1",
-    "gulp": "^3.9.1",
-    "gulp-run": "^1.6.12",
-    "gulp-clean": "^0.3.2",
-    "gulp-webpack": "^1.5.0",
-    "gulp-codecov":"^2.0.1",
-    "karma": "^0.13.21",
-    "karma-expect": "^1.1.2",
+    "eslint": "^1.3.1",
+    "karma": "",
+    "karma-chrome-launcher": "",
+    "karma-expect": "",
+    "karma-istanbul": "^0.0.2",
     "karma-mocha": "^0.2.2",
-    "karma-webpack":"^1.7.0",
-    "karma-coverage": "^0.5.5",
-    "karma-sauce-launcher": "^0.3.1",
-    "karma-chrome-launcher": "^0.2.2",
-    "phantomjs-prebuilt": "^2.1.3",
-    "karma-phantomjs-launcher": "^1.0.0",
+    "karma-phantomjs-launcher": "",
+    "karma-rollup-preprocessor": "",
+    "karma-sauce-launcher": "^1.0.0",
+    "karma-spec-reporter": "",
     "mocha": "2.3.4",
-    "path": "^0.12.7",
-    "webpack": "^1.12.14",
-    "webpack-dev-server": "^1.14.1"
+    "phantomjs-prebuilt": "",
+    "rollup": "",
+    "rollup-plugin-babel": "",
+    "rollup-plugin-coverage": "^0.1.4",
+    "rollup-plugin-multi-entry": "^2.0.0",
+    "uglify": ""
   }
 }

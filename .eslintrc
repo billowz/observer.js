@@ -1,45 +1,23 @@
 {
-  "parser": "babel-eslint",
-  "plugins": [
-    "react"
-  ],
-  "ecmaFeatures": {
-    "jsx": true,
-    "modules": true
-  },
   "env": {
     "browser": true,
     "amd": true,
     "es6": true
   },
+  "ecmaFeatures": {
+    "arrowFunctions": true,
+    "destructuring": true,
+    "classes": true,
+    "defaultParams": true,
+    "blockBindings": true,
+    "modules": true,
+    "objectLiteralComputedProperties": true,
+    "objectLiteralShorthandMethods": true,
+    "objectLiteralShorthandProperties": true,
+    "restParams": true,
+    "spread": true,
+    "templateStrings": true
+  },
   "rules": {
-    "dot-notation":1,
-    "eol-last":0,
-    "no-undef":0,
-    "global-strict":0,
-    "no-extra-semi":1,
-    "no-extra-bind":1,
-    "no-use-before-define":1,
-    "semi":1,
-    "semi-spacing":0,
-    "no-unused-vars":1,
-    "no-console":1,
-    "curly": 0,
-    "comma-dangle": 0,
-    "comma-spacing": 0,
-    "eqeqeq": [1, "allow-null"],
-    "key-spacing": 0,
-    "no-underscore-dangle": 0,
-    "no-unused-expressions": 0,
-    "no-shadow": 0,
-    "no-shadow-restricted-names": 0,
-    "no-extend-native": 0,
-    "new-cap": 0,
-    "quotes": 0,
-    "space-unary-ops": 0,
-    "space-infix-ops": 0,
-    "consistent-return": 0,
-    "strict": 0,
-    "yoda":0
   }
 }

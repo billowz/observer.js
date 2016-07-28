@@ -3,7 +3,6 @@
 [![Version](https://img.shields.io/npm/v/observer.js.svg)](https://npmjs.org/package/observer.js)
 [![License](https://img.shields.io/npm/l/observer.js.svg)](https://npmjs.org/package/observer.js)
 [![Downloads](https://img.shields.io/npm/dt/observer.js.svg)](https://npmjs.org/package/observer.js)
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/observer_js.svg)](https://saucelabs.com/u/observer_js)
 
 ##observer.js
 

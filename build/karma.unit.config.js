@@ -1,13 +1,9 @@
-var base = require('./karma.base.config.js')
+var baseCfg = require('./karma.config')
 
 module.exports = function(config) {
-  var options = Object.assign(base, {
+  baseCfg(config)
+  config.set({
     browsers: ['Chrome'],
-    reporters: ['progress'],
-    autoWatch: false,
     singleRun: false
-  });
-
-  options.plugins.push(require('karma-chrome-launcher'));
-  config.set(options);
+  })
 }
