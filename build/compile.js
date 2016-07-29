@@ -1,33 +1,48 @@
 var fs = require('fs'),
   zlib = require('zlib'),
   rollup = require('rollup').rollup,
-  uglify = require('uglify-js'),
-  babel = require('./rollup-babel')
+  uglify = require('rollup-plugin-uglify'),
+  babel = require('./rollup-babel'),
+  rollupOptions = 'entry,cache,external,paths,onwarn,plugins,treeshake,acorn'.split(',')
+
+function complie(opt, dest, plugins) {
+  var cfg = {}
+  rollupOptions.forEach(function(name) {
+    cfg[name] = opt[name]
+  })
+  cfg.plugins = [babel()].concat(opt.plugins || []).concat(plugins || [])
+
+  return rollup(cfg).then(function(bundle) {
+    var res = bundle.generate({
+      format: 'umd',
+      banner: opt.banner,
+      moduleId: opt.module,
+      moduleName: opt.module,
+      useStrict: opt.useStrict,
+      sourceMap: true,
+      dest: dest,
+      globals: opt.globals
+    })
+
+    return Promise.all([
+      write(dest, res.code + '\n//# sourceMappingURL=' + dest.replace(/(.*\/)|(.*\\)/g, '') + '.map'),
+      write(dest + '.map', JSON.stringify(res.map))
+    ])
+  })
+}
 
 module.exports = function(opt) {
-  return rollup({
-      entry: opt.entry,
-      plugins: [babel()].concat(opt.plugins || [])
-    })
-    .then(function(bundle) {
-      return write(opt.dest, bundle.generate({
-        format: 'umd',
-        banner: opt.banner,
-        moduleId: opt.module,
-        moduleName: opt.module,
-        useStrict: opt.useStrict,
-      }).code)
-    })
+  return complie(opt, opt.dest)
     .then(function(dest) {
-      return write(dest.replace(/\.js$/, '.min.js'), uglify.minify(dest).code)
+      return complie(opt, dest[0].replace(/\.js$/, '.min.js'), [uglify()])
     })
     .then(function(dest) {
       return new Promise(function(resolve, reject) {
-        fs.readFile(dest, function(err, buf) {
+        fs.readFile(dest[0], function(err, buf) {
           if (err) return reject(err)
           zlib.gzip(buf, function(err, buf) {
             if (err) return reject(err)
-            write(dest.replace(/\.js$/, '.js.gz'), buf).then(resolve).catch(reject)
+            write(dest[0] + '.gz', buf).then(resolve).catch(reject)
           })
         })
       })
@@ -41,7 +56,7 @@ function write(dest, code) {
   return new Promise(function(resolve, reject) {
     fs.writeFile(dest, code, function(err) {
       if (err) return reject(err)
-      console.log(dest + ' ' + size(code))
+      console.log('complie and output: ', dest + ' (' + size(code) + ')')
       resolve(dest)
     })
   })

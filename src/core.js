@@ -1,11 +1,9 @@
-const proxy = require('./proxy'),
-  vbproxy = require('./vbproxy'),
-  _ = require('utility'),
-  {
-    timeoutframe
-  } = _,
-  configuration = require('./configuration'),
-  config = configuration.cfg
+import _ from 'utility'
+import proxy from './proxy'
+import configuration from './configuration'
+
+const timeoutframe = _.timeoutframe,
+  config = configuration.get()
 
 configuration.register({
   lazy: true,
@@ -33,10 +31,10 @@ const Observer = _.dynamicClass({
   },
 
   _fire(attr, val, oldVal) {
-    let handlers
+    let handlers = this.listens[attr]
 
-    if (proxy.eq(val, oldVal) && !(this.isArray && attr === 'length')) return
-    if (!(handlers = this.listens[attr])) return
+    if (handlers) return
+    if (proxy.eq(val, oldVal) && !_.isArray(val)) return
 
     _.each(handlers.slice(), (handler) => {
       handler(attr, val, oldVal, this.target)
@@ -309,94 +307,94 @@ let policies = [],
 
 let inited = false
 
-module.exports = {
+export default {
   registerPolicy(name, priority, checker, policy) {
-    policies.push({
-      name: name,
-      priority: priority,
-      policy: policy,
-      checker: checker
-    })
-    policies.sort((p1, p2) => {
-      return p1.priority - p2.priority
-    })
-    return this
-  },
-  init(cfg) {
-    if (!inited) {
-      configuration.config(cfg)
-      if (_.each(policies, (policy) => {
-          if (policy.checker(config)) {
-            _.each(policy.policy(config), (val, key) => {
-              Observer.prototype[key] = val
-            })
-            config.policy = policy.name
-            return false
-          }
-        }) !== false) throw Error('not supported')
-      inited = true
-    }
-    return this
-  },
-
-  on(obj, expr, handler) {
-    let path = _.parseExpr(expr)
-
-    if (path.length > 1) {
-      let map = _.getOwnProp(obj, config.expressionKey),
-        exp = map ? map[expr] : undefined
-
-      if (!exp) {
-        exp = new Expression(obj, expr, path)
-        if (!map)
-          map = obj[config.expressionKey] = {}
-        map[expr] = exp
+      policies.push({
+        name: name,
+        priority: priority,
+        policy: policy,
+        checker: checker
+      })
+      policies.sort((p1, p2) => {
+        return p1.priority - p2.priority
+      })
+      return this
+    },
+    init(cfg) {
+      if (!inited) {
+        configuration.config(cfg)
+        if (_.each(policies, (policy) => {
+            if (policy.checker(config)) {
+              _.each(policy.policy(config), (val, key) => {
+                Observer.prototype[key] = val
+              })
+              config.policy = policy.name
+              return false
+            }
+          }) !== false) throw Error('not supported')
+        inited = true
       }
-      exp.on(handler)
-      return exp.target
-    }
-    return on(obj, expr, handler)
-  },
+      return this
+    },
 
-  un(obj, expr, handler) {
-    let path = _.parseExpr(expr)
+    on(obj, expr, handler) {
+      let path = _.parseExpr(expr)
 
-    if (path.length > 1) {
-      let map = _.getOwnProp(obj, config.expressionKey),
-        exp = map ? map[expr] : undefined
+      if (path.length > 1) {
+        let map = _.getOwnProp(obj, config.expressionKey),
+          exp = map ? map[expr] : undefined
 
-      if (exp) {
-        arguments.length == 2 ? exp.un() : exp.un(handler)
-        if (!exp.hasListen()) {
-          map[expr] = undefined
-          return exp.destory()
+        if (!exp) {
+          exp = new Expression(obj, expr, path)
+          if (!map)
+            map = obj[config.expressionKey] = {}
+          map[expr] = exp
         }
+        exp.on(handler)
         return exp.target
       }
-      return proxy.proxy(obj) || obj
+      return on(obj, expr, handler)
+    },
+
+    un(obj, expr, handler) {
+      let path = _.parseExpr(expr)
+
+      if (path.length > 1) {
+        let map = _.getOwnProp(obj, config.expressionKey),
+          exp = map ? map[expr] : undefined
+
+        if (exp) {
+          arguments.length == 2 ? exp.un() : exp.un(handler)
+          if (!exp.hasListen()) {
+            map[expr] = undefined
+            return exp.destory()
+          }
+          return exp.target
+        }
+        return proxy.proxy(obj) || obj
+      }
+      return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler)
+    },
+
+    hasListen(obj, expr, handler) {
+      let l = arguments.length
+
+      switch (l) {
+        case 1:
+          return hasListen(obj)
+        case 2:
+          if (_.isFunc(expr))
+            return hasListen(obj, expr)
+      }
+
+      let path = _.parseExpr(expr)
+
+      if (path.length > 1) {
+        let map = _.getOwnProp(obj, config.expressionKey),
+          exp = map ? map[expr] : undefined
+
+        return exp ? (l == 2 ? true : exp.hasListen(handler)) : false
+      }
+      return hasListen.apply(window, arguments)
     }
-    return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler)
-  },
-
-  hasListen(obj, expr, handler) {
-    let l = arguments.length
-
-    switch (l) {
-      case 1:
-        return hasListen(obj)
-      case 2:
-        if (_.isFunc(expr))
-          return hasListen(obj, expr)
-    }
-
-    let path = _.parseExpr(expr)
-
-    if (path.length > 1) {
-      let map = _.getOwnProp(obj, config.expressionKey),
-        exp = map ? map[expr] : undefined
-
-      return exp ? (l == 2 ? true : exp.hasListen(handler)) : false
-    }
-    return hasListen.apply(window, arguments)
-  }
 }

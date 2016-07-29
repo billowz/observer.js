@@ -1,41 +1,1858 @@
 /*
- * observer.js v0.2.7 built in Thu, 28 Jul 2016 15:21:40 GMT
+ * observer.js v0.2.7 built in Fri, 29 Jul 2016 10:57:32 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
  *https://github.com/tao-zeng/observer.js
  */
 (function (global, factory) {
-  typeof exports === 'object' && typeof module !== 'undefined' ? factory() :
+  typeof exports === 'object' && typeof module !== 'undefined' ? module.exports = factory() :
   typeof define === 'function' && define.amd ? define('observer', factory) :
-  (factory());
+  (global.observer = factory());
 }(this, function () {
 
-  var _ = require('utility');
-  var observer = require('./core');
-  var _proxy = require('./proxy');
-  var configuration = require('./configuration');
-  require('./es6proxy');
-  require('./es5defprop');
+  let lastTime
 
-  _.assignIf(observer, _, {
+  function request(callback) {
+    let currTime = new Date().getTime(),
+      timeToCall = Math.max(0, 16 - (currTime - lastTime)),
+      reqId = setTimeout(() => {
+        callback(currTime + timeToCall)
+      }, timeToCall);
+    lastTime = currTime + timeToCall
+    return reqId
+  }
+
+  function cancel(reqId) {
+    clearTimeout(reqId);
+  }
+
+
+  var tf = Object.freeze({
+    request: request,
+    cancel: cancel
+  });
+
+  const toStr = Object.prototype.toString;
+  const hasOwn = Object.prototype.hasOwnProperty;
+  function hasOwnProp(obj, prop) {
+    return hasOwn.call(obj, prop)
+  }
+
+  // ==============================================
+  // type utils
+  // ==============================================
+  const argsType = '[object Arguments]';
+  const arrayType = '[object Array]';
+  const funcType = '[object Function]';
+  const boolType = '[object Boolean]';
+  const numberType = '[object Number]';
+  const dateType = '[object Date]';
+  const stringType = '[object String]';
+  const objectType = '[object Object]';
+  const regexpType = '[object RegExp]';
+  const nodeListType = '[object NodeList]';
+  function isDefine(obj) {
+    return obj !== undefined
+  }
+
+  function isNull(obj) {
+    return obj === null
+  }
+
+  function isNil(obj) {
+    return obj === undefined || obj === null
+  }
+
+  function isArray(obj) {
+    return toStr.call(obj) === arrayType
+  }
+
+  function isFunc(obj) {
+    return toStr.call(obj) === funcType
+  }
+
+  function isNumber(obj) {
+    return toStr.call(obj) === numberType
+  }
+
+  function isBool(obj) {
+    return toStr.call(obj) === boolType
+  }
+
+  function isDate(obj) {
+    return toStr.call(obj) === dateType
+  }
+
+  function isString(obj) {
+    return toStr.call(obj) === stringType
+  }
+
+  function isObject(obj) {
+    return toStr.call(obj) === objectType
+  }
+
+  function isRegExp(obj) {
+    return toStr.call(obj) === regexpType
+  }
+
+  function isArrayLike(obj) {
+    let type = toStr.call(obj)
+    switch (type) {
+      case argsType:
+      case arrayType:
+      case stringType:
+      case nodeListType:
+        return true
+      default:
+        if (obj) {
+          let length = obj.length
+          return isNumber(length) && (length ? length > 0 && (length - 1) in obj : length === 0)
+        }
+        return false
+    }
+  }
+
+  // ==============================================
+  // array utils
+  // ==============================================
+  function _eachObj(obj, callback, scope, own) {
+    let key, isOwn
+
+    scope = scope || obj
+    for (key in obj) {
+      isOwn = hasOwnProp(obj, key)
+      if (own === false || isOwn) {
+        if (callback.call(scope, obj[key], key, obj, isOwn) === false)
+          return false
+      }
+    }
+    return true
+  }
+
+  function _eachArray(obj, callback, scope) {
+    let i = 0,
+      j = obj.length
+
+    scope = scope || obj
+    for (; i < j; i++) {
+      if (callback.call(scope, obj[i], i, obj, true) === false)
+        return false
+    }
+    return true
+  }
+
+  function each(obj, callback, scope, own) {
+    if (isArrayLike(obj)) {
+      return _eachArray(obj, callback, scope)
+    } else if (!isNil(obj)) {
+      return _eachObj(obj, callback, scope, own)
+    }
+    return true
+  }
+
+  function map(obj, callback, scope, own) {
+    let ret
+
+    function cb(val, key) {
+      ret[key] = callback.apply(this, arguments)
+    }
+
+    if (isArrayLike(obj)) {
+      ret = []
+      _eachArray(obj, cb, scope)
+    } else {
+      ret = {}
+      if (!isNil(obj))
+        _eachObj(obj, cb, scope, own)
+    }
+    return ret
+  }
+
+  function filter(obj, callback, scope, own) {
+    let ret
+
+    if (isArrayLike(obj)) {
+      ret = []
+      _eachArray(obj, function(val) {
+        if (callback.apply(this, arguments))
+          ret.push(val)
+      }, scope)
+    } else {
+      ret = {}
+      if (!isNil(obj))
+        _eachObj(obj, function(val, key) {
+          if (callback.apply(this, arguments))
+            ret[key] = val
+        }, scope, own)
+    }
+    return ret
+  }
+
+  function aggregate(obj, callback, defVal, scope, own) {
+    let rs = defVal
+
+    each(obj, function(val, key, obj, isOwn) {
+      rs = callback.call(this, rs, val, key, obj, isOwn)
+    }, scope, own)
+    return rs
+  }
+
+  function keys(obj, filter, scope, own) {
+    let keys = []
+
+    each(obj, function(val, key) {
+      if (!filter || filter.apply(this, arguments))
+        keys.push(key)
+    }, scope, own)
+    return keys
+  }
+
+  function _indexOfArray(array, val) {
+    let i = 0,
+      l = array.length
+
+    for (; i < l; i++) {
+      if (array[i] === val)
+        return i
+    }
+    return -1
+  }
+
+  function _lastIndexOfArray(array, val) {
+    let i = array.length
+
+    while (i-- > 0) {
+      if (array[i] === val)
+        return i
+    }
+  }
+
+  function _indexOfObj(obj, val, own) {
+    for (key in obj) {
+      if (own === false || hasOwnProp(obj, key)) {
+        if (obj[key] === val)
+          return key
+      }
+    }
+    return undefined
+  }
+
+  function indexOf(obj, val, own) {
+    if (isArrayLike(obj)) {
+      return _indexOfArray(obj, val)
+    } else {
+      return _indexOfObj(obj, val, own)
+    }
+  }
+
+  function lastIndexOf(obj, val, own) {
+    if (isArrayLike(obj)) {
+      return _lastIndexOfArray(obj, val)
+    } else {
+      return _indexOfObj(obj, val, own)
+    }
+  }
+
+  function convert(obj, keyGen, valGen, scope, own) {
+    let o = {}
+
+    each(obj, function(val, key) {
+      o[keyGen ? keyGen.apply(this, arguments) : key] = valGen ? valGen.apply(this, arguments) : val
+    }, scope, own)
+    return o
+  }
+
+  function reverseConvert(obj, valGen, scope, own) {
+    let o = {}
+
+    each(obj, function(val, key) {
+      o[val] = valGen ? valGen.apply(this, arguments) : key
+    }, scope, own)
+    return o
+  }
+
+  // ==============================================
+  // string utils
+  // ==============================================
+  const regFirstChar = /^[a-z]/;
+  const regLeftTrim = /^\s+/;
+  const regRightTrim = /\s+$/;
+  const regTrim = /(^\s+)|(\s+$)/g;
+  function _uppercase(k) {
+    return k.toUpperCase()
+  }
+
+  function upperFirst(str) {
+    return str.replace(regFirstChar, _uppercase)
+  }
+
+  function ltrim(str) {
+    return str.replace(regLeftTrim, '')
+  }
+
+  function rtrim(str) {
+    return str.replace(regRightTrim, '')
+  }
+
+  function trim(str) {
+    return str.replace(regTrim, '')
+  }
+
+  const regFormat = /%%|%(\d+\$)?([-+#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuidfegpEGP])/g
+
+  function pad(str, len, chr, leftJustify) {
+    let padding = (str.length >= len) ? '' : Array(1 + len - str.length >>> 0).join(chr)
+
+    return leftJustify ? str + padding : padding + str
+  }
+
+  function justify(value, prefix, leftJustify, minWidth, zeroPad) {
+    var diff = minWidth - value.length
+
+    if (diff > 0)
+      return leftJustify || !zeroPad ?
+        pad(value, minWidth, ' ', leftJustify) :
+        value.slice(0, prefix.length) + pad('', diff, '0', true) + value.slice(prefix.length)
+    return value
+  }
+
+  function format(str) {
+    return _format(str, Array.prototype.slice.call(arguments, 1)).format
+  }
+
+  function _format(str, args) {
+    let i = 0
+    str = str.replace(regFormat, function(substring, valueIndex, flags, minWidth, _, precision, type) {
+      if (substring == '%%') return '%'
+
+      let leftJustify = false,
+        positivePrefix = '',
+        zeroPad = false,
+        prefixBaseX = false
+
+      if (flags)
+        each(flags, function(c) {
+          switch (c) {
+            case ' ':
+              positivePrefix = ' '
+              break
+            case '+':
+              positivePrefix = '+'
+              break
+            case '-':
+              leftJustify = true
+              break
+            case '0':
+              zeroPad = true
+              break
+            case '#':
+              prefixBaseX = true
+              break
+          }
+        })
+
+      if (!minWidth) {
+        minWidth = 0
+      } else if (minWidth == '*') {
+        minWidth = +args[i++]
+      } else if (minWidth.charAt(0) == '*') {
+        minWidth = +args[minWidth.slice(1, -1)]
+      } else {
+        minWidth = +minWidth
+      }
+
+      if (minWidth < 0) {
+        minWidth = -minWidth
+        leftJustify = true
+      }
+
+      if (!isFinite(minWidth))
+        throw new Error('sprintf: (minimum-)width must be finite')
+
+      if (precision && precision.charAt(0) == '*') {
+        precision = +args[(precision == '*') ? i++ : precision.slice(1, -1)]
+        if (precision < 0)
+          precision = null
+      }
+
+      if (precision == null) {
+        precision = 'fFeE'.indexOf(type) > -1 ? 6 : (type == 'd') ? 0 : void(0)
+      } else {
+        precision = +precision
+      }
+
+      let value = valueIndex ? args[valueIndex.slice(0, -1)] : args[i++],
+        prefix, base
+
+      switch (type) {
+        case 'c':
+          value = String.fromCharCode(+value)
+        case 's':
+          {
+            value = String(value)
+            if (precision != null)
+              value = value.slice(0, precision)
+            prefix = ''
+            break
+          }
+        case 'b':
+          base = 2
+          break
+        case 'o':
+          base = 8
+          break
+        case 'u':
+          base = 10
+          break
+        case 'x':
+        case 'X':
+          base = 16
+          break
+        case 'i':
+        case 'd':
+          {
+            let number = parseInt(+value)
+            if (isNaN(number))
+              return ''
+            prefix = number < 0 ? '-' : positivePrefix
+            value = prefix + pad(String(Math.abs(number)), precision, '0', false)
+            break
+          }
+        case 'e':
+        case 'E':
+        case 'f':
+        case 'F':
+        case 'g':
+        case 'G':
+        case 'p':
+        case 'P':
+          {
+            let number = +value
+            if (isNaN(number))
+              return ''
+            prefix = number < 0 ? '-' : positivePrefix
+            let method
+            if ('p' != type.toLowerCase()) {
+              method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())]
+            } else {
+              // Count significant-figures, taking special-care of zeroes ('0' vs '0.00' etc.)
+              let sf = String(value).replace(/[eE].*|[^\d]/g, '')
+              sf = (number ? sf.replace(/^0+/, '') : sf).length
+              precision = precision ? Math.min(precision, sf) : precision
+              method = (!precision || precision <= sf) ? 'toPrecision' : 'toExponential'
+            }
+            let number_str = Math.abs(number)[method](precision)
+              // number_str = thousandSeparation ? thousand_separate(number_str): number_str
+            value = prefix + number_str
+            break
+          }
+        case 'n':
+          return ''
+        default:
+          return substring
+      }
+
+      if (base) {
+        var number = value >>> 0
+        prefix = prefixBaseX && base != 10 && number && ['0b', '0', '0x'][base >> 3] || ''
+        value = prefix + pad(number.toString(base), precision || 0, '0', false)
+      }
+      var justified = justify(value, prefix, leftJustify, minWidth, zeroPad)
+      return ('EFGPX'.indexOf(type) > -1) ? justified.toUpperCase() : justified
+    })
+    return {
+      format: str,
+      formatArgCount: i
+    }
+  }
+
+  // ==============================================
+  // object utils
+  // ==============================================
+  const exprCache = {};
+  const regPropertyName = /[^.[\]]+|\[(?:(-?\d+(?:\.\d+)?)|(["'])((?:(?!\2)[^\n\\]|\\.)*?)\2)\]/g;
+  const regEscapeChar = /\\(\\)?/g;
+  function parseExpr(expr, autoCache) {
+    if (isArray(expr)) {
+      return expr
+    } else if (isString(expr)) {
+      let rs = exprCache[expr]
+
+      if (rs)
+        return rs
+      rs = autoCache ? (exprCache[expr] = []) : []
+      expr.replace(regPropertyName, function(match, number, quote, string) {
+        rs.push(quote ? string.replace(regEscapeChar, '$1') : (number || match))
+      })
+      return rs
+    } else {
+      return []
+    }
+  }
+
+  function get(obj, expr, defVal, lastOwn, own) {
+    let i = 0,
+      path = parseExpr(expr, true),
+      l = path.length - 1,
+      prop
+
+    while (!isNil(obj) && i < l) {
+      prop = path[i++]
+      if (own && !hasOwnProp(obj, prop))
+        return defVal
+      obj = obj[prop]
+    }
+    prop = path[i]
+    return (i == l && !isNil(obj) && (own ? hasOwnProp(obj, prop) : prop in obj)) ? obj[prop] : defVal
+  }
+
+  function has(obj, expr, lastOwn, own) {
+    let i = 0,
+      path = parseExpr(expr, true),
+      l = path.length - 1,
+      prop
+
+    while (!isNil(obj) && i < l) {
+      prop = path[i++]
+      if (own && !hasOwnProp(obj, prop))
+        return false
+      obj = obj[prop]
+    }
+    prop = path[i]
+    return i == l && !isNil(obj) && (own ? hasOwnProp(obj, prop) : prop in obj)
+  }
+
+  function set(obj, expr, value) {
+    let i = 0,
+      path = parseExpr(expr, true),
+      l = path.length - 1,
+      prop = path[0],
+      _obj = obj
+
+    for (; i < l; i++) {
+      if (isNil(_obj[prop])) {
+        _obj = _obj[prop] = {}
+      } else {
+        _obj = _obj[prop]
+      }
+      prop = path[i + 1]
+    }
+    _obj[prop] = value
+    return obj
+  }
+
+  function getOwnProp(obj, key) {
+    return hasOwnProp(obj, key) ? obj[key] : undefined
+  }
+
+  let prototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function getPrototypeOf(obj) {
+    return obj.__proto__
+  }
+
+  let setPrototypeOf = Object.setPrototypeOf || function setPrototypeOf(obj, proto) {
+    obj.__proto__ = proto
+  }
+
+  let assign = Object.assign || function assign(target) {
+    let source, key,
+      i = 1,
+      l = arguments.length
+
+    for (; i < l; i++) {
+      source = arguments[i]
+      for (key in source) {
+        if (hasOwnProp(source, key))
+          target[key] = source[key]
+      }
+    }
+    return target
+  }
+
+  function assignIf(target) {
+    let source, key,
+      i = 1,
+      l = arguments.length
+
+    for (; i < l; i++) {
+      source = arguments[i]
+      for (key in source) {
+        if (hasOwnProp(source, key) && !hasOwnProp(target, key))
+          target[key] = source[key]
+      }
+    }
+    return target
+  }
+
+  function emptyFunc() {}
+
+  let create = Object.create || function(parent, props) {
+    emptyFunc.prototype = parent
+    let obj = new emptyFunc()
+    emptyFunc.prototype = undefined
+    if (props)
+      each(props, (prop, name) => {
+        obj[name] = prop.value
+      })
+    return obj
+  }
+
+  function isExtendOf(cls, parent) {
+    if (!isFunc(cls))
+      return (cls instanceof parent)
+
+    let proto = cls
+
+    while ((proto = prototypeOf(proto)) && proto !== Object) {
+      if (proto === parent)
+        return true
+    }
+    return parent === Object
+  }
+
+  // ==============================================
+  // dynamicClass
+  // ==============================================
+  const Base = function() {}
+  assign(Base.prototype, {
+    super(args) {
+      let method = arguments.callee.caller
+      method.$owner.superclass[method.$name].apply(this, args)
+    },
+    superclass() {
+      let method = arguments.callee.caller
+      return method.$owner.superclass
+    }
+  })
+  assign(Base, {
+    extend(overrides) {
+      if (overrides) {
+        let proto = this.prototype
+        each(overrides, (member, name) => {
+          if (isFunc(member)) {
+            member.$owner = this
+            member.$name = name
+          }
+          proto[name] = member
+        })
+        this.assign(overrides.statics)
+      }
+      return this
+    },
+    assign(statics) {
+      if (statics)
+        assign(this, statics)
+      return this
+    }
+  })
+  function dynamicClass(overrides) {
+    let cls = function DynamicClass() {
+        this.constructor.apply(this, arguments)
+      },
+      superclass = overrides.extend,
+      superproto, proto
+
+    assign(cls, Base)
+
+    if (!isFunc(superclass) || superclass === Object)
+      superclass = Base
+
+    superproto = superclass.prototype
+
+    proto = create(superproto)
+
+    cls.superclass = superproto
+    cls.prototype = proto
+    setPrototypeOf(cls, superclass)
+
+    delete overrides.extend
+    return cls.extend(overrides)
+  }
+
+
+  var _$1 = Object.freeze({
+    hasOwnProp: hasOwnProp,
+    isDefine: isDefine,
+    isNull: isNull,
+    isNil: isNil,
+    isArray: isArray,
+    isFunc: isFunc,
+    isNumber: isNumber,
+    isBool: isBool,
+    isDate: isDate,
+    isString: isString,
+    isObject: isObject,
+    isRegExp: isRegExp,
+    isArrayLike: isArrayLike,
+    each: each,
+    map: map,
+    filter: filter,
+    aggregate: aggregate,
+    keys: keys,
+    indexOf: indexOf,
+    lastIndexOf: lastIndexOf,
+    convert: convert,
+    reverseConvert: reverseConvert,
+    upperFirst: upperFirst,
+    ltrim: ltrim,
+    rtrim: rtrim,
+    trim: trim,
+    format: format,
+    _format: _format,
+    parseExpr: parseExpr,
+    get: get,
+    has: has,
+    set: set,
+    getOwnProp: getOwnProp,
+    prototypeOf: prototypeOf,
+    setPrototypeOf: setPrototypeOf,
+    assign: assign,
+    assignIf: assignIf,
+    emptyFunc: emptyFunc,
+    create: create,
+    isExtendOf: isExtendOf,
+    dynamicClass: dynamicClass
+  });
+
+  var Configuration = dynamicClass({
+    constructor(def) {
+      this.cfg = def || {}
+    },
+    register(name, defVal) {
+      if (arguments.length == 1) {
+        each(name, (val, name) => {
+          this.cfg[name] = val
+        })
+      } else {
+        this.cfg[name] = defVal
+      }
+      return this
+    },
+    config(cfg) {
+      if (cfg) each(this.cfg, (val, key) => {
+        if (hasOwnProp(cfg, key)) this.cfg[key] = cfg[key]
+      })
+      return this
+    },
+    get(name) {
+      return arguments.length ? this.cfg[name] : create(this.cfg)
+    }
+  })
+
+  const logLevels = ['debug', 'info', 'warn', 'error'];
+  const tmpEl = document.createElement('div');
+  const slice = Array.prototype.slice;
+  const SimulationConsole = dynamicClass({
+      constructor() {
+        tmpEl.innerHTML = `<div id="simulation_console"
+    style="position:absolute; top:0; right:0; font-family:courier,monospace; background:#eee; font-size:10px; padding:10px; width:200px; height:200px;">
+  <a style="float:right; padding-left:1em; padding-bottom:.5em; text-align:right;">Clear</a>
+  <div id="simulation_console_body"></div>
+</div>`
+        this.el = tmpEl.childNodes[0]
+        this.clearEl = this.el.childNodes[0]
+        this.bodyEl = this.el.childNodes[1]
+      },
+      appendTo(el) {
+        el.appendChild(this.el)
+      },
+      log(style, msg) {
+        tmpEl.innerHTML = `<span style="${style}">${msg}</span>`
+        this.bodyEl.appendChild(tmpEl.childNodes[0])
+      },
+      parseMsg(args) {
+        let msg = args[0]
+        if (isString(msg)) {
+          let f = _format.apply(_$1, args)
+          return [f.format].concat(slice.call(args, f.formatArgCount)).join(' ')
+        }
+        return args.join(' ')
+      },
+      debug() {
+        this.log('color: red;', this.parseMsg(arguments))
+      },
+      info() {
+        this.log('color: red;', this.parseMsg(arguments))
+      },
+      warn() {
+        this.log('color: red;', this.parseMsg(arguments))
+      },
+      error() {
+        this.log('color: red;', this.parseMsg(arguments))
+      },
+      clear() {
+        this.bodyEl.innerHTML = ''
+      }
+    });
+  let console$1 = window.console
+  if (console$1 && !console$1.debug)
+    console$1.debug = () => {
+      Function.apply.call(console$1.log, console$1, arguments)
+    }
+
+  const Logger = dynamicClass({
+    statics: {
+      enableSimulationConsole() {
+        if (!console$1) {
+          console$1 = new SimulationConsole()
+          console$1.appendTo(document.body)
+        }
+      }
+    },
+    constructor(_module, level) {
+      this.module = _module
+      this.level = indexOf(logLevels, level || 'info')
+    },
+    setLevel(level) {
+      this.level = indexOf(logLevels, level || 'info')
+    },
+    getLevel() {
+      return logLevels[this.level]
+    },
+    _print(level, args, trace) {
+      Function.apply.call(console$1[level], console$1, args)
+      if (trace && console$1.trace) console$1.trace()
+    },
+    _log(level, args, trace) {
+      if (level < this.level || !console$1) return
+      let msg = '[%s] %s -' + (isString(args[0]) ? ' ' + args.shift() : ''),
+        errors = []
+      args = filter(args, arg => {
+        if (arg instanceof Error) {
+          errors.push(arg)
+          return false
+        }
+        return true
+      })
+      each(errors, err => {
+        args.push.call(args, err.message, '\n', err.stack)
+      })
+      level = logLevels[level]
+      this._print(level, [msg, level, this.module].concat(args), trace)
+    },
+    debug() {
+      this._log(0, slice.call(arguments, 0))
+    },
+    info() {
+      this._log(1, slice.call(arguments, 0))
+    },
+    warn() {
+      this._log(2, slice.call(arguments, 0))
+    },
+    error() {
+      this._log(3, slice.call(arguments, 0))
+    }
+  })
+
+  const logger = new Logger('default', 'info')
+
+
+  var log = Object.freeze({
+    Logger: Logger,
+    logger: logger
+  });
+
+  window.requestAnimationFrame = window.requestAnimationFrame ||
+    window.webkitRequestAnimationFrame ||
+    window.mozRequestAnimationFrame ||
+    window.oRequestAnimationFrame ||
+    window.msRequestAnimationFrame || request
+
+  window.cancelAnimationFrame = window.cancelAnimationFrame ||
+    window.webkitCancelAnimationFrame ||
+    window.mozCancelAnimationFrame ||
+    window.oCancelAnimationFrame ||
+    window.msCancelAnimationFrame || cancel
+
+  function fixProto(Type, prop, val) {
+    if (!Type.prototype[prop]) Type.prototype[prop] = val
+  }
+
+  fixProto(Function, 'bind', function bind(scope) {
+    let fn = this,
+      args = Array.prototype.slice.call(arguments, 1)
+    return function() {
+      return fn.apply(scope, args.concat(Array.prototype.slice.call(arguments)))
+    }
+  })
+
+  var _ = assignIf(_$1, {
+    timeoutframe: tf,
+    Configuration: Configuration
+  }, log)
+
+  var configuration = new _.Configuration();
+
+var   hasOwnProp$1 = _.hasOwnProp;
+  var LISTEN_CONFIG = 'proxyListenKey';
+  configuration.register(LISTEN_CONFIG, '__PROXY_LISTENERS__');
+
+  var defaultPolicy = {
     eq: function (o1, o2) {
-      return _proxy.eq(o1, o2);
+      return o1 === o2;
     },
     obj: function (o) {
-      return _proxy.obj(o);
+      return o;
     },
-    onproxy: function (o, h) {
-      return _proxy.on(o, h);
+    proxy: function (o) {
+      return o;
+    }
+  };
+  var apply = {
+    change: function (obj, p) {
+      var handlers = _.getOwnProp(obj, configuration.get(LISTEN_CONFIG));
+
+      if (handlers) {
+        var i = handlers.length;
+        while (i--) {
+          handlers[i](obj, p);
+        }
+      }
     },
-    unproxy: function (o, h) {
-      return _proxy.un(o, h);
+    on: function (obj, handler) {
+      if (!_.isFunc(handler)) throw TypeError('Invalid Proxy Event Handler[' + handler);
+      var key = configuration.get(LISTEN_CONFIG),
+          handlers = _.getOwnProp(obj, key);
+
+      if (!handlers) obj[key] = handlers = [];
+      handlers.push(handler);
+    },
+    un: function (obj, handler) {
+      var handlers = _.getOwnProp(obj, configuration.get(LISTEN_CONFIG));
+
+      if (handlers) {
+        if (_.isFunc(handler)) {
+          var i = handlers.length;
+
+          while (i-- > 0) {
+            if (handlers[i] === handler) {
+              handlers.splice(i, 1);
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    },
+    clean: function (obj) {
+      if (obj[proxy$1.listenKey]) obj[proxy$1.listenKey] = undefined;
+    }
+  };
+  function proxy$1(o) {
+    return proxy$1.proxy(o);
+  }
+
+  _.assign(proxy$1, {
+    isEnable: function () {
+      return policy === defaultPolicy;
+    },
+    enable: function (policy) {
+      applyPolicy(policy);
+    },
+    disable: function () {
+      applyPolicy(defaultPolicy);
+    }
+  });
+
+  function applyPolicy(policy) {
+    var _apply = policy !== defaultPolicy ? function (fn, name) {
+      proxy$1[name] = fn;
+    } : function (fn, name) {
+      proxy$1[name] = _.emptyFunc;
+    };
+    _.each(apply, _apply);
+    _.each(policy, function (fn, name) {
+      proxy$1[name] = fn;
+    });
+  }
+
+  proxy$1.disable();
+
+  _.get = function (obj, expr, defVal, lastOwn, own) {
+    var i = 0,
+        path = _.parseExpr(expr, true),
+        l = path.length - 1,
+        prop = void 0;
+
+    while (!_.isNil(obj) && i < l) {
+      prop = path[i++];
+      obj = proxy$1.obj(obj);
+      if (own && !hasOwnProp$1(obj, prop)) return defVal;
+      obj = obj[prop];
+    }
+    obj = proxy$1.obj(obj);
+    prop = path[i];
+    return i == l && !_.isNil(obj) && (own ? hasOwnProp$1(obj, prop) : prop in obj) ? obj[prop] : defVal;
+  };
+
+  _.hasOwnProp = function (obj, prop) {
+    return hasOwnProp$1(proxy$1.obj(obj), prop);
+  };
+
+  var timeoutframe = _.timeoutframe;
+  var config = configuration.get();
+  configuration.register({
+    lazy: true,
+    animationFrame: true,
+    observerKey: '__OBSERVER__',
+    expressionKey: '__EXPR_OBSERVER__'
+  });
+
+  function abstractFunc() {}
+
+  var Observer = _.dynamicClass({
+    constructor: function (target) {
+      this.isArray = _.isArray(target);
+      if (!this.isArray && !_.isObject(target)) throw TypeError('can not observe object[' + Object.prototype.toString.call(target) + ']');
+      this.target = target;
+      this.obj = target;
+      this.listens = {};
+      this.changeRecords = {};
+      this._notify = this._notify.bind(this);
+      this.watchPropNum = 0;
+      this._init();
+    },
+    _fire: function (attr, val, oldVal) {
+      var _this = this;
+
+      var handlers = this.listens[attr];
+
+      if (handlers) return;
+      if (proxy$1.eq(val, oldVal) && !_.isArray(val)) return;
+
+      _.each(handlers.slice(), function (handler) {
+        handler(attr, val, oldVal, _this.target);
+      });
+    },
+    _notify: function () {
+      var _this2 = this;
+
+      var obj = this.obj;
+
+      _.each(this.changeRecords, function (val, attr) {
+        _this2._fire(attr, obj[attr], val);
+      });
+      this.request_frame = undefined;
+      this.changeRecords = {};
+    },
+    _addChangeRecord: function (attr, oldVal) {
+      if (!config.lazy) {
+        this._fire(attr, this.obj[attr], oldVal);
+      } else if (!(attr in this.changeRecords)) {
+        this.changeRecords[attr] = oldVal;
+        if (!this.request_frame) {
+          this.request_frame = config.animationFrame ? window.requestAnimationFrame(this._notify) : timeoutframe.request(this._notify);
+        }
+      }
+    },
+    checkHandler: function (handler) {
+      if (!_.isFunc(handler)) throw TypeError('Invalid Observe Handler');
+    },
+    hasListen: function (attr, handler) {
+      switch (arguments.length) {
+        case 0:
+          return !!this.watchPropNum;
+        case 1:
+          if (_.isFunc(attr)) {
+            return !_.each(this.listens, function (handlers) {
+              return _.lastIndexOf(handlers, attr) !== -1;
+            });
+          }
+          return !!listens[attr];
+        default:
+          this.checkHandler(handler);
+          return _.lastIndexOf(listens[attr], handler) !== -1;
+      }
+    },
+    on: function (attr, handler) {
+      var handlers = void 0;
+
+      this.checkHandler(handler);
+      if (!(handlers = this.listens[attr])) {
+        this.listens[attr] = [handler];
+        this.watchPropNum++;
+        this._watch(attr);
+      } else {
+        handlers.push(handler);
+      }
+      return this.target;
+    },
+    _cleanListen: function (attr) {
+      this.listens[attr] = undefined;
+      this.watchPropNum--;
+      this._unwatch(attr);
+    },
+    un: function (attr, handler) {
+      var handlers = this.listens[attr];
+
+      if (handlers) {
+        if (arguments.length == 1) {
+          this._cleanListen(attr);
+        } else {
+          this.checkHandler(handler);
+
+          var i = handlers.length;
+          while (i--) {
+            if (handlers[i] === handler) {
+              handlers.splice(i, 1);
+              if (!handlers.length) this._cleanListen(attr);
+              break;
+            }
+          }
+        }
+      }
+      return this.target;
+    },
+    destroy: function () {
+      if (this.request_frame) {
+        config.animationFrame ? window.cancelAnimationFrame(this.request_frame) : timeoutframe.cancel(this.request_frame);
+        this.request_frame = undefined;
+      }
+      var obj = this.obj;
+      this._destroy();
+      this.obj = undefined;
+      this.target = undefined;
+      this.listens = undefined;
+      this.changeRecords = undefined;
+      return obj;
     },
 
-    proxy: _proxy,
+    _init: abstractFunc,
+    _destroy: abstractFunc,
+    _watch: abstractFunc,
+    _unwatch: abstractFunc
+  });
+
+  function hasListen(obj, attr, handler) {
+    var observer = _.getOwnProp(obj, config.observerKey);
+
+    return observer ? arguments.length == 1 ? observer.hasListen() : arguments.length == 2 ? observer.hasListen(attr) : observer.hasListen(attr, handler) : false;
+  }
+
+  function on(obj, attr, handler) {
+    var observer = _.getOwnProp(obj, config.observerKey);
+
+    if (!observer) {
+      obj = proxy$1.obj(obj);
+      observer = new Observer(obj);
+      obj[config.observerKey] = observer;
+    }
+    return observer.on(attr, handler);
+  }
+
+  function un(obj, attr, handler) {
+    var observer = _.getOwnProp(obj, config.observerKey);
+
+    if (observer) {
+      obj = arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler);
+      if (!observer.hasListen()) {
+        obj[config.observerKey] = undefined;
+        return observer.destroy();
+      }
+    }
+    return obj;
+  }
+
+  var expressionIdGenerator = 0;
+
+  var Expression = _.dynamicClass({
+    constructor: function (target, expr, path) {
+      this.id = expressionIdGenerator++;
+      this.expr = expr;
+      this.handlers = [];
+      this.observers = [];
+      this.path = path || _.parseExpr(expr);
+      this.observeHandlers = this._initObserveHandlers();
+      this.obj = proxy$1.obj(target);
+      this.target = this._observe(this.obj, 0);
+      this._onTargetProxy = this._onTargetProxy.bind(this);
+      proxy$1.on(target, this._onTargetProxy);
+    },
+    _onTargetProxy: function (obj, proxy) {
+      this.target = proxy;
+    },
+    _observe: function (obj, idx) {
+      var prop = this.path[idx],
+          o = void 0;
+
+      if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._observe(proxy$1.obj(o), idx + 1);
+      return on(obj, prop, this.observeHandlers[idx]);
+    },
+    _unobserve: function (obj, idx) {
+      var prop = this.path[idx],
+          o = void 0,
+          ret = void 0;
+
+      ret = un(obj, prop, this.observeHandlers[idx]);
+      if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._unobserve(proxy$1.obj(o), idx + 1);
+      return ret;
+    },
+    _initObserveHandlers: function () {
+      return _.map(this.path, function (prop, i) {
+        return this._createObserveHandler(i);
+      }, this);
+    },
+    _createObserveHandler: function (idx) {
+      var _this3 = this;
+
+      var path = this.path.slice(0, idx + 1),
+          rpath = this.path.slice(idx + 1),
+          ridx = this.path.length - idx - 1;
+
+      return function (prop, val, oldVal) {
+        if (ridx) {
+          if (oldVal) {
+            oldVal = proxy$1.obj(oldVal);
+            _this3._unobserve(oldVal, idx + 1);
+            oldVal = _.get(oldVal, rpath);
+          } else {
+            oldVal = undefined;
+          }
+          if (val) {
+            val = proxy$1.obj(val);
+            _this3._observe(val, idx + 1);
+            val = _.get(val, rpath);
+          } else {
+            val = undefined;
+          }
+          if (proxy$1.eq(val, oldVal)) return;
+        }
+        _.each(_this3.handlers.slice(), function (h) {
+          h(this.expr, val, oldVal, this.target);
+        }, _this3);
+      };
+    },
+    checkHandler: function (handler) {
+      if (!_.isFunc(handler)) throw TypeError('Invalid Observe Handler');
+    },
+    on: function (handler) {
+      this.checkHandler(handler);
+      this.handlers.push(handler);
+      return this;
+    },
+    un: function (handler) {
+      if (!arguments.length) {
+        this.handlers = [];
+      } else {
+        this.checkHandler(handler);
+
+        var handlers = this.handlers,
+            i = handlers.length;
+
+        while (i--) {
+          if (handlers[i] === handler) {
+            handlers.splice(i, 1);
+            break;
+          }
+        }
+      }
+      return this;
+    },
+    hasListen: function (handler) {
+      return arguments.length ? _.lastIndexOf(this.handlers, handler) != -1 : !!this.handlers.length;
+    },
+    destory: function () {
+      proxy$1.un(this.target, this._onTargetProxy);
+      var obj = this._unobserve(this.obj, 0);
+      this.obj = undefined;
+      this.target = undefined;
+      this.expr = undefined;
+      this.handlers = undefined;
+      this.path = undefined;
+      this.observers = undefined;
+      this.observeHandlers = undefined;
+      this.target = undefined;
+      return obj;
+    }
+  });
+
+  var policies = [];
+  var inited = false;
+
+  var core = {
+    registerPolicy: function (name, priority, checker, policy) {
+      policies.push({
+        name: name,
+        priority: priority,
+        policy: policy,
+        checker: checker
+      });
+      policies.sort(function (p1, p2) {
+        return p1.priority - p2.priority;
+      });
+      return this;
+    },
+    init: function (cfg) {
+      if (!inited) {
+        configuration.config(cfg);
+        if (_.each(policies, function (policy) {
+          if (policy.checker(config)) {
+            _.each(policy.policy(config), function (val, key) {
+              Observer.prototype[key] = val;
+            });
+            config.policy = policy.name;
+            return false;
+          }
+        }) !== false) throw Error('not supported');
+        inited = true;
+      }
+      return this;
+    },
+    on: function (obj, expr, handler) {
+      var path = _.parseExpr(expr);
+
+      if (path.length > 1) {
+        var map = _.getOwnProp(obj, config.expressionKey),
+            exp = map ? map[expr] : undefined;
+
+        if (!exp) {
+          exp = new Expression(obj, expr, path);
+          if (!map) map = obj[config.expressionKey] = {};
+          map[expr] = exp;
+        }
+        exp.on(handler);
+        return exp.target;
+      }
+      return on(obj, expr, handler);
+    },
+    un: function (obj, expr, handler) {
+      var path = _.parseExpr(expr);
+
+      if (path.length > 1) {
+        var map = _.getOwnProp(obj, config.expressionKey),
+            exp = map ? map[expr] : undefined;
+
+        if (exp) {
+          arguments.length == 2 ? exp.un() : exp.un(handler);
+          if (!exp.hasListen()) {
+            map[expr] = undefined;
+            return exp.destory();
+          }
+          return exp.target;
+        }
+        return proxy$1.proxy(obj) || obj;
+      }
+      return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler);
+    },
+    hasListen: function (obj, expr, handler) {
+      var l = arguments.length;
+
+      switch (l) {
+        case 1:
+          return hasListen(obj);
+        case 2:
+          if (_.isFunc(expr)) return hasListen(obj, expr);
+      }
+
+      var path = _.parseExpr(expr);
+
+      if (path.length > 1) {
+        var map = _.getOwnProp(obj, config.expressionKey),
+            exp = map ? map[expr] : undefined;
+
+        return exp ? l == 2 ? true : exp.hasListen(handler) : false;
+      }
+      return hasListen.apply(window, arguments);
+    }
+  };
+
+  configuration.register({
+    es6Proxy: true,
+    es6SourceKey: '__ES6_PROXY_SOURCE__',
+    es6ProxyKey: '__ES6_PROXY__'
+  });
+
+  core.registerPolicy('ES6Proxy', 1, function (config) {
+    return window.Proxy && config.es6Proxy !== false;
+  }, function (config) {
+    var es6SourceKey = config.es6SourceKey;
+    var es6ProxyKey = config.es6ProxyKey;
+
+
+    proxy$1.enable({
+      obj: function (obj) {
+        return obj ? _.getOwnProp(obj, es6SourceKey) || obj : obj;
+      },
+      eq: function (o1, o2) {
+        return o1 === o2 || o1 && o2 && proxy$1.obj(o1) === proxy$1.obj(o2);
+      },
+      proxy: function (obj) {
+        return obj ? _.getOwnProp(obj, es6ProxyKey) : undefined;
+      }
+    });
+
+    return {
+      _init: function () {
+        this.obj = proxy$1.obj(this.target);
+        this.es6proxy = false;
+      },
+      _destroy: function () {
+        this.es6proxy = false;
+        this.obj[es6ProxyKey] = undefined;
+        proxy$1.change(this.obj, undefined);
+      },
+      _watch: function (attr) {
+        if (!this.es6proxy) {
+          var _proxy = this._objectProxy(),
+              obj = this.obj;
+
+          this.target = _proxy;
+          obj[es6ProxyKey] = _proxy;
+          obj[es6SourceKey] = obj;
+          proxy$1.change(obj, _proxy);
+          this.es6proxy = true;
+        }
+      },
+      _unwatch: function (attr) {},
+      _objectProxy: function () {
+        var _this = this;
+
+        return new Proxy(this.obj, {
+          set: function (obj, prop, value) {
+            if (_this.listens[prop]) {
+              var oldVal = obj[prop];
+              obj[prop] = value;
+              _this._addChangeRecord(prop, oldVal);
+            } else {
+              obj[prop] = value;
+            }
+            return true;
+          }
+        });
+      }
+    };
+  });
+
+var   hasOwn$1 = Object.prototype.hasOwnProperty;
+  var RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(',');
+  var RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,indexOf,lastIndexOf,length,map,keys,join,pop,push,reverse,reverseRight,some,shift,slice,sort,splice,toSource,unshift'.split(',');
+  var VBClassFactory = _.dynamicClass({
+    constBind: '__VB_CONST__',
+    descBind: '__VB_PROXY__',
+    classNameGenerator: 0,
+    constructor: function (defProps, onProxyChange) {
+      this.classPool = {};
+      this.defPropMap = {};
+      this.onProxyChange = onProxyChange;
+      this.addDefProps(defProps);
+      this.initConstScript();
+    },
+    setConstBind: function (constBind) {
+      this.constBind = constBind;
+      this.initConstScript();
+    },
+    setDescBind: function (descBind) {
+      this.descBind = descBind;
+      this.initConstScript();
+    },
+    addDefProps: function (defProps) {
+      var defPropMap = this.defPropMap;
+
+      _.each(defProps || [], function (prop) {
+        defPropMap[prop] = true;
+      });
+      this.defProps = _.keys(defPropMap);
+      this.initReserveProps();
+    },
+    initReserveProps: function () {
+      this.reserveProps = RESERVE_PROPS.concat(_.keys(this.defPropMap) || []);
+      this.reserveArrayProps = this.reserveProps.concat(RESERVE_ARRAY_PROPS);
+      this.reservePropMap = _.reverseConvert(this.reserveProps);
+      this.reserveArrayPropMap = _.reverseConvert(this.reserveArrayProps);
+    },
+    initConstScript: function () {
+      this.constScript = ['\tPublic [', this.descBind, ']\r\n', '\tPublic Default Function [', this.constBind, '](desc)\r\n', '\t\tset [', this.descBind, '] = desc\r\n', '\t\tSet [', this.constBind, '] = Me\r\n', '\tEnd Function\r\n'].join('');
+    },
+    generateClassName: function () {
+      return 'VBClass' + this.classNameGenerator++;
+    },
+    parseClassConstructorName: function (className) {
+      return className + 'Constructor';
+    },
+    generateSetter: function (attr) {
+      var descBind = this.descBind;
+
+      return ['\tPublic Property Get [', attr, ']\r\n', '\tOn Error Resume Next\r\n', '\t\tSet[', attr, '] = [', descBind, '].get("', attr, '")\r\n', '\tIf Err.Number <> 0 Then\r\n', '\t\t[', attr, '] = [', descBind, '].get("', attr, '")\r\n', '\tEnd If\r\n', '\tOn Error Goto 0\r\n', '\tEnd Property\r\n'];
+    },
+    generateGetter: function (attr) {
+      var descBind = this.descBind;
+
+      return ['\tPublic Property Let [', attr, '](val)\r\n', '\t\tCall [', descBind, '].set("', attr, '",val)\r\n', '\tEnd Property\r\n', '\tPublic Property Set [', attr, '](val)\r\n', '\t\tCall [', descBind, '].set("', attr, '",val)\r\n', '\tEnd Property\r\n'];
+    },
+    generateClass: function (className, props, funcMap) {
+      var _this = this;
+
+      var buffer = ['Class ', className, '\r\n', this.constScript, '\r\n'];
+
+      _.each(props, function (attr) {
+        if (funcMap[attr]) {
+          buffer.push('\tPublic [' + attr + ']\r\n');
+        } else {
+          buffer.push.apply(buffer, _this.generateSetter(attr));
+          buffer.push.apply(buffer, _this.generateGetter(attr));
+        }
+      });
+      buffer.push('End Class\r\n');
+      return buffer.join('');
+    },
+    generateClassConstructor: function (props, funcMap, funcArray) {
+      var key = [props.length, '[', props.join(','), ']', '[', funcArray.join(','), ']'].join(''),
+          classConstName = this.classPool[key];
+
+      if (classConstName) return classConstName;
+
+      var className = this.generateClassName();
+      classConstName = this.parseClassConstructorName(className);
+      parseVB(this.generateClass(className, props, funcMap));
+      parseVB(['Function ', classConstName, '(desc)\r\n', '\tDim o\r\n', '\tSet o = (New ', className, ')(desc)\r\n', '\tSet ', classConstName, ' = o\r\n', 'End Function'].join(''));
+      this.classPool[key] = classConstName;
+      return classConstName;
+    },
+    create: function (obj, desc) {
+      var _this2 = this;
+
+      var protoProps = void 0,
+          protoPropMap = void 0,
+          props = [],
+          funcs = [],
+          funcMap = {},
+          descBind = this.descBind;
+
+      function addProp(prop) {
+        if (_.isFunc(obj[prop])) {
+          funcMap[prop] = true;
+          funcs.push(prop);
+        }
+        props.push(prop);
+      }
+
+      if (_.isArray(obj)) {
+        protoProps = this.reserveArrayProps;
+        protoPropMap = this.reserveArrayPropMap;
+      } else {
+        protoProps = this.reserveProps;
+        protoPropMap = this.reservePropMap;
+      }
+      _.each(protoProps, addProp);
+      _.each(obj, function (val, prop) {
+        if (prop !== descBind && !(prop in protoPropMap)) addProp(prop);
+      }, obj, false);
+
+      if (!desc) {
+        desc = this.descriptor(obj);
+        if (desc) {
+          obj = desc.obj;
+        } else {
+          desc = new ObjectDescriptor(obj, props, this);
+        }
+      }
+
+      proxy = window[this.generateClassConstructor(props, funcMap, funcs)](desc);
+      _.each(funcs, function (prop) {
+        proxy[prop] = _this2.funcProxy(obj[prop], proxy);
+      });
+      desc.proxy = proxy;
+
+      this.onProxyChange(obj, proxy);
+      return proxy;
+    },
+    funcProxy: function (fn, proxy) {
+      return function () {
+        fn.apply(!this || this == window ? proxy : this, arguments);
+      };
+    },
+    eq: function (o1, o2) {
+      var d1 = this.descriptor(o1),
+          d2 = this.descriptor(o2);
+
+      if (d1) o1 = d1.obj;
+      if (d2) o2 = d2.obj;
+      return o1 === o2;
+    },
+    obj: function (obj) {
+      var desc = this.descriptor(obj);
+
+      return desc ? desc.obj : obj;
+    },
+    proxy: function (obj) {
+      var desc = this.descriptor(obj);
+
+      return desc ? desc.proxy : undefined;
+    },
+    isProxy: function (obj) {
+      return hasOwn$1.call(obj, this.constBind);
+    },
+    descriptor: function (obj) {
+      var descBind = this.descBind;
+
+      return hasOwn$1.call(obj, descBind) ? obj[descBind] : undefined;
+    },
+    destroy: function (obj) {
+      var desc = this.descriptor(obj);
+
+      if (desc) {
+        obj = desc.obj;
+        this.onProxyChange(obj, undefined);
+      }
+      return obj;
+    }
+  });
+
+  var ObjectDescriptor = _.dynamicClass({
+    constructor: function (obj, props, classGenerator) {
+      this.classGenerator = classGenerator;
+      this.obj = obj;
+      this.defines = _.reverseConvert(props, function () {
+        return false;
+      });
+      obj[classGenerator.descBind] = this;
+      this.accessorNR = 0;
+    },
+    isAccessor: function (desc) {
+      return desc && (desc.get || desc.set);
+    },
+    hasAccessor: function () {
+      return !!this.accessorNR;
+    },
+    defineProperty: function (attr, desc) {
+      var defines = this.defines,
+          obj = this.obj;
+
+      if (!(attr in defines)) {
+        if (!(attr in obj)) {
+          obj[attr] = undefined;
+        } else if (_.isFunc(obj[attr])) {
+          console.warn('defineProperty not support function [' + attr + ']');
+        }
+        this.classGenerator.create(this.obj, this);
+      }
+
+      if (!this.isAccessor(desc)) {
+        if (defines[attr]) {
+          defines[attr] = false;
+          this.accessorNR--;
+        }
+        obj[attr] = desc.value;
+      } else {
+        defines[attr] = desc;
+        this.accessorNR++;
+        if (desc.get) obj[attr] = desc.get();
+      }
+      return this.proxy;
+    },
+    getPropertyDefine: function (attr) {
+      return this.defines[attr] || undefined;
+    },
+    get: function (attr) {
+      var define = this.defines[attr];
+
+      return define && define.get ? define.get.call(this.proxy) : this.obj[attr];
+    },
+    set: function (attr, value) {
+      var define = this.defines[attr];
+
+      if (define && define.set) define.set.call(this.proxy, value);
+      this.obj[attr] = value;
+    }
+  });
+
+  var supported = undefined;
+  VBClassFactory.isSupport = function isSupport() {
+    if (supported !== undefined) return supported;
+    supported = false;
+    if (window.VBArray) {
+      try {
+        window.execScript(['Function parseVB(code)', '\tExecuteGlobal(code)', 'End Function'].join('\n'), 'VBScript');
+        supported = true;
+      } catch (e) {
+        console.error(e.message, e);
+      }
+    }
+    return supported;
+  };
+
+  var policy$1 = {
+    _init: function () {
+      this.watchers = {};
+    },
+    _destroy: function () {
+      for (var attr in this.watchers) {
+        if (this.watchers[attr]) this._unwatch(attr);
+      }
+      this.watchers = undefined;
+    },
+    _watch: function (attr) {
+      if (!this.watchers[attr]) {
+        this._defineProperty(attr, this.obj[attr]);
+        this.watchers[attr] = true;
+      }
+    },
+    _unwatch: function (attr) {
+      if (this.watchers[attr]) {
+        this._undefineProperty(attr, this.obj[attr]);
+      }
+    }
+  };
+
+  core.registerPolicy('ES5DefineProperty', 10, function (config) {
+    if (Object.defineProperty) {
+      try {
+        var _ret = function () {
+          var val = void 0,
+              obj = {};
+          Object.defineProperty(obj, 'sentinel', {
+            get: function () {
+              return val;
+            },
+            set: function (value) {
+              val = value;
+            }
+          });
+          obj.sentinel = 1;
+          return {
+            v: obj.sentinel === val
+          };
+        }();
+
+        if (typeof _ret === "object") return _ret.v;
+      } catch (e) {}
+    }
+    return false;
+  }, function (config) {
+    proxyPro.disable();
+    return _.assignIf({
+      _defineProperty: function (attr, value) {
+        var _this = this;
+
+        Object.defineProperty(this.target, attr, {
+          enumerable: true,
+          configurable: true,
+          get: function () {
+            return value;
+          },
+          set: function (val) {
+            var oldVal = value;
+
+            value = val;
+            _this._addChangeRecord(attr, oldVal);
+          }
+        });
+      },
+      _undefineProperty: function (attr, value) {
+        Object.defineProperty(this.target, attr, {
+          enumerable: true,
+          configurable: true,
+          writable: true,
+          value: value
+        });
+      }
+    }, policy$1);
+  });
+
+  core.registerPolicy('DefineGetterAndSetter', 20, function (config) {
+    return '__defineGetter__' in {};
+  }, function (config) {
+    proxyPro.disable();
+    return _.assignIf({
+      _defineProperty: function (attr, value) {
+        var _this2 = this;
+
+        this.target.__defineGetter__(attr, function () {
+          return value;
+        });
+        this.target.__defineSetter__(attr, function (val) {
+          var oldVal = value;
+
+          value = val;
+          _this2._addChangeRecord(attr, oldVal);
+        });
+      },
+      _undefineProperty: function (attr, value) {
+        this.target.__defineGetter__(attr, function () {
+          return value;
+        });
+        this.target.__defineSetter__(attr, function (val) {
+          value = val;
+        });
+      }
+    }, policy$1);
+  });
+
+  core.registerPolicy('VBScriptProxy', 30, function (config) {
+    return VBClassFactory.isSupport();
+  }, function (config) {
+    var init = policy$1._init,
+        factory = void 0;
+
+    proxyPro.enable({
+      obj: function (obj) {
+        return obj ? factory.obj(obj) : obj;
+      },
+      eq: function (o1, o2) {
+        return o1 === o2 || o1 && o2 && factory.obj(o1) === factory.obj(o2);
+      },
+      proxy: function (obj) {
+        return obj ? factory.proxy(obj) : undefined;
+      }
+    });
+    factory = core.vbfactory = new VBClassFactory([proxyPro.listenKey, config.observerKey, config.expressionKey], proxyPro.change);
+
+    return _.assignIf({
+      _init: function () {
+        init.call(this);
+        this.obj = factory.obj(this.target);
+      },
+      _defineProperty: function (attr, value) {
+        var _this3 = this;
+
+        var obj = this.obj,
+            desc = factory.descriptor(obj);
+
+        if (!desc) desc = factory.descriptor(factory.create(obj));
+
+        this.target = desc.defineProperty(attr, {
+          set: function (val) {
+            var oldVal = _this3.obj[attr];
+            _this3.obj[attr] = val;
+            _this3._addChangeRecord(attr, oldVal);
+          }
+        });
+      },
+      _undefineProperty: function (attr, value) {
+        var obj = this.obj,
+            desc = factory.descriptor(obj);
+
+        if (desc) {
+          this.target = desc.defineProperty(attr, {
+            value: value
+          });
+          if (!desc.hasAccessor()) {
+            this.target = factory.destroy(obj);
+          }
+        }
+      }
+    }, policy$1);
+  });
+
+  var index = _.assignIf(core, _, {
+    eq: function (o1, o2) {
+      return proxy$1.eq(o1, o2);
+    },
+    obj: function (o) {
+      return proxy$1.obj(o);
+    },
+    onproxy: function (o, h) {
+      return proxy$1.on(o, h);
+    },
+    unproxy: function (o, h) {
+      return proxy$1.un(o, h);
+    },
+
+    proxy: proxy$1,
     config: configuration.get()
   });
 
-  module.exports = observer;
+  return index;
 
 }));
+//# sourceMappingURL=observer.js.map

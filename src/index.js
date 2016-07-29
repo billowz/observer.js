@@ -1,12 +1,11 @@
-const _ = require('utility'),
-  observer = require('./core'),
-  _proxy = require('./proxy'),
-  configuration = require('./configuration')
+import _ from 'utility'
+import core from './core'
+import _proxy from './proxy'
+import configuration from './configuration'
+import './es6proxy'
+import './es5defprop'
 
-require('./es6proxy')
-require('./es5defprop')
-
-_.assignIf(observer, _, {
+export default _.assignIf(core, _, {
   eq(o1, o2) {
     return _proxy.eq(o1, o2)
   },
@@ -22,5 +21,3 @@ _.assignIf(observer, _, {
   proxy: _proxy,
   config: configuration.get()
 })
-
-module.exports = observer

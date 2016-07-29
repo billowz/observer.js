@@ -1,55 +1,31 @@
-const core = require('./core'),
-  proxyPro = require('./proxy'),
-  VBClassFactory = require('./vbproxy'),
-  _ = require('utility'),
-  arrayHockMethods = ['push', 'pop', 'shift', 'unshift', 'sort', 'reverse', 'splice'],
-  policy = {
-    _init() {
-      this.watchers = {}
-    },
-    _destroy() {
-      for (let attr in this.watchers) {
-        if (this.watchers[attr])
-          this._unwatch(attr)
-      }
-      this.watchers = undefined
-    },
-    _hockArrayLength(method) {
-      let self = this
+import _ from 'utility'
+import core from './core'
+import proxy from './proxy'
+import VBClassFactory from './vbproxy'
 
-      this.obj[method] = function() {
-        let len = this.length
-
-        Array.prototype[method].apply(this, arguments)
-        if (self.obj.length != len)
-          self._addChangeRecord('length', len)
-      }
-    },
-    _watch(attr) {
-      if (!this.watchers[attr]) {
-        if (this.isArray && attr === 'length') {
-          _.each(arrayHockMethods, (method) => {
-            this._hockArrayLength(method)
-          })
-        } else {
-          this._defineProperty(attr, this.obj[attr])
-        }
-        this.watchers[attr] = true
-      }
-    },
-    _unwatch(attr) {
-      if (this.watchers[attr]) {
-        if (this.isArray && attr === 'length') {
-          _.each(arrayHockMethods, (method) => {
-            delete this.obj[method]
-          })
-        } else {
-          this._undefineProperty(attr, this.obj[attr])
-        }
-        this.watchers[attr] = false
-      }
+const policy = {
+  _init() {
+    this.watchers = {}
+  },
+  _destroy() {
+    for (let attr in this.watchers) {
+      if (this.watchers[attr])
+        this._unwatch(attr)
+    }
+    this.watchers = undefined
+  },
+  _watch(attr) {
+    if (!this.watchers[attr]) {
+      this._defineProperty(attr, this.obj[attr])
+      this.watchers[attr] = true
+    }
+  },
+  _unwatch(attr) {
+    if (this.watchers[attr]) {
+      this._undefineProperty(attr, this.obj[attr])
     }
   }
+}
 
 core.registerPolicy('ES5DefineProperty', 10, function(config) {
   if (Object.defineProperty) {

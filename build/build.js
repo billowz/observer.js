@@ -1,4 +1,7 @@
 var compile = require('./compile'),
+  alias = require('rollup-plugin-alias'),
+  inject = require('rollup-plugin-inject'),
+  nodeResolve = require('rollup-plugin-node-resolve'),
   pkg = require('../package.json'),
   banner = `/*
  * ${pkg.name} v${pkg.version} built in ${new Date().toUTCString()}
@@ -13,5 +16,13 @@ compile({
   useStrict: false,
   entry: pkg.entry,
   dest: pkg.main,
-  banner: banner
+  banner: banner,
+  plugins: [nodeResolve({
+    jsnext: true
+  })],
+  globals: {
+    utility: 'utility'
+  },
+  external: Object.keys(pkg.dependencies)
 })
+console.log(Object.keys(pkg.dependencies))

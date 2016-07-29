@@ -1,5 +1,3 @@
-const {
-  Configuration
-} = require('utility')
+import _ from 'utility'
 
-module.exports = new Configuration()
+export default new _.Configuration()

@@ -1,9 +1,8 @@
+import _ from 'utility'
+import configuration from './configuration'
+
 const toStr = Object.prototype.toString,
-  _ = require('utility'),
-  {
-    hasOwnProp
-  } = _,
-  configuration = require('./configuration'),
+  hasOwnProp = _.hasOwnProp,
   LISTEN_CONFIG = 'proxyListenKey'
 
 configuration.register(LISTEN_CONFIG, '__PROXY_LISTENERS__')
@@ -63,7 +62,7 @@ const defaultPolicy = {
     }
   }
 
-function proxy(o) {
+export default function proxy(o) {
   return proxy.proxy(o)
 }
 
@@ -116,4 +115,3 @@ _.get = function(obj, expr, defVal, lastOwn, own) {
 _.hasOwnProp = function(obj, prop) {
   return hasOwnProp(proxy.obj(obj), prop)
 }
-module.exports = proxy

@@ -1,5 +1,6 @@
-const _ = require('utility'),
-  hasOwn = Object.prototype.hasOwnProperty,
+import _ from 'utility'
+
+const hasOwn = Object.prototype.hasOwnProperty,
   RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(','),
   RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,indexOf,lastIndexOf,length,map,keys,join,pop,push,reverse,reverseRight,some,shift,slice,sort,splice,toSource,unshift'.split(',')
 
@@ -278,4 +279,4 @@ VBClassFactory.isSupport = function isSupport() {
   }
   return supported
 }
-module.exports = VBClassFactory
+export default VBClassFactory

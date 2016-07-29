@@ -1,7 +1,7 @@
-const core = require('./core'),
-  proxy = require('./proxy'),
-  _ = require('utility'),
-  configuration = require('./configuration')
+import _ from 'utility'
+import core from './core'
+import proxy from './proxy'
+import configuration from './configuration'
 
 configuration.register({
   es6Proxy: true,
@@ -41,7 +41,7 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
     },
     _watch(attr) {
       if (!this.es6proxy) {
-        let _proxy = this.isArray ? this._arrayProxy() : this._objectProxy(),
+        let _proxy = this._objectProxy(),
           obj = this.obj
 
         this.target = _proxy
@@ -52,39 +52,13 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
       }
     },
     _unwatch(attr) {},
-    _arrayProxy() {
-      let oldLength = this.target.length
-
-      return new Proxy(this.obj, {
-        set: (obj, prop, value) => {
-          if (this.listens[prop]) {
-            let oldVal
-
-            if (prop === 'length') {
-              oldVal = oldLength
-              oldLength = value
-            } else {
-              oldVal = obj[prop]
-            }
-            obj[prop] = value
-            if (value !== oldVal)
-              this._addChangeRecord(prop, oldVal)
-          } else {
-            obj[prop] = value
-          }
-          return true
-        }
-      })
-    },
     _objectProxy() {
       return new Proxy(this.obj, {
         set: (obj, prop, value) => {
           if (this.listens[prop]) {
             let oldVal = obj[prop]
-
             obj[prop] = value
-            if (value !== oldVal)
-              this._addChangeRecord(prop, oldVal)
+            this._addChangeRecord(prop, oldVal)
           } else {
             obj[prop] = value
           }
