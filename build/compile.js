@@ -2,15 +2,14 @@ var fs = require('fs'),
   zlib = require('zlib'),
   rollup = require('rollup').rollup,
   uglify = require('rollup-plugin-uglify'),
-  babel = require('./rollup-babel'),
   rollupOptions = 'entry,cache,external,paths,onwarn,plugins,treeshake,acorn'.split(',')
 
-function complie(opt, dest, plugins) {
+function complie(opt, dest, mini) {
   var cfg = {}
   rollupOptions.forEach(function(name) {
     cfg[name] = opt[name]
   })
-  cfg.plugins = [babel()].concat(opt.plugins || []).concat(plugins || [])
+  cfg.plugins = (opt.plugins || []).concat(mini ? [uglify()] : [])
 
   return rollup(cfg).then(function(bundle) {
     var res = bundle.generate({
@@ -31,10 +30,10 @@ function complie(opt, dest, plugins) {
   })
 }
 
-module.exports = function(opt) {
-  return complie(opt, opt.dest)
+module.exports = function(dest, opt) {
+  return complie(opt, dest)
     .then(function(dest) {
-      return complie(opt, dest[0].replace(/\.js$/, '.min.js'), [uglify()])
+      return complie(opt, dest[0].replace(/\.js$/, '.min.js'), true)
     })
     .then(function(dest) {
       return new Promise(function(resolve, reject) {

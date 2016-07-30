@@ -1,7 +1,7 @@
 var compile = require('./compile'),
-  alias = require('rollup-plugin-alias'),
   inject = require('rollup-plugin-inject'),
   nodeResolve = require('rollup-plugin-node-resolve'),
+  babel = require('./rollup-babel'),
   pkg = require('../package.json'),
   banner = `/*
  * ${pkg.name} v${pkg.version} built in ${new Date().toUTCString()}
@@ -11,18 +11,25 @@ var compile = require('./compile'),
  *${pkg.homepage}
  */`
 
-compile({
-  module: pkg.module,
+var cfg = {
+  module: pkg.namespace,
+  entry: pkg.main,
   useStrict: false,
-  entry: pkg.entry,
-  dest: pkg.main,
   banner: banner,
-  plugins: [nodeResolve({
-    jsnext: true
-  })],
   globals: {
-    utility: 'utility'
+    'utility': 'utility'
   },
   external: Object.keys(pkg.dependencies)
+}
+
+compile('dist/observer.js', Object.assign({
+  plugins: [babel()]
+}, cfg)).then(function() {
+  compile('dist/observer.all.js', Object.assign({
+    plugins: [inject({
+      utility: 'utility.js'
+    }), nodeResolve({
+      jsnext: true
+    }), babel()]
+  }, cfg))
 })
-console.log(Object.keys(pkg.dependencies))
