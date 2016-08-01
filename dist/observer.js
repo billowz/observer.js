@@ -1,5 +1,5 @@
 /*
- * observer.js v0.2.7 built in Sat, 30 Jul 2016 15:17:18 GMT
+ * observer.js v0.2.7 built in Mon, 01 Aug 2016 06:25:41 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -104,7 +104,7 @@
     var i = 0,
         path = _.parseExpr(expr, true),
         l = path.length - 1,
-        prop = undefined;
+        prop = void 0;
 
     while (!_.isNil(obj) && i < l) {
       prop = path[i++];
@@ -197,7 +197,7 @@
       }
     },
     on: function (attr, handler) {
-      var handlers = undefined;
+      var handlers = void 0;
 
       this.checkHandler(handler);
       if (!(handlers = this.listens[attr])) {
@@ -305,15 +305,15 @@
     },
     _observe: function (obj, idx) {
       var prop = this.path[idx],
-          o = undefined;
+          o = void 0;
 
       if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._observe(proxy$1.obj(o), idx + 1);
       return on(obj, prop, this.observeHandlers[idx]);
     },
     _unobserve: function (obj, idx) {
       var prop = this.path[idx],
-          o = undefined,
-          ret = undefined;
+          o = void 0,
+          ret = void 0;
 
       ret = un(obj, prop, this.observeHandlers[idx]);
       if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._unobserve(proxy$1.obj(o), idx + 1);
@@ -643,8 +643,8 @@
     create: function (obj, desc) {
       var _this2 = this;
 
-      var protoProps = undefined,
-          protoPropMap = undefined,
+      var protoProps = void 0,
+          protoPropMap = void 0,
           props = [],
           funcs = [],
           funcMap = {},
@@ -830,7 +830,7 @@
     if (Object.defineProperty) {
       try {
         var _ret = function () {
-          var val = undefined,
+          var val = void 0,
               obj = {};
           Object.defineProperty(obj, 'sentinel', {
             get: function () {
@@ -914,7 +914,7 @@
     return VBClassFactory.isSupport();
   }, function (config) {
     var init = policy$1._init,
-        factory = undefined;
+        factory = void 0;
 
     proxyPro.enable({
       obj: function (obj) {

@@ -13,19 +13,21 @@ function complie(opt, dest, mini) {
 
   return rollup(cfg).then(function(bundle) {
     var res = bundle.generate({
-      format: 'umd',
-      banner: opt.banner,
-      moduleId: opt.module,
-      moduleName: opt.module,
-      useStrict: opt.useStrict,
-      sourceMap: true,
-      dest: dest,
-      globals: opt.globals
-    })
+        format: 'umd',
+        banner: opt.banner,
+        moduleId: opt.module,
+        moduleName: opt.module,
+        useStrict: opt.useStrict,
+        sourceMap: true,
+        dest: dest,
+        globals: opt.globals
+      }),
+      code = res.code + '\n//# sourceMappingURL=' + dest.replace(/(.*\/)|(.*\\)/g, '') + '.map',
+      mapcode = JSON.stringify(res.map)
 
     return Promise.all([
-      write(dest, res.code + '\n//# sourceMappingURL=' + dest.replace(/(.*\/)|(.*\\)/g, '') + '.map'),
-      write(dest + '.map', JSON.stringify(res.map))
+      write(dest, code),
+      write(dest + '.map', mapcode)
     ])
   })
 }

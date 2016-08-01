@@ -1,6 +1,6 @@
 var compile = require('./compile'),
   inject = require('rollup-plugin-inject'),
-  nodeResolve = require('rollup-plugin-node-resolve'),
+  nodeResolve = require('rollup-plugin-node-resolve-ext'),
   babel = require('./rollup-babel'),
   pkg = require('../package.json'),
   banner = `/*
@@ -26,10 +26,10 @@ compile('dist/observer.js', Object.assign({
   plugins: [babel()]
 }, cfg)).then(function() {
   compile('dist/observer.all.js', Object.assign({
-    plugins: [inject({
-      utility: 'utility.js'
-    }), nodeResolve({
-      jsnext: true
+    plugins: [nodeResolve({
+      alias: {
+        'utility': 'utility.js'
+      }
     }), babel()]
   }, cfg))
 })

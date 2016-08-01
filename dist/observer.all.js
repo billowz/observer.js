@@ -1,5 +1,5 @@
 /*
- * observer.js v0.2.7 built in Sat, 30 Jul 2016 15:17:18 GMT
+ * observer.js v0.2.7 built in Mon, 01 Aug 2016 06:25:41 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -11,7 +11,7 @@
   (global.observer = factory());
 }(this, function () {
 
-  var lastTime = undefined;
+  var lastTime = void 0;
 
   function request(callback) {
     var currTime = new Date().getTime(),
@@ -116,8 +116,8 @@ var tf = Object.freeze({
   // array utils
   // ==============================================
   function _eachObj(obj, callback, scope, own) {
-    var key = undefined,
-        isOwn = undefined;
+    var key = void 0,
+        isOwn = void 0;
 
     scope = scope || obj;
     for (key in obj) {
@@ -150,7 +150,7 @@ var tf = Object.freeze({
   }
 
   function map(obj, callback, scope, own) {
-    var ret = undefined;
+    var ret = void 0;
 
     function cb(val, key) {
       ret[key] = callback.apply(this, arguments);
@@ -167,7 +167,7 @@ var tf = Object.freeze({
   }
 
   function filter(obj, callback, scope, own) {
-    var ret = undefined;
+    var ret = void 0;
 
     if (isArrayLike(obj)) {
       ret = [];
@@ -367,8 +367,8 @@ var tf = Object.freeze({
       }
 
       var value = valueIndex ? args[valueIndex.slice(0, -1)] : args[i++],
-          prefix = undefined,
-          base = undefined;
+          prefix = void 0,
+          base = void 0;
 
       switch (type) {
         case 'c':
@@ -414,7 +414,7 @@ var tf = Object.freeze({
             var _number2 = +value;
             if (isNaN(_number2)) return '';
             prefix = _number2 < 0 ? '-' : positivePrefix;
-            var method = undefined;
+            var method = void 0;
             if ('p' != type.toLowerCase()) {
               method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
             } else {
@@ -484,7 +484,7 @@ var tf = Object.freeze({
     var i = 0,
         path = parseExpr(expr, true),
         l = path.length - 1,
-        prop = undefined;
+        prop = void 0;
 
     while (!isNil(obj) && i < l) {
       prop = path[i++];
@@ -499,7 +499,7 @@ var tf = Object.freeze({
     var i = 0,
         path = parseExpr(expr, true),
         l = path.length - 1,
-        prop = undefined;
+        prop = void 0;
 
     while (!isNil(obj) && i < l) {
       prop = path[i++];
@@ -542,8 +542,8 @@ var tf = Object.freeze({
   };
 
   var assign = Object.assign || function assign(target) {
-    var source = undefined,
-        key = undefined,
+    var source = void 0,
+        key = void 0,
         i = 1,
         l = arguments.length;
 
@@ -557,8 +557,8 @@ var tf = Object.freeze({
   };
 
   function assignIf(target) {
-    var source = undefined,
-        key = undefined,
+    var source = void 0,
+        key = void 0,
         i = 1,
         l = arguments.length;
 
@@ -637,8 +637,8 @@ var tf = Object.freeze({
       this.constructor.apply(this, arguments);
     },
         superclass = overrides.extend,
-        superproto = undefined,
-        proto = undefined;
+        superproto = void 0,
+        proto = void 0;
 
     assign(cls, Base);
 
@@ -729,7 +729,6 @@ var _$1 = Object.freeze({
     }
   });
 
-  var _arguments = arguments;
   var logLevels = ['debug', 'info', 'warn', 'error'];
   var tmpEl = document.createElement('div');
   var slice = Array.prototype.slice;
@@ -773,7 +772,7 @@ var _$1 = Object.freeze({
   });
   var console$1 = window.console;
   if (console$1 && !console$1.debug) console$1.debug = function () {
-    Function.apply.call(console$1.log, console$1, _arguments);
+    Function.apply.call(console$1.log, console$1, arguments);
   };
 
   var Logger = dynamicClass({
@@ -949,7 +948,7 @@ var   hasOwnProp$1 = _.hasOwnProp;
     var i = 0,
         path = _.parseExpr(expr, true),
         l = path.length - 1,
-        prop = undefined;
+        prop = void 0;
 
     while (!_.isNil(obj) && i < l) {
       prop = path[i++];
@@ -1042,7 +1041,7 @@ var   hasOwnProp$1 = _.hasOwnProp;
       }
     },
     on: function (attr, handler) {
-      var handlers = undefined;
+      var handlers = void 0;
 
       this.checkHandler(handler);
       if (!(handlers = this.listens[attr])) {
@@ -1150,15 +1149,15 @@ var   hasOwnProp$1 = _.hasOwnProp;
     },
     _observe: function (obj, idx) {
       var prop = this.path[idx],
-          o = undefined;
+          o = void 0;
 
       if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._observe(proxy$1.obj(o), idx + 1);
       return on(obj, prop, this.observeHandlers[idx]);
     },
     _unobserve: function (obj, idx) {
       var prop = this.path[idx],
-          o = undefined,
-          ret = undefined;
+          o = void 0,
+          ret = void 0;
 
       ret = un(obj, prop, this.observeHandlers[idx]);
       if (idx + 1 < this.path.length && (o = obj[prop])) obj[prop] = this._unobserve(proxy$1.obj(o), idx + 1);
@@ -1488,8 +1487,8 @@ var   hasOwn$1 = Object.prototype.hasOwnProperty;
     create: function (obj, desc) {
       var _this2 = this;
 
-      var protoProps = undefined,
-          protoPropMap = undefined,
+      var protoProps = void 0,
+          protoPropMap = void 0,
           props = [],
           funcs = [],
           funcMap = {},
@@ -1675,7 +1674,7 @@ var   hasOwn$1 = Object.prototype.hasOwnProperty;
     if (Object.defineProperty) {
       try {
         var _ret = function () {
-          var val = undefined,
+          var val = void 0,
               obj = {};
           Object.defineProperty(obj, 'sentinel', {
             get: function () {
@@ -1759,7 +1758,7 @@ var   hasOwn$1 = Object.prototype.hasOwnProperty;
     return VBClassFactory.isSupport();
   }, function (config) {
     var init = policy$1._init,
-        factory = undefined;
+        factory = void 0;
 
     proxyPro.enable({
       obj: function (obj) {

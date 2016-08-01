@@ -55,7 +55,8 @@
     "rollup-plugin-coverage": "^0.1.4",
     "rollup-plugin-inject": "^1.4.1",
     "rollup-plugin-multi-entry": "^2.0.0",
-    "rollup-plugin-node-resolve": "^1.7.2",
+    "rollup-plugin-node-resolve-ext": "^2.0.0",
+    "rollup-plugin-resolve-aliases": "^0.2.0",
     "rollup-plugin-uglify": "^1.0.1"
   }
 }

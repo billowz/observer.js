@@ -1,23 +1,26 @@
-const observer = require('../index');
+import observer from '../index'
 
 describe("Observer", () => {
   it("Observe changes", function(done) {
     var obj = {
-      a: {
-        b: {
-          c: 123
+        obj: {
+          arr: [{
+            a: 123
+          }]
         }
-      }
-    };
-    obj = observer.on(obj, 'a.b.c', function() {
-      expect(Array.prototype.slice.call(arguments)).eql(['a.b.c', 'abc', 123, obj]);
-      expect(observer.hasListen(obj, 'a.b.c')).equal(true);
-      observer.un(obj, 'a.b.c');
-      expect(observer.hasListen(obj)).equal(false);
-      done();
-    });
-    expect(observer.hasListen(obj, 'a.b.c')).equal(true);
-    obj.a.b.c = 'abc';
-  });
+      },
+      path = 'obj.arr[0].a'
 
-});
+    obj = observer.on(obj, path, function() {
+      /*
+      expect(Array.prototype.slice.call(arguments)).eql([path, 'abc', 123, obj])
+      expect(observer.hasListen(obj, path)).equal(true)
+      observer.un(obj, path)
+      expect(observer.hasListen(obj)).equal(false)
+      done()*/
+    })
+    expect(observer.hasListen(obj, path)).equal(true)
+    obj.obj.arr[0].a = 'abc'
+  })
+
+})
