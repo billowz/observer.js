@@ -45,7 +45,7 @@ core.registerPolicy('ES5DefineProperty', 10, function(config) {
   }
   return false
 }, function(config) {
-  proxyPro.disable()
+  proxy.disable()
   return _.assignIf({
     _defineProperty(attr, value) {
       Object.defineProperty(this.target, attr, {
@@ -56,7 +56,6 @@ core.registerPolicy('ES5DefineProperty', 10, function(config) {
         },
         set: (val) => {
           let oldVal = value
-
           value = val
           this._addChangeRecord(attr, oldVal)
         }
@@ -77,7 +76,7 @@ core.registerPolicy('ES5DefineProperty', 10, function(config) {
 core.registerPolicy('DefineGetterAndSetter', 20, function(config) {
   return '__defineGetter__' in {}
 }, function(config) {
-  proxyPro.disable()
+  proxy.disable()
   return _.assignIf({
     _defineProperty(attr, value) {
       this.target.__defineGetter__(attr, () => {
@@ -107,7 +106,7 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
   let init = policy._init,
     factory
 
-  proxyPro.enable({
+  proxy.enable({
     obj(obj) {
       return obj ? factory.obj(obj) : obj
     },
@@ -115,10 +114,10 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
       return o1 === o2 || (o1 && o2 && factory.obj(o1) === factory.obj(o2))
     },
     proxy(obj) {
-      return obj ? factory.proxy(obj) : undefined
+      return obj ? factory.proxy(obj) : obj
     }
   })
-  factory = core.vbfactory = new VBClassFactory([proxyPro.listenKey, config.observerKey, config.expressionKey], proxyPro.change)
+  factory = core.vbfactory = new VBClassFactory([proxy.listenKey, config.observerKey, config.expressionKey], proxy.change)
 
   return _.assignIf({
     _init() {

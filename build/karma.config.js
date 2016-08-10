@@ -39,9 +39,6 @@ module.exports = function(config) {
       reporters: [{
         type: 'lcov'
       }, {
-        type: 'text',
-        file: 'coverage.txt'
-      }, {
         type: 'text-summary'
       }]
     },

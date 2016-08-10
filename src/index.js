@@ -5,7 +5,7 @@ import configuration from './configuration'
 import './es6proxy'
 import './es5defprop'
 
-export default _.assignIf(core, _, {
+export default _.assign({
   eq(o1, o2) {
     return _proxy.eq(o1, o2)
   },
@@ -20,4 +20,4 @@ export default _.assignIf(core, _, {
   },
   proxy: _proxy,
   config: configuration.get()
-})
+}, _, core)

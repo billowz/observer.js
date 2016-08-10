@@ -20,7 +20,8 @@ function complie(opt, dest, mini) {
         useStrict: opt.useStrict,
         sourceMap: true,
         dest: dest,
-        globals: opt.globals
+        globals: opt.globals,
+        indent: false
       }),
       code = res.code + '\n//# sourceMappingURL=' + dest.replace(/(.*\/)|(.*\\)/g, '') + '.map',
       mapcode = JSON.stringify(res.map)

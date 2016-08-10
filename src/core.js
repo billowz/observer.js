@@ -1,6 +1,7 @@
 import _ from 'utility'
 import proxy from './proxy'
 import configuration from './configuration'
+import logger from './log'
 
 const timeoutframe = _.timeoutframe,
   config = configuration.get()
@@ -12,15 +13,8 @@ configuration.register({
   expressionKey: '__EXPR_OBSERVER__'
 })
 
-function abstractFunc() {
-
-}
-
 const Observer = _.dynamicClass({
   constructor(target) {
-    this.isArray = _.isArray(target)
-    if (!this.isArray && !_.isObject(target))
-      throw TypeError('can not observe object[' + (Object.prototype.toString.call(target)) + ']')
     this.target = target
     this.obj = target
     this.listens = {}
@@ -32,26 +26,26 @@ const Observer = _.dynamicClass({
 
   _fire(attr, val, oldVal) {
     let handlers = this.listens[attr]
-
-    if (handlers) return
-    if (proxy.eq(val, oldVal) && !_.isArray(val)) return
-
-    _.each(handlers.slice(), (handler) => {
-      handler(attr, val, oldVal, this.target)
-    })
+    if (handlers && (!proxy.eq(val, oldVal) || _.isArray(val)))
+      _.each(handlers.slice(), (handler) => {
+        handler(attr, val, oldVal, this.target)
+      })
   },
 
   _notify() {
-    let obj = this.obj
+    let obj = this.obj,
+      changeRecords = this.changeRecords
 
-    _.each(this.changeRecords, (val, attr) => {
-      this._fire(attr, obj[attr], val)
-    })
     this.request_frame = undefined
     this.changeRecords = {}
+
+    _.each(changeRecords, (val, attr) => {
+      this._fire(attr, obj[attr], val)
+    })
   },
 
   _addChangeRecord(attr, oldVal) {
+    console.log('add', attr, oldVal)
     if (!config.lazy) {
       this._fire(attr, this.obj[attr], oldVal)
     } else if (!(attr in this.changeRecords)) {
@@ -79,10 +73,10 @@ const Observer = _.dynamicClass({
             return _.lastIndexOf(handlers, attr) !== -1
           })
         }
-        return !!listens[attr]
+        return !!this.listens[attr]
       default:
         this.checkHandler(handler)
-        return _.lastIndexOf(listens[attr], handler) !== -1
+        return _.lastIndexOf(this.listens[attr], handler) !== -1
     }
   },
 
@@ -141,10 +135,10 @@ const Observer = _.dynamicClass({
     this.changeRecords = undefined
     return obj
   },
-  _init: abstractFunc,
-  _destroy: abstractFunc,
-  _watch: abstractFunc,
-  _unwatch: abstractFunc
+  _init: _.emptyFunc,
+  _destroy: _.emptyFunc,
+  _watch: _.emptyFunc,
+  _unwatch: _.emptyFunc
 })
 
 function hasListen(obj, attr, handler) {
@@ -191,8 +185,10 @@ const Expression = _.dynamicClass({
     this.observeHandlers = this._initObserveHandlers()
     this.obj = proxy.obj(target)
     this.target = this._observe(this.obj, 0)
-    this._onTargetProxy = this._onTargetProxy.bind(this)
-    proxy.on(target, this._onTargetProxy)
+    if (proxy.isEnable()) {
+      this._onTargetProxy = this._onTargetProxy.bind(this)
+      proxy.on(target, this._onTargetProxy)
+    }
   },
 
   _onTargetProxy(obj, proxy) {
@@ -203,18 +199,23 @@ const Expression = _.dynamicClass({
     let prop = this.path[idx],
       o
 
-    if (idx + 1 < this.path.length && (o = obj[prop]))
-      obj[prop] = this._observe(proxy.obj(o), idx + 1)
+    if (idx + 1 < this.path.length && (o = obj[prop])) {
+      o = this._observe(proxy.obj(o), idx + 1)
+      if (proxy.isEnable()) obj[prop] = o
+    }
     return on(obj, prop, this.observeHandlers[idx])
   },
 
   _unobserve(obj, idx) {
     let prop = this.path[idx],
-      o, ret
+      o,
+      ret
 
     ret = un(obj, prop, this.observeHandlers[idx])
-    if (idx + 1 < this.path.length && (o = obj[prop]))
-      obj[prop] = this._unobserve(proxy.obj(o), idx + 1)
+    if (idx + 1 < this.path.length && (o = obj[prop])) {
+      o = this._unobserve(proxy.obj(o), idx + 1)
+      if (proxy.isEnable()) obj[prop] = o
+    }
     return ret
   },
 
@@ -239,9 +240,20 @@ const Expression = _.dynamicClass({
           oldVal = undefined
         }
         if (val) {
-          val = proxy.obj(val)
-          this._observe(val, idx + 1)
-          val = _.get(val, rpath)
+          let mobj = proxy.obj(val),
+            obj = this.obj
+
+          val = _.get(mobj, rpath)
+          mobj = this._observe(mobj, idx + 1)
+          if (true || proxy.isEnable()) {
+            // update proxy val
+            let i = 0
+            while (i < idx) {
+              obj = proxy.obj(obj[path[i++]])
+              if (!obj) return
+            }
+            obj[path[i]] = mobj
+          }
         } else {
           val = undefined
         }
@@ -318,6 +330,7 @@ export default {
       policies.sort((p1, p2) => {
         return p1.priority - p2.priority
       })
+      logger.info('register observe policy[%s], priority is %d', name, priority)
       return this
     },
     init(cfg) {
@@ -329,9 +342,10 @@ export default {
                 Observer.prototype[key] = val
               })
               config.policy = policy.name
+              logger.info('apply observe policy[%s], priority is %d', policy.name, policy.priority)
               return false
             }
-          }) !== false) throw Error('not supported')
+          }) !== false) throw Error('observer is not supported')
         inited = true
       }
       return this

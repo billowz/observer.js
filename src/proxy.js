@@ -2,7 +2,7 @@ import _ from 'utility'
 import configuration from './configuration'
 
 const toStr = Object.prototype.toString,
-  hasOwnProp = _.hasOwnProp,
+  hasOwn = Object.prototype.hasOwnProperty,
   LISTEN_CONFIG = 'proxyListenKey'
 
 configuration.register(LISTEN_CONFIG, '__PROXY_LISTENERS__')
@@ -66,12 +66,36 @@ export default function proxy(o) {
   return proxy.proxy(o)
 }
 
+let hasEnabled = false
 _.assign(proxy, {
   isEnable() {
-    return policy === defaultPolicy
+    return proxy.on !== _.emptyFunc
   },
   enable(policy) {
     applyPolicy(policy)
+    if (!hasEnabled) {
+      _.overrideHasOwnProlicy(function(prop) {
+        return hasOwn.call(proxy.obj(this), prop)
+      })
+      _.get = function(obj, expr, defVal, lastOwn, own) {
+        let i = 0,
+          path = _.parseExpr(expr, true),
+          l = path.length - 1,
+          prop
+
+        while (!_.isNil(obj) && i < l) {
+          prop = path[i++]
+          obj = proxy.obj(obj)
+          if (own && !hasOwn.call(obj, prop))
+            return defVal
+          obj = obj[prop]
+        }
+        obj = proxy.obj(obj)
+        prop = path[i]
+        return (i == l && !_.isNil(obj) && (own ? hasOwn.call(obj, prop) : prop in obj)) ? obj[prop] : defVal
+      }
+      hasEnabled = true
+    }
   },
   disable() {
     applyPolicy(defaultPolicy)
@@ -91,27 +115,4 @@ function applyPolicy(policy) {
   })
 }
 
-
 proxy.disable()
-
-_.get = function(obj, expr, defVal, lastOwn, own) {
-  let i = 0,
-    path = _.parseExpr(expr, true),
-    l = path.length - 1,
-    prop
-
-  while (!_.isNil(obj) && i < l) {
-    prop = path[i++]
-    obj = proxy.obj(obj)
-    if (own && !hasOwnProp(obj, prop))
-      return defVal
-    obj = obj[prop]
-  }
-  obj = proxy.obj(obj)
-  prop = path[i]
-  return (i == l && !_.isNil(obj) && (own ? hasOwnProp(obj, prop) : prop in obj)) ? obj[prop] : defVal
-}
-
-_.hasOwnProp = function(obj, prop) {
-  return hasOwnProp(proxy.obj(obj), prop)
-}

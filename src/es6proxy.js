@@ -9,6 +9,8 @@ configuration.register({
   es6ProxyKey: '__ES6_PROXY__'
 })
 
+const hasOwn = Object.prototype.hasOwnProperty
+
 core.registerPolicy('ES6Proxy', 1, function(config) {
   return window.Proxy && config.es6Proxy !== false
 }, function(config) {
@@ -19,13 +21,17 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
 
   proxy.enable({
     obj(obj) {
-      return obj ? _.getOwnProp(obj, es6SourceKey) || obj : obj
+      if (obj && hasOwn.call(obj, es6SourceKey))
+        return obj[es6SourceKey]
+      return obj
     },
     eq(o1, o2) {
       return o1 === o2 || (o1 && o2 && proxy.obj(o1) === proxy.obj(o2))
     },
     proxy(obj) {
-      return obj ? _.getOwnProp(obj, es6ProxyKey) : undefined
+      if (obj && hasOwn.call(obj, es6ProxyKey))
+        return obj[es6ProxyKey]
+      return obj
     }
   })
 
@@ -55,6 +61,7 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
     _objectProxy() {
       return new Proxy(this.obj, {
         set: (obj, prop, value) => {
+          console.log(obj, ', ', prop, ', ', value, ', ', this.listens[prop])
           if (this.listens[prop]) {
             let oldVal = obj[prop]
             obj[prop] = value
