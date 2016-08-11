@@ -24,7 +24,7 @@ module.exports = function(config) {
           // instrumenter, include, exclude, instrumenterConfig(codeGenerationOptions, noCompact)
           exclude: ['src/**/__tests__/**', 'node_modules/**'],
           instrumenterConfig: {
-            noCompact: true
+            //noCompact: true
           }
         })]
       },

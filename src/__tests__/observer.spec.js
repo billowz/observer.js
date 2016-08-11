@@ -2,7 +2,7 @@ import observer from '../index'
 import _ from 'utility'
 
 observer.init({
-  es6Proxy: false
+  es6Proxy: true
 })
 
 function test(name, obj, path, steps, done) {

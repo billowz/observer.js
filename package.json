@@ -53,10 +53,8 @@
     "rollup": "^0.34.1",
     "rollup-plugin-babel": "^2.6.1",
     "rollup-plugin-coverage": "^0.1.4",
-    "rollup-plugin-inject": "^1.4.1",
     "rollup-plugin-multi-entry": "^2.0.0",
     "rollup-plugin-node-resolve-ext": "^2.0.0",
-    "rollup-plugin-resolve-aliases": "^0.2.0",
     "rollup-plugin-uglify": "^1.0.1"
   }
 }

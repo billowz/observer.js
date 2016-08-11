@@ -232,20 +232,13 @@ const Expression = _.dynamicClass({
 
     return (prop, val, oldVal) => {
       if (ridx) {
-        if (oldVal) {
-          oldVal = proxy.obj(oldVal)
-          this._unobserve(oldVal, idx + 1)
-          oldVal = _.get(oldVal, rpath)
-        } else {
-          oldVal = undefined
-        }
         if (val) {
           let mobj = proxy.obj(val),
             obj = this.obj
 
           val = _.get(mobj, rpath)
           mobj = this._observe(mobj, idx + 1)
-          if (true || proxy.isEnable()) {
+          if (proxy.isEnable()) {
             // update proxy val
             let i = 0
             while (i < idx) {
@@ -257,6 +250,15 @@ const Expression = _.dynamicClass({
         } else {
           val = undefined
         }
+
+        if (oldVal) {
+          oldVal = proxy.obj(oldVal)
+          this._unobserve(oldVal, idx + 1)
+          oldVal = _.get(oldVal, rpath)
+        } else {
+          oldVal = undefined
+        }
+
         if (proxy.eq(val, oldVal))
           return
       }

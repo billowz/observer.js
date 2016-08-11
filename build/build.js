@@ -1,5 +1,4 @@
 var compile = require('./compile'),
-  inject = require('rollup-plugin-inject'),
   nodeResolve = require('rollup-plugin-node-resolve-ext'),
   babel = require('./rollup-babel'),
   pkg = require('../package.json'),

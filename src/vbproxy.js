@@ -24,16 +24,21 @@ const VBClassFactory = _.dynamicClass({
     this.initConstScript()
   },
   addDefProps(defProps) {
-    let defPropMap = this.defPropMap
+    let defPropMap = this.defPropMap,
+      props = []
 
     _.each(defProps || [], (prop) => {
       defPropMap[prop] = true
     })
-    this.defProps = _.keys(defPropMap)
+    for (let prop in defPropMap) {
+      if (hasOwn.call(defPropMap, prop))
+        props.push(prop)
+    }
+    this.defProps = props
     this.initReserveProps()
   },
   initReserveProps() {
-    this.reserveProps = RESERVE_PROPS.concat(_.keys(this.defPropMap) || [])
+    this.reserveProps = RESERVE_PROPS.concat(this.defProps)
     this.reserveArrayProps = this.reserveProps.concat(RESERVE_ARRAY_PROPS)
     this.reservePropMap = _.reverseConvert(this.reserveProps)
     this.reserveArrayPropMap = _.reverseConvert(this.reserveArrayProps)

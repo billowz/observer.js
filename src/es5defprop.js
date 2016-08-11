@@ -2,6 +2,11 @@ import _ from 'utility'
 import core from './core'
 import proxy from './proxy'
 import VBClassFactory from './vbproxy'
+import configuration from './configuration'
+
+configuration.register({
+  defaultProps: []
+})
 
 const policy = {
   _init() {
@@ -103,6 +108,7 @@ core.registerPolicy('DefineGetterAndSetter', 20, function(config) {
 core.registerPolicy('VBScriptProxy', 30, function(config) {
   return VBClassFactory.isSupport()
 }, function(config) {
+
   let init = policy._init,
     factory
 
@@ -117,7 +123,7 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
       return obj ? factory.proxy(obj) : obj
     }
   })
-  factory = core.vbfactory = new VBClassFactory([proxy.listenKey, config.observerKey, config.expressionKey], proxy.change)
+  factory = core.vbfactory = new VBClassFactory([proxy.listenKey, config.observerKey, config.expressionKey].concat(config.defaultProps || []), proxy.change)
 
   return _.assignIf({
     _init() {
