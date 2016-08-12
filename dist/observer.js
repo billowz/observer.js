@@ -1,5 +1,5 @@
 /*
- * observer.js v0.2.7 built in Thu, 11 Aug 2016 10:25:10 GMT
+ * observer.js v0.2.7 built in Fri, 12 Aug 2016 04:19:58 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -166,7 +166,6 @@ var Observer = _.dynamicClass({
     });
   },
   _addChangeRecord: function (attr, oldVal) {
-    console.log('add', attr, oldVal);
     if (!config.lazy) {
       this._fire(attr, this.obj[attr], oldVal);
     } else if (!(attr in this.changeRecords)) {
@@ -567,7 +566,6 @@ core.registerPolicy('ES6Proxy', 1, function (config) {
 
       return new Proxy(this.obj, {
         set: function (obj, prop, value) {
-          console.log(obj, ', ', prop, ', ', value, ', ', _this.listens[prop]);
           if (_this.listens[prop]) {
             var oldVal = obj[prop];
             obj[prop] = value;

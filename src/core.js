@@ -45,7 +45,6 @@ const Observer = _.dynamicClass({
   },
 
   _addChangeRecord(attr, oldVal) {
-    console.log('add', attr, oldVal)
     if (!config.lazy) {
       this._fire(attr, this.obj[attr], oldVal)
     } else if (!(attr in this.changeRecords)) {

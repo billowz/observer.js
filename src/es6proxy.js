@@ -61,7 +61,6 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
     _objectProxy() {
       return new Proxy(this.obj, {
         set: (obj, prop, value) => {
-          console.log(obj, ', ', prop, ', ', value, ', ', this.listens[prop])
           if (this.listens[prop]) {
             let oldVal = obj[prop]
             obj[prop] = value

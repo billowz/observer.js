@@ -34,6 +34,7 @@
     "utility.js": "~0.0.10"
   },
   "devDependencies": {
+    "babel-plugin-istanbul": "^1.0.3",
     "babel-plugin-transform-es3-member-expression-literals": "^6.8.0",
     "babel-plugin-transform-es3-property-literals": "^6.8.0",
     "babel-preset-es2015-loose-rollup": "^7.0.0",
@@ -52,9 +53,9 @@
     "phantomjs-prebuilt": "^2.1.7",
     "rollup": "^0.34.1",
     "rollup-plugin-babel": "^2.6.1",
-    "rollup-plugin-coverage": "^0.1.4",
     "rollup-plugin-multi-entry": "^2.0.0",
     "rollup-plugin-node-resolve-ext": "^2.0.0",
-    "rollup-plugin-uglify": "^1.0.1"
+    "rollup-plugin-uglify": "^1.0.1",
+    "rollup-watch": "^2.5.0"
   }
 }

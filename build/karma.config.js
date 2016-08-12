@@ -1,6 +1,5 @@
 var babel = require('./rollup-babel'),
   multiEntry = require('rollup-plugin-multi-entry'),
-  coverage = require('rollup-plugin-coverage'),
   nodeResolve = require('rollup-plugin-node-resolve-ext')
 
 module.exports = function(config) {
@@ -20,13 +19,9 @@ module.exports = function(config) {
           alias: {
             'utility': 'utility.js'
           }
-        }), babel(), multiEntry(), coverage({
-          // instrumenter, include, exclude, instrumenterConfig(codeGenerationOptions, noCompact)
-          exclude: ['src/**/__tests__/**', 'node_modules/**'],
-          instrumenterConfig: {
-            //noCompact: true
-          }
-        })]
+        }), babel({
+          plugins: ['istanbul']
+        }), multiEntry()]
       },
       bundle: {
         sourceMap: 'inline',
