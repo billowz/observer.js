@@ -1,4 +1,5 @@
 import _ from 'utility'
+import logger from './log'
 
 const hasOwn = Object.prototype.hasOwnProperty,
   RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(','),
@@ -35,6 +36,7 @@ const VBClassFactory = _.dynamicClass({
         props.push(prop)
     }
     this.defProps = props
+    logger.info('VBProxy default props is: ', props.join(','))
     this.initReserveProps()
   },
   initReserveProps() {

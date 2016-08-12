@@ -1,5 +1,5 @@
 /*
- * observer.js v0.2.7 built in Fri, 12 Aug 2016 04:24:38 GMT
+ * observer.js v0.2.7 built in Fri, 12 Aug 2016 04:37:26 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -613,6 +613,7 @@ var VBClassFactory = _.dynamicClass({
       if (hasOwn$2.call(defPropMap, prop)) props.push(prop);
     }
     this.defProps = props;
+    logger.info('VBProxy default props is: ', props.join(','));
     this.initReserveProps();
   },
   initReserveProps: function () {
@@ -960,7 +961,7 @@ core.registerPolicy('VBScriptProxy', 30, function (config) {
       return obj ? factory.proxy(obj) : obj;
     }
   });
-  factory = core.vbfactory = new VBClassFactory([proxy$1.listenKey, config.observerKey, config.expressionKey].concat(config.defaultProps || []), proxy$1.change);
+  factory = core.vbfactory = new VBClassFactory([config.proxyListenKey, config.observerKey, config.expressionKey].concat(config.defaultProps || []), proxy$1.change);
 
   return _.assignIf({
     _init: function () {

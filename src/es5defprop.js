@@ -123,7 +123,7 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
       return obj ? factory.proxy(obj) : obj
     }
   })
-  factory = core.vbfactory = new VBClassFactory([proxy.listenKey, config.observerKey, config.expressionKey].concat(config.defaultProps || []), proxy.change)
+  factory = core.vbfactory = new VBClassFactory([config.proxyListenKey, config.observerKey, config.expressionKey].concat(config.defaultProps || []), proxy.change)
 
   return _.assignIf({
     _init() {
