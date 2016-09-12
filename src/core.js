@@ -4,7 +4,10 @@ import configuration from './configuration'
 import logger from './log'
 
 const timeoutframe = _.timeoutframe,
-  config = configuration.get()
+  config = configuration.get(),
+  {
+    LinkedList
+  } = _
 
 configuration.register({
   lazy: true,
@@ -27,7 +30,7 @@ const Observer = _.dynamicClass({
   _fire(attr, val, oldVal) {
     let handlers = this.listens[attr]
     if (handlers && (!proxy.eq(val, oldVal) || _.isArray(val)))
-      _.each(handlers.slice(), (handler) => {
+      handlers.each((handler) => {
         handler(attr, val, oldVal, this.target)
       })
   },
@@ -60,6 +63,7 @@ const Observer = _.dynamicClass({
   checkHandler(handler) {
     if (!_.isFunc(handler))
       throw TypeError('Invalid Observe Handler')
+    return handler
   },
 
   hasListen(attr, handler) {
@@ -69,52 +73,47 @@ const Observer = _.dynamicClass({
       case 1:
         if (_.isFunc(attr)) {
           return !_.each(this.listens, (handlers) => {
-            return _.lastIndexOf(handlers, attr) !== -1
+            return handlers.contains(attr)
           })
         }
         return !!this.listens[attr]
       default:
         this.checkHandler(handler)
-        return _.lastIndexOf(this.listens[attr], handler) !== -1
+        let handlers = this.listens[attr]
+        return !!handlers && handlers.contains(handler)
     }
   },
 
   on(attr, handler) {
     let handlers
-
     this.checkHandler(handler)
-    if (!(handlers = this.listens[attr])) {
-      this.listens[attr] = [handler]
+
+    if (!(handlers = this.listens[attr]))
+      this.listens[attr] = handlers = new LinkedList()
+
+    if (handlers.empty()) {
       this.watchPropNum++;
       this._watch(attr)
-    } else {
-      handlers.push(handler)
     }
-    return this.target
-  },
 
-  _cleanListen(attr) {
-    this.listens[attr] = undefined
-    this.watchPropNum--;
-    this._unwatch(attr)
+    handlers.push(handler)
+    return this.target
   },
 
   un(attr, handler) {
     let handlers = this.listens[attr]
 
-    if (handlers) {
+    if (handlers && !handlers.empty()) {
       if (arguments.length == 1) {
-        this._cleanListen(attr)
+        handlers.clean()
+        this.watchPropNum--;
+        this._unwatch(attr)
       } else {
         this.checkHandler(handler)
-
-        let i = handlers.length
-        while (i--) {
-          if (handlers[i] === handler) {
-            handlers.splice(i, 1)
-            if (!handlers.length) this._cleanListen(attr)
-            break
-          }
+        handlers.remove(handler)
+        if (handlers.empty()) {
+          this.watchPropNum--;
+          this._unwatch(attr)
         }
       }
     }
@@ -178,7 +177,7 @@ const Expression = _.dynamicClass({
   constructor(target, expr, path) {
     this.id = expressionIdGenerator++
       this.expr = expr
-    this.handlers = []
+    this.handlers = new LinkedList()
     this.observers = []
     this.path = path || _.parseExpr(expr)
     this.observeHandlers = this._initObserveHandlers()
@@ -261,42 +260,30 @@ const Expression = _.dynamicClass({
         if (proxy.eq(val, oldVal))
           return
       }
-      _.each(this.handlers.slice(), function(h) {
-        h(this.expr, val, oldVal, this.target)
-      }, this)
+      this.handlers.each(handler => handler(this.expr, val, oldVal, this.target))
     }
   },
   checkHandler(handler) {
     if (!_.isFunc(handler))
       throw TypeError('Invalid Observe Handler')
+    return handler
   },
   on(handler) {
-    this.checkHandler(handler)
-    this.handlers.push(handler)
+    this.handlers.push(this.checkHandler(handler))
     return this
   },
 
   un(handler) {
     if (!arguments.length) {
-      this.handlers = []
+      this.handlers.clean()
     } else {
-      this.checkHandler(handler)
-
-      let handlers = this.handlers,
-        i = handlers.length
-
-      while (i--) {
-        if (handlers[i] === handler) {
-          handlers.splice(i, 1)
-          break
-        }
-      }
+      this.handlers.remove(this.checkHandler(handler))
     }
     return this
   },
 
   hasListen(handler) {
-    return arguments.length ? _.lastIndexOf(this.handlers, handler) != -1 : !!this.handlers.length
+    return arguments.length ? this.handlers.contains(this.checkHandler(handler)) : !this.handlers.empty()
   },
 
   destory() {

@@ -3,7 +3,10 @@ import configuration from './configuration'
 
 const toStr = Object.prototype.toString,
   hasOwn = Object.prototype.hasOwnProperty,
-  LISTEN_CONFIG = 'proxyListenKey'
+  LISTEN_CONFIG = 'proxyListenKey',
+  {
+    LinkedList
+  } = _
 
 configuration.register(LISTEN_CONFIG, '__PROXY_LISTENERS__')
 
@@ -22,12 +25,8 @@ const defaultPolicy = {
     change(obj, p) {
       let handlers = _.getOwnProp(obj, configuration.get(LISTEN_CONFIG))
 
-      if (handlers) {
-        let i = handlers.length
-        while (i--) {
-          handlers[i](obj, p)
-        }
-      }
+      if (handlers)
+        handlers.each(handler => handler(obj, p))
     },
     on(obj, handler) {
       if (!_.isFunc(handler))
@@ -36,24 +35,14 @@ const defaultPolicy = {
         handlers = _.getOwnProp(obj, key)
 
       if (!handlers)
-        obj[key] = handlers = []
+        obj[key] = handlers = new LinkedList()
       handlers.push(handler)
     },
     un(obj, handler) {
       let handlers = _.getOwnProp(obj, configuration.get(LISTEN_CONFIG))
 
-      if (handlers) {
-        if (_.isFunc(handler)) {
-          let i = handlers.length
-
-          while (i-- > 0) {
-            if (handlers[i] === handler) {
-              handlers.splice(i, 1)
-              return true
-            }
-          }
-        }
-      }
+      if (handlers && _.isFunc(handler))
+        handlers.remove(handler)
       return false
     },
     clean(obj) {
