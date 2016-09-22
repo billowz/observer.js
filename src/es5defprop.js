@@ -9,25 +9,28 @@ configuration.register({
 })
 
 const policy = {
-  _init() {
+  init() {
     this.watchers = {}
   },
-  _destroy() {
-    for (let attr in this.watchers) {
-      if (this.watchers[attr])
-        this._unwatch(attr)
-    }
+  beforeDestroy() {
+    let watchers = this.watchers,
+      attr
+    for (attr in watchers)
+      this.unwatch(attr)
     this.watchers = undefined
   },
-  _watch(attr) {
-    if (!this.watchers[attr]) {
-      this._defineProperty(attr, this.obj[attr])
-      this.watchers[attr] = true
+  watch(attr) {
+    let watchers = this.watchers
+    if (!watchers[attr]) {
+      this.defineProperty(attr, this.obj[attr])
+      watchers[attr] = true
     }
   },
-  _unwatch(attr) {
-    if (this.watchers[attr]) {
-      this._undefineProperty(attr, this.obj[attr])
+  unwatch(attr) {
+    let watchers = this.watchers
+    if (watchers[attr]) {
+      this.undefineProperty(attr, this.obj[attr])
+      watchers[attr] = false
     }
   }
 }
@@ -50,9 +53,8 @@ core.registerPolicy('ES5DefineProperty', 10, function(config) {
   }
   return false
 }, function(config) {
-  proxy.disable()
   return _.assignIf({
-    _defineProperty(attr, value) {
+    defineProperty(attr, value) {
       Object.defineProperty(this.target, attr, {
         enumerable: true,
         configurable: true,
@@ -62,11 +64,11 @@ core.registerPolicy('ES5DefineProperty', 10, function(config) {
         set: (val) => {
           let oldVal = value
           value = val
-          this._addChangeRecord(attr, oldVal)
+          this.addChangeRecord(attr, oldVal)
         }
       })
     },
-    _undefineProperty(attr, value) {
+    undefineProperty(attr, value) {
       Object.defineProperty(this.target, attr, {
         enumerable: true,
         configurable: true,
@@ -81,9 +83,8 @@ core.registerPolicy('ES5DefineProperty', 10, function(config) {
 core.registerPolicy('DefineGetterAndSetter', 20, function(config) {
   return '__defineGetter__' in {}
 }, function(config) {
-  proxy.disable()
   return _.assignIf({
-    _defineProperty(attr, value) {
+    defineProperty(attr, value) {
       this.target.__defineGetter__(attr, () => {
         return value
       })
@@ -91,10 +92,10 @@ core.registerPolicy('DefineGetterAndSetter', 20, function(config) {
         let oldVal = value
 
         value = val
-        this._addChangeRecord(attr, oldVal)
+        this.addChangeRecord(attr, oldVal)
       })
     },
-    _undefineProperty(attr, value) {
+    undefineProperty(attr, value) {
       this.target.__defineGetter__(attr, () => {
         return value
       })
@@ -109,43 +110,36 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
   return VBClassFactory.isSupport()
 }, function(config) {
 
-  let init = policy._init,
-    factory
+  let factory
 
   proxy.enable({
     obj(obj) {
-      return obj ? factory.obj(obj) : obj
+      return factory.obj(obj)
     },
     eq(o1, o2) {
       return o1 === o2 || (o1 && o2 && factory.obj(o1) === factory.obj(o2))
     },
     proxy(obj) {
-      return obj ? factory.proxy(obj) : obj
+      return factory.proxy(obj) || obj
     }
   })
-  factory = core.vbfactory = new VBClassFactory([config.proxyListenKey, config.observerKey, config.expressionKey].concat(config.defaultProps || []), proxy.change)
+  factory = core.vbfactory = new VBClassFactory([
+    config.proxyListenKey, config.observerKey, config.expressionKey, _.LinkedList.ListKey
+  ].concat(config.defaultProps || []), proxy.change)
 
   return _.assignIf({
-    _init() {
-      init.call(this)
-      this.obj = factory.obj(this.target)
-    },
-    _defineProperty(attr, value) {
-      let obj = this.obj,
-        desc = factory.descriptor(obj)
+    defineProperty(attr, value) {
+      let obj = this.obj
 
-      if (!desc)
-        desc = factory.descriptor(factory.create(obj))
-
-      this.target = desc.defineProperty(attr, {
+      this.target = (factory.descriptor(obj) || factory.create(obj)).defineProperty(attr, {
         set: (val) => {
-          let oldVal = this.obj[attr]
-          this.obj[attr] = val
-          this._addChangeRecord(attr, oldVal)
+          let oldVal = obj[attr]
+          obj[attr] = val
+          this.addChangeRecord(attr, oldVal)
         }
       })
     },
-    _undefineProperty(attr, value) {
+    undefineProperty(attr, value) {
       let obj = this.obj,
         desc = factory.descriptor(obj)
 
@@ -154,7 +148,8 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
           value: value
         })
         if (!desc.hasAccessor()) {
-          this.target = factory.destroy(obj)
+          this.target = obj
+          factory.destroy(desc)
         }
       }
     }

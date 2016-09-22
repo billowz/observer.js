@@ -30,24 +30,23 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
     },
     proxy(obj) {
       if (obj && hasOwn.call(obj, es6ProxyKey))
-        return obj[es6ProxyKey]
+        return obj[es6ProxyKey] || obj
       return obj
     }
   })
 
   return {
-    _init() {
-      this.obj = proxy.obj(this.target)
+    init() {
       this.es6proxy = false
     },
-    _destroy() {
+    beforeDestroy() {
       this.es6proxy = false
       this.obj[es6ProxyKey] = undefined
       proxy.change(this.obj, undefined)
     },
-    _watch(attr) {
+    watch(attr) {
       if (!this.es6proxy) {
-        let _proxy = this._objectProxy(),
+        let _proxy = this.objectProxy(),
           obj = this.obj
 
         this.target = _proxy
@@ -57,14 +56,14 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
         this.es6proxy = true
       }
     },
-    _unwatch(attr) {},
-    _objectProxy() {
+    unwatch(attr) {},
+    objectProxy() {
       return new Proxy(this.obj, {
         set: (obj, prop, value) => {
           if (this.listens[prop]) {
             let oldVal = obj[prop]
             obj[prop] = value
-            this._addChangeRecord(prop, oldVal)
+            this.addChangeRecord(prop, oldVal)
           } else {
             obj[prop] = value
           }

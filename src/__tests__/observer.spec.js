@@ -13,13 +13,13 @@ function test(name, obj, path, steps, done) {
     return 'watch' in step ? step.watch : step.val
   }
 
-  function handler(path2, val, oldVal) {
+  function handler(path2, val, oldVal, o, eq) {
     let _oldVal = watchVal(steps[step - 1]),
       _val = watchVal(steps[step])
 
-    logger.debug('step[%s]: handler %s(%s) %s(%s) to %s(%s)', step, path, path2, oldVal, _oldVal, val, _val)
-
-    expect(Array.prototype.slice.call(arguments)).eql([path, _val, _oldVal, obj])
+    logger.debug('step[%s]: handler %s(%s) %s(%s) to %s(%s) %s(%s)', step, path, path2, oldVal, _oldVal, val, _val, _oldVal === _val, eq)
+    console.log(arguments)
+    expect(Array.prototype.slice.call(arguments)).eql([path, _val, _oldVal, obj, _oldVal === _val])
 
     if (!steps[step + 1]) {
       logger.debug('test end')

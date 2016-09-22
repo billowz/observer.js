@@ -18,24 +18,29 @@ configuration.register({
 
 const Observer = _.dynamicClass({
   constructor(target) {
-    this.target = target
     this.obj = target
+    this.target = target
     this.listens = {}
     this.changeRecords = {}
-    this._notify = this._notify.bind(this)
+    this.notify = this.notify.bind(this)
     this.watchPropNum = 0
-    this._init()
+    this.init()
   },
 
-  _fire(attr, val, oldVal) {
+  fire(attr, val, oldVal) {
     let handlers = this.listens[attr]
-    if (handlers && (!proxy.eq(val, oldVal) || _.isArray(val)))
-      handlers.each((handler) => {
-        handler(attr, val, oldVal, this.target)
-      })
+
+    if (handlers) {
+      let primitive = _.isPrimitive(val),
+        eq = proxy.eq(val, oldVal)
+      if (!primitive || !eq)
+        handlers.each((handler) => {
+          handler(attr, val, oldVal, this.target, eq)
+        })
+    }
   },
 
-  _notify() {
+  notify() {
     let obj = this.obj,
       changeRecords = this.changeRecords
 
@@ -43,27 +48,20 @@ const Observer = _.dynamicClass({
     this.changeRecords = {}
 
     _.each(changeRecords, (val, attr) => {
-      this._fire(attr, obj[attr], val)
+      this.fire(attr, obj[attr], val)
     })
   },
 
-  _addChangeRecord(attr, oldVal) {
+  addChangeRecord(attr, oldVal) {
     if (!config.lazy) {
-      this._fire(attr, this.obj[attr], oldVal)
+      this.fire(attr, this.obj[attr], oldVal)
     } else if (!(attr in this.changeRecords)) {
       this.changeRecords[attr] = oldVal
-      if (!this.request_frame) {
+      if (!this.request_frame)
         this.request_frame = (config.animationFrame ?
-          window.requestAnimationFrame(this._notify) :
-          timeoutframe.request(this._notify))
-      }
+          window.requestAnimationFrame(this.notify) :
+          timeoutframe.request(this.notify))
     }
-  },
-
-  checkHandler(handler) {
-    if (!_.isFunc(handler))
-      throw TypeError('Invalid Observe Handler')
-    return handler
   },
 
   hasListen(attr, handler) {
@@ -78,7 +76,6 @@ const Observer = _.dynamicClass({
         }
         return !!this.listens[attr]
       default:
-        this.checkHandler(handler)
         let handlers = this.listens[attr]
         return !!handlers && handlers.contains(handler)
     }
@@ -86,14 +83,13 @@ const Observer = _.dynamicClass({
 
   on(attr, handler) {
     let handlers
-    this.checkHandler(handler)
 
     if (!(handlers = this.listens[attr]))
       this.listens[attr] = handlers = new LinkedList()
 
     if (handlers.empty()) {
       this.watchPropNum++;
-      this._watch(attr)
+      this.watch(attr)
     }
 
     handlers.push(handler)
@@ -107,13 +103,12 @@ const Observer = _.dynamicClass({
       if (arguments.length == 1) {
         handlers.clean()
         this.watchPropNum--;
-        this._unwatch(attr)
+        this.unwatch(attr)
       } else {
-        this.checkHandler(handler)
         handlers.remove(handler)
         if (handlers.empty()) {
           this.watchPropNum--;
-          this._unwatch(attr)
+          this.unwatch(attr)
         }
       }
     }
@@ -126,17 +121,17 @@ const Observer = _.dynamicClass({
       this.request_frame = undefined
     }
     let obj = this.obj
-    this._destroy()
+    this.beforeDestroy()
     this.obj = undefined
     this.target = undefined
     this.listens = undefined
     this.changeRecords = undefined
     return obj
   },
-  _init: _.emptyFunc,
-  _destroy: _.emptyFunc,
-  _watch: _.emptyFunc,
-  _unwatch: _.emptyFunc
+  init: _.emptyFunc,
+  beforeDestroy: _.emptyFunc,
+  watch: _.emptyFunc,
+  unwatch: _.emptyFunc
 })
 
 function hasListen(obj, attr, handler) {
@@ -150,7 +145,6 @@ function on(obj, attr, handler) {
   let observer = _.getOwnProp(obj, config.observerKey)
 
   if (!observer) {
-    obj = proxy.obj(obj)
     observer = new Observer(obj)
     obj[config.observerKey] = observer
   }
@@ -175,14 +169,14 @@ let expressionIdGenerator = 0
 const Expression = _.dynamicClass({
 
   constructor(target, expr, path) {
-    this.id = expressionIdGenerator++
-      this.expr = expr
+    this.id = expressionIdGenerator++;
+    this.expr = expr
     this.handlers = new LinkedList()
     this.observers = []
     this.path = path || _.parseExpr(expr)
     this.observeHandlers = this._initObserveHandlers()
-    this.obj = proxy.obj(target)
-    this.target = this._observe(this.obj, 0)
+    this.obj = target
+    this.target = this._observe(target, 0)
     if (proxy.isEnable()) {
       this._onTargetProxy = this._onTargetProxy.bind(this)
       proxy.on(target, this._onTargetProxy)
@@ -228,17 +222,20 @@ const Expression = _.dynamicClass({
       rpath = this.path.slice(idx + 1),
       ridx = this.path.length - idx - 1
 
-    return (prop, val, oldVal) => {
+    return (prop, val, oldVal, t, eq) => {
       if (ridx) {
+        if (eq) return
+
         if (val) {
-          let mobj = proxy.obj(val),
-            obj = this.obj
+          let mobj = proxy.obj(val)
 
           val = _.get(mobj, rpath)
           mobj = this._observe(mobj, idx + 1)
           if (proxy.isEnable()) {
             // update proxy val
-            let i = 0
+            let i = 0,
+              obj = this.obj
+
             while (i < idx) {
               obj = proxy.obj(obj[path[i++]])
               if (!obj) return
@@ -257,19 +254,17 @@ const Expression = _.dynamicClass({
           oldVal = undefined
         }
 
-        if (proxy.eq(val, oldVal))
+        let primitive = _.isPrimitive(val)
+        eq = proxy.eq(val, oldVal)
+
+        if (primitive && eq)
           return
       }
-      this.handlers.each(handler => handler(this.expr, val, oldVal, this.target))
+      this.handlers.each(handler => handler(this.expr, val, oldVal, this.target, eq))
     }
   },
-  checkHandler(handler) {
-    if (!_.isFunc(handler))
-      throw TypeError('Invalid Observe Handler')
-    return handler
-  },
   on(handler) {
-    this.handlers.push(this.checkHandler(handler))
+    this.handlers.push(handler)
     return this
   },
 
@@ -277,13 +272,13 @@ const Expression = _.dynamicClass({
     if (!arguments.length) {
       this.handlers.clean()
     } else {
-      this.handlers.remove(this.checkHandler(handler))
+      this.handlers.remove(handler)
     }
     return this
   },
 
   hasListen(handler) {
-    return arguments.length ? this.handlers.contains(this.checkHandler(handler)) : !this.handlers.empty()
+    return arguments.length ? this.handlers.contains(handler) : !this.handlers.empty()
   },
 
   destory() {
@@ -301,14 +296,74 @@ const Expression = _.dynamicClass({
   }
 })
 
-
 let policies = [],
   policyNames = {}
 
 let inited = false
 
 export default {
-  registerPolicy(name, priority, checker, policy) {
+  on(obj, expr, handler) {
+      let path = _.parseExpr(expr)
+
+      obj = proxy.obj(obj)
+      if (path.length > 1) {
+        let map = _.getOwnProp(obj, config.expressionKey),
+          exp = map ? map[expr] : undefined
+
+        if (!exp) {
+          exp = new Expression(obj, expr, path)
+          if (!map)
+            map = obj[config.expressionKey] = {}
+          map[expr] = exp
+        }
+        exp.on(handler)
+        return exp.target
+      }
+      return on(obj, expr, handler)
+    },
+    un(obj, expr, handler) {
+      let path = _.parseExpr(expr)
+
+      obj = proxy.obj(obj)
+      if (path.length > 1) {
+        let map = _.getOwnProp(obj, config.expressionKey),
+          exp = map ? map[expr] : undefined
+
+        if (exp) {
+          arguments.length == 2 ? exp.un() : exp.un(handler)
+          if (!exp.hasListen()) {
+            map[expr] = undefined
+            return exp.destory()
+          }
+          return exp.target
+        }
+        return proxy.proxy(obj) || obj
+      }
+      return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler)
+    },
+    hasListen(obj, expr, handler) {
+      let l = arguments.length
+
+      obj = proxy.obj(obj)
+      switch (l) {
+        case 1:
+          return hasListen(obj)
+        case 2:
+          if (_.isFunc(expr))
+            return hasListen(obj, expr)
+      }
+
+      let path = _.parseExpr(expr)
+
+      if (path.length > 1) {
+        let map = _.getOwnProp(obj, config.expressionKey),
+          exp = map ? map[expr] : undefined
+
+        return exp ? (l == 2 ? true : exp.hasListen(handler)) : false
+      }
+      return hasListen.apply(null, arguments)
+    },
+    registerPolicy(name, priority, checker, policy) {
       policies.push({
         name: name,
         priority: priority,
@@ -337,66 +392,5 @@ export default {
         inited = true
       }
       return this
-    },
-
-    on(obj, expr, handler) {
-      let path = _.parseExpr(expr)
-
-      if (path.length > 1) {
-        let map = _.getOwnProp(obj, config.expressionKey),
-          exp = map ? map[expr] : undefined
-
-        if (!exp) {
-          exp = new Expression(obj, expr, path)
-          if (!map)
-            map = obj[config.expressionKey] = {}
-          map[expr] = exp
-        }
-        exp.on(handler)
-        return exp.target
-      }
-      return on(obj, expr, handler)
-    },
-
-    un(obj, expr, handler) {
-      let path = _.parseExpr(expr)
-
-      if (path.length > 1) {
-        let map = _.getOwnProp(obj, config.expressionKey),
-          exp = map ? map[expr] : undefined
-
-        if (exp) {
-          arguments.length == 2 ? exp.un() : exp.un(handler)
-          if (!exp.hasListen()) {
-            map[expr] = undefined
-            return exp.destory()
-          }
-          return exp.target
-        }
-        return proxy.proxy(obj) || obj
-      }
-      return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler)
-    },
-
-    hasListen(obj, expr, handler) {
-      let l = arguments.length
-
-      switch (l) {
-        case 1:
-          return hasListen(obj)
-        case 2:
-          if (_.isFunc(expr))
-            return hasListen(obj, expr)
-      }
-
-      let path = _.parseExpr(expr)
-
-      if (path.length > 1) {
-        let map = _.getOwnProp(obj, config.expressionKey),
-          exp = map ? map[expr] : undefined
-
-        return exp ? (l == 2 ? true : exp.hasListen(handler)) : false
-      }
-      return hasListen.apply(window, arguments)
     }
 }

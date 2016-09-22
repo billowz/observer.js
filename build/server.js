@@ -29,7 +29,7 @@ function devServer(options) {
   function addContent(map, path, content) {
     if (path) {
       map[path[0] === '/' ? path : '/' + path] = content
-      console.log('apply file:' + path)
+      console.log('apply file:' + path + ' (' + size(content) + ')')
     }
   }
 
@@ -72,11 +72,11 @@ function devServer(options) {
 
       addContent(map, main.dest, main.code)
       if (main.sourcemap)
-        addContent(map, main.sourcemapDest, main.sourcemap)
+        addContent(map, main.sourcemapDest, JSON.stringify(main.sourcemap))
       if (mini) {
         addContent(map, mini.dest, mini.code)
         if (mini.sourcemap)
-          addContent(map, mini.sourcemapDest, mini.sourcemap)
+          addContent(map, mini.sourcemapDest, JSON.stringify(mini.sourcemap))
         if (gzip)
           addContent(map, gzip.dest, gzip.code)
       }
@@ -103,6 +103,11 @@ function devServer(options) {
   console.log('listen localhost:' + options.port)
   return app
 }
+
+function size(buf) {
+  return (buf.length / 1024).toFixed(2) + 'kb'
+}
+
 
 devServer(Object.assign({}, require('./rollup.all.config'), {
   base: path.join(__dirname, '../'),

@@ -1,5 +1,5 @@
 /*
- * observer.js v0.3.1 built in Mon, 12 Sep 2016 05:40:43 GMT
+ * observer.js v0.3.2 built in Thu, 22 Sep 2016 10:47:10 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -128,23 +128,30 @@
 
   var Observer = _.dynamicClass({
     constructor: function (target) {
-      this.target = target;
       this.obj = target;
+      this.target = target;
       this.listens = {};
       this.changeRecords = {};
-      this._notify = this._notify.bind(this);
+      this.notify = this.notify.bind(this);
       this.watchPropNum = 0;
-      this._init();
+      this.init();
     },
-    _fire: function (attr, val, oldVal) {
+    fire: function (attr, val, oldVal) {
       var _this = this;
 
       var handlers = this.listens[attr];
-      if (handlers && (!proxy$1.eq(val, oldVal) || _.isArray(val))) handlers.each(function (handler) {
-        handler(attr, val, oldVal, _this.target);
-      });
+
+      if (handlers) {
+        (function () {
+          var primitive = _.isPrimitive(val),
+              eq = proxy$1.eq(val, oldVal);
+          if (!primitive || !eq) handlers.each(function (handler) {
+            handler(attr, val, oldVal, _this.target, eq);
+          });
+        })();
+      }
     },
-    _notify: function () {
+    notify: function () {
       var _this2 = this;
 
       var obj = this.obj,
@@ -154,22 +161,16 @@
       this.changeRecords = {};
 
       _.each(changeRecords, function (val, attr) {
-        _this2._fire(attr, obj[attr], val);
+        _this2.fire(attr, obj[attr], val);
       });
     },
-    _addChangeRecord: function (attr, oldVal) {
+    addChangeRecord: function (attr, oldVal) {
       if (!config.lazy) {
-        this._fire(attr, this.obj[attr], oldVal);
+        this.fire(attr, this.obj[attr], oldVal);
       } else if (!(attr in this.changeRecords)) {
         this.changeRecords[attr] = oldVal;
-        if (!this.request_frame) {
-          this.request_frame = config.animationFrame ? window.requestAnimationFrame(this._notify) : timeoutframe.request(this._notify);
-        }
+        if (!this.request_frame) this.request_frame = config.animationFrame ? window.requestAnimationFrame(this.notify) : timeoutframe.request(this.notify);
       }
-    },
-    checkHandler: function (handler) {
-      if (!_.isFunc(handler)) throw TypeError('Invalid Observe Handler');
-      return handler;
     },
     hasListen: function (attr, handler) {
       switch (arguments.length) {
@@ -183,20 +184,18 @@
           }
           return !!this.listens[attr];
         default:
-          this.checkHandler(handler);
           var handlers = this.listens[attr];
           return !!handlers && handlers.contains(handler);
       }
     },
     on: function (attr, handler) {
       var handlers = void 0;
-      this.checkHandler(handler);
 
       if (!(handlers = this.listens[attr])) this.listens[attr] = handlers = new LinkedList();
 
       if (handlers.empty()) {
         this.watchPropNum++;
-        this._watch(attr);
+        this.watch(attr);
       }
 
       handlers.push(handler);
@@ -209,13 +208,12 @@
         if (arguments.length == 1) {
           handlers.clean();
           this.watchPropNum--;
-          this._unwatch(attr);
+          this.unwatch(attr);
         } else {
-          this.checkHandler(handler);
           handlers.remove(handler);
           if (handlers.empty()) {
             this.watchPropNum--;
-            this._unwatch(attr);
+            this.unwatch(attr);
           }
         }
       }
@@ -227,7 +225,7 @@
         this.request_frame = undefined;
       }
       var obj = this.obj;
-      this._destroy();
+      this.beforeDestroy();
       this.obj = undefined;
       this.target = undefined;
       this.listens = undefined;
@@ -235,10 +233,10 @@
       return obj;
     },
 
-    _init: _.emptyFunc,
-    _destroy: _.emptyFunc,
-    _watch: _.emptyFunc,
-    _unwatch: _.emptyFunc
+    init: _.emptyFunc,
+    beforeDestroy: _.emptyFunc,
+    watch: _.emptyFunc,
+    unwatch: _.emptyFunc
   });
 
   function hasListen(obj, attr, handler) {
@@ -251,7 +249,6 @@
     var observer = _.getOwnProp(obj, config.observerKey);
 
     if (!observer) {
-      obj = proxy$1.obj(obj);
       observer = new Observer(obj);
       obj[config.observerKey] = observer;
     }
@@ -281,8 +278,8 @@
       this.observers = [];
       this.path = path || _.parseExpr(expr);
       this.observeHandlers = this._initObserveHandlers();
-      this.obj = proxy$1.obj(target);
-      this.target = this._observe(this.obj, 0);
+      this.obj = target;
+      this.target = this._observe(target, 0);
       if (proxy$1.isEnable()) {
         this._onTargetProxy = this._onTargetProxy.bind(this);
         proxy$1.on(target, this._onTargetProxy);
@@ -325,17 +322,20 @@
           rpath = this.path.slice(idx + 1),
           ridx = this.path.length - idx - 1;
 
-      return function (prop, val, oldVal) {
+      return function (prop, val, oldVal, t, eq) {
         if (ridx) {
+          if (eq) return;
+
           if (val) {
-            var mobj = proxy$1.obj(val),
-                obj = _this3.obj;
+            var mobj = proxy$1.obj(val);
 
             val = _.get(mobj, rpath);
             mobj = _this3._observe(mobj, idx + 1);
             if (proxy$1.isEnable()) {
               // update proxy val
-              var i = 0;
+              var i = 0,
+                  obj = _this3.obj;
+
               while (i < idx) {
                 obj = proxy$1.obj(obj[path[i++]]);
                 if (!obj) return;
@@ -354,31 +354,30 @@
             oldVal = undefined;
           }
 
-          if (proxy$1.eq(val, oldVal)) return;
+          var primitive = _.isPrimitive(val);
+          eq = proxy$1.eq(val, oldVal);
+
+          if (primitive && eq) return;
         }
         _this3.handlers.each(function (handler) {
-          return handler(_this3.expr, val, oldVal, _this3.target);
+          return handler(_this3.expr, val, oldVal, _this3.target, eq);
         });
       };
     },
-    checkHandler: function (handler) {
-      if (!_.isFunc(handler)) throw TypeError('Invalid Observe Handler');
-      return handler;
-    },
     on: function (handler) {
-      this.handlers.push(this.checkHandler(handler));
+      this.handlers.push(handler);
       return this;
     },
     un: function (handler) {
       if (!arguments.length) {
         this.handlers.clean();
       } else {
-        this.handlers.remove(this.checkHandler(handler));
+        this.handlers.remove(handler);
       }
       return this;
     },
     hasListen: function (handler) {
-      return arguments.length ? this.handlers.contains(this.checkHandler(handler)) : !this.handlers.empty();
+      return arguments.length ? this.handlers.contains(handler) : !this.handlers.empty();
     },
     destory: function () {
       proxy$1.un(this.target, this._onTargetProxy);
@@ -399,6 +398,65 @@
   var inited = false;
 
   var core = {
+    on: function (obj, expr, handler) {
+      var path = _.parseExpr(expr);
+
+      obj = proxy$1.obj(obj);
+      if (path.length > 1) {
+        var map = _.getOwnProp(obj, config.expressionKey),
+            exp = map ? map[expr] : undefined;
+
+        if (!exp) {
+          exp = new Expression(obj, expr, path);
+          if (!map) map = obj[config.expressionKey] = {};
+          map[expr] = exp;
+        }
+        exp.on(handler);
+        return exp.target;
+      }
+      return on(obj, expr, handler);
+    },
+    un: function (obj, expr, handler) {
+      var path = _.parseExpr(expr);
+
+      obj = proxy$1.obj(obj);
+      if (path.length > 1) {
+        var map = _.getOwnProp(obj, config.expressionKey),
+            exp = map ? map[expr] : undefined;
+
+        if (exp) {
+          arguments.length == 2 ? exp.un() : exp.un(handler);
+          if (!exp.hasListen()) {
+            map[expr] = undefined;
+            return exp.destory();
+          }
+          return exp.target;
+        }
+        return proxy$1.proxy(obj) || obj;
+      }
+      return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler);
+    },
+    hasListen: function (obj, expr, handler) {
+      var l = arguments.length;
+
+      obj = proxy$1.obj(obj);
+      switch (l) {
+        case 1:
+          return hasListen(obj);
+        case 2:
+          if (_.isFunc(expr)) return hasListen(obj, expr);
+      }
+
+      var path = _.parseExpr(expr);
+
+      if (path.length > 1) {
+        var map = _.getOwnProp(obj, config.expressionKey),
+            exp = map ? map[expr] : undefined;
+
+        return exp ? l == 2 ? true : exp.hasListen(handler) : false;
+      }
+      return hasListen.apply(null, arguments);
+    },
     registerPolicy: function (name, priority, checker, policy) {
       policies.push({
         name: name,
@@ -428,62 +486,6 @@
         inited = true;
       }
       return this;
-    },
-    on: function (obj, expr, handler) {
-      var path = _.parseExpr(expr);
-
-      if (path.length > 1) {
-        var map = _.getOwnProp(obj, config.expressionKey),
-            exp = map ? map[expr] : undefined;
-
-        if (!exp) {
-          exp = new Expression(obj, expr, path);
-          if (!map) map = obj[config.expressionKey] = {};
-          map[expr] = exp;
-        }
-        exp.on(handler);
-        return exp.target;
-      }
-      return on(obj, expr, handler);
-    },
-    un: function (obj, expr, handler) {
-      var path = _.parseExpr(expr);
-
-      if (path.length > 1) {
-        var map = _.getOwnProp(obj, config.expressionKey),
-            exp = map ? map[expr] : undefined;
-
-        if (exp) {
-          arguments.length == 2 ? exp.un() : exp.un(handler);
-          if (!exp.hasListen()) {
-            map[expr] = undefined;
-            return exp.destory();
-          }
-          return exp.target;
-        }
-        return proxy$1.proxy(obj) || obj;
-      }
-      return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler);
-    },
-    hasListen: function (obj, expr, handler) {
-      var l = arguments.length;
-
-      switch (l) {
-        case 1:
-          return hasListen(obj);
-        case 2:
-          if (_.isFunc(expr)) return hasListen(obj, expr);
-      }
-
-      var path = _.parseExpr(expr);
-
-      if (path.length > 1) {
-        var map = _.getOwnProp(obj, config.expressionKey),
-            exp = map ? map[expr] : undefined;
-
-        return exp ? l == 2 ? true : exp.hasListen(handler) : false;
-      }
-      return hasListen.apply(window, arguments);
     }
   };
 
@@ -511,24 +513,23 @@
         return o1 === o2 || o1 && o2 && proxy$1.obj(o1) === proxy$1.obj(o2);
       },
       proxy: function (obj) {
-        if (obj && hasOwn$1.call(obj, es6ProxyKey)) return obj[es6ProxyKey];
+        if (obj && hasOwn$1.call(obj, es6ProxyKey)) return obj[es6ProxyKey] || obj;
         return obj;
       }
     });
 
     return {
-      _init: function () {
-        this.obj = proxy$1.obj(this.target);
+      init: function () {
         this.es6proxy = false;
       },
-      _destroy: function () {
+      beforeDestroy: function () {
         this.es6proxy = false;
         this.obj[es6ProxyKey] = undefined;
         proxy$1.change(this.obj, undefined);
       },
-      _watch: function (attr) {
+      watch: function (attr) {
         if (!this.es6proxy) {
-          var _proxy = this._objectProxy(),
+          var _proxy = this.objectProxy(),
               obj = this.obj;
 
           this.target = _proxy;
@@ -538,8 +539,8 @@
           this.es6proxy = true;
         }
       },
-      _unwatch: function (attr) {},
-      _objectProxy: function () {
+      unwatch: function (attr) {},
+      objectProxy: function () {
         var _this = this;
 
         return new Proxy(this.obj, {
@@ -547,7 +548,7 @@
             if (_this.listens[prop]) {
               var oldVal = obj[prop];
               obj[prop] = value;
-              _this._addChangeRecord(prop, oldVal);
+              _this.addChangeRecord(prop, oldVal);
             } else {
               obj[prop] = value;
             }
@@ -694,7 +695,7 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
       desc.proxy = proxy;
 
       this.onProxyChange(obj, proxy);
-      return proxy;
+      return desc;
     },
     funcProxy: function (fn, proxy) {
       return function () {
@@ -727,14 +728,12 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
 
       return hasOwn$2.call(obj, descBind) ? obj[descBind] : undefined;
     },
-    destroy: function (obj) {
-      var desc = this.descriptor(obj);
-
+    destroy: function (desc) {
       if (desc) {
-        obj = desc.obj;
+        var obj = desc.obj;
+        desc.destroy();
         this.onProxyChange(obj, undefined);
       }
-      return obj;
     }
   });
 
@@ -791,8 +790,14 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
     set: function (attr, value) {
       var define = this.defines[attr];
 
-      if (define && define.set) define.set.call(this.proxy, value);
-      this.obj[attr] = value;
+      if (define && define.set) {
+        define.set.call(this.proxy, value);
+      } else {
+        this.obj[attr] = value;
+      }
+    },
+    destroy: function () {
+      this.obj[this.classGenerator.descBind] = undefined;
     }
   });
 
@@ -816,24 +821,28 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
   });
 
   var policy = {
-    _init: function () {
+    init: function () {
       this.watchers = {};
     },
-    _destroy: function () {
-      for (var attr in this.watchers) {
-        if (this.watchers[attr]) this._unwatch(attr);
-      }
-      this.watchers = undefined;
+    beforeDestroy: function () {
+      var watchers = this.watchers,
+          attr = void 0;
+      for (attr in watchers) {
+        this.unwatch(attr);
+      }this.watchers = undefined;
     },
-    _watch: function (attr) {
-      if (!this.watchers[attr]) {
-        this._defineProperty(attr, this.obj[attr]);
-        this.watchers[attr] = true;
+    watch: function (attr) {
+      var watchers = this.watchers;
+      if (!watchers[attr]) {
+        this.defineProperty(attr, this.obj[attr]);
+        watchers[attr] = true;
       }
     },
-    _unwatch: function (attr) {
-      if (this.watchers[attr]) {
-        this._undefineProperty(attr, this.obj[attr]);
+    unwatch: function (attr) {
+      var watchers = this.watchers;
+      if (watchers[attr]) {
+        this.undefineProperty(attr, this.obj[attr]);
+        watchers[attr] = false;
       }
     }
   };
@@ -863,9 +872,8 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
     }
     return false;
   }, function (config) {
-    proxy$1.disable();
     return _.assignIf({
-      _defineProperty: function (attr, value) {
+      defineProperty: function (attr, value) {
         var _this = this;
 
         Object.defineProperty(this.target, attr, {
@@ -877,11 +885,11 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
           set: function (val) {
             var oldVal = value;
             value = val;
-            _this._addChangeRecord(attr, oldVal);
+            _this.addChangeRecord(attr, oldVal);
           }
         });
       },
-      _undefineProperty: function (attr, value) {
+      undefineProperty: function (attr, value) {
         Object.defineProperty(this.target, attr, {
           enumerable: true,
           configurable: true,
@@ -895,9 +903,8 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
   core.registerPolicy('DefineGetterAndSetter', 20, function (config) {
     return '__defineGetter__' in {};
   }, function (config) {
-    proxy$1.disable();
     return _.assignIf({
-      _defineProperty: function (attr, value) {
+      defineProperty: function (attr, value) {
         var _this2 = this;
 
         this.target.__defineGetter__(attr, function () {
@@ -907,10 +914,10 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
           var oldVal = value;
 
           value = val;
-          _this2._addChangeRecord(attr, oldVal);
+          _this2.addChangeRecord(attr, oldVal);
         });
       },
-      _undefineProperty: function (attr, value) {
+      undefineProperty: function (attr, value) {
         this.target.__defineGetter__(attr, function () {
           return value;
         });
@@ -925,44 +932,36 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
     return VBClassFactory.isSupport();
   }, function (config) {
 
-    var init = policy._init,
-        factory = void 0;
+    var factory = void 0;
 
     proxy$1.enable({
       obj: function (obj) {
-        return obj ? factory.obj(obj) : obj;
+        return factory.obj(obj);
       },
       eq: function (o1, o2) {
         return o1 === o2 || o1 && o2 && factory.obj(o1) === factory.obj(o2);
       },
       proxy: function (obj) {
-        return obj ? factory.proxy(obj) : obj;
+        return factory.proxy(obj) || obj;
       }
     });
-    factory = core.vbfactory = new VBClassFactory([config.proxyListenKey, config.observerKey, config.expressionKey].concat(config.defaultProps || []), proxy$1.change);
+    factory = core.vbfactory = new VBClassFactory([config.proxyListenKey, config.observerKey, config.expressionKey, _.LinkedList.ListKey].concat(config.defaultProps || []), proxy$1.change);
 
     return _.assignIf({
-      _init: function () {
-        init.call(this);
-        this.obj = factory.obj(this.target);
-      },
-      _defineProperty: function (attr, value) {
+      defineProperty: function (attr, value) {
         var _this3 = this;
 
-        var obj = this.obj,
-            desc = factory.descriptor(obj);
+        var obj = this.obj;
 
-        if (!desc) desc = factory.descriptor(factory.create(obj));
-
-        this.target = desc.defineProperty(attr, {
+        this.target = (factory.descriptor(obj) || factory.create(obj)).defineProperty(attr, {
           set: function (val) {
-            var oldVal = _this3.obj[attr];
-            _this3.obj[attr] = val;
-            _this3._addChangeRecord(attr, oldVal);
+            var oldVal = obj[attr];
+            obj[attr] = val;
+            _this3.addChangeRecord(attr, oldVal);
           }
         });
       },
-      _undefineProperty: function (attr, value) {
+      undefineProperty: function (attr, value) {
         var obj = this.obj,
             desc = factory.descriptor(obj);
 
@@ -971,7 +970,8 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
             value: value
           });
           if (!desc.hasAccessor()) {
-            this.target = factory.destroy(obj);
+            this.target = obj;
+            factory.destroy(desc);
           }
         }
       }

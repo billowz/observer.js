@@ -165,7 +165,7 @@ const VBClassFactory = _.dynamicClass({
     desc.proxy = proxy
 
     this.onProxyChange(obj, proxy)
-    return proxy
+    return desc
   },
   funcProxy(fn, proxy) {
     return function() {
@@ -198,14 +198,12 @@ const VBClassFactory = _.dynamicClass({
 
     return hasOwn.call(obj, descBind) ? obj[descBind] : undefined
   },
-  destroy(obj) {
-    let desc = this.descriptor(obj)
-
+  destroy(desc) {
     if (desc) {
-      obj = desc.obj
+      let obj = desc.obj
+      desc.destroy()
       this.onProxyChange(obj, undefined)
     }
-    return obj
   }
 })
 
@@ -261,9 +259,14 @@ const ObjectDescriptor = _.dynamicClass({
   set(attr, value) {
     let define = this.defines[attr]
 
-    if (define && define.set)
+    if (define && define.set) {
       define.set.call(this.proxy, value)
-    this.obj[attr] = value
+    } else {
+      this.obj[attr] = value
+    }
+  },
+  destroy() {
+    this.obj[this.classGenerator.descBind] = undefined
   }
 })
 
