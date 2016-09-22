@@ -199,11 +199,7 @@ const VBClassFactory = _.dynamicClass({
     return hasOwn.call(obj, descBind) ? obj[descBind] : undefined
   },
   destroy(desc) {
-    if (desc) {
-      let obj = desc.obj
-      desc.destroy()
-      this.onProxyChange(obj, undefined)
-    }
+    this.onProxyChange(obj, undefined)
   }
 })
 
@@ -264,9 +260,6 @@ const ObjectDescriptor = _.dynamicClass({
     } else {
       this.obj[attr] = value
     }
-  },
-  destroy() {
-    this.obj[this.classGenerator.descBind] = undefined
   }
 })
 

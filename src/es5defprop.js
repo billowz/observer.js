@@ -12,13 +12,6 @@ const policy = {
   init() {
     this.watchers = {}
   },
-  beforeDestroy() {
-    let watchers = this.watchers,
-      attr
-    for (attr in watchers)
-      this.unwatch(attr)
-    this.watchers = undefined
-  },
   watch(attr) {
     let watchers = this.watchers
     if (!watchers[attr]) {
@@ -114,13 +107,13 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
 
   proxy.enable({
     obj(obj) {
-      return factory.obj(obj)
+      return obj && factory.obj(obj)
     },
     eq(o1, o2) {
-      return o1 === o2 || (o1 && o2 && factory.obj(o1) === factory.obj(o2))
+      return o1 === o2 || proxy.obj(o1) === proxy.obj(o2)
     },
     proxy(obj) {
-      return factory.proxy(obj) || obj
+      return obj && (factory.proxy(obj) || obj)
     }
   })
   factory = core.vbfactory = new VBClassFactory([
@@ -143,15 +136,10 @@ core.registerPolicy('VBScriptProxy', 30, function(config) {
       let obj = this.obj,
         desc = factory.descriptor(obj)
 
-      if (desc) {
-        this.target = desc.defineProperty(attr, {
+      if (desc)
+        desc.defineProperty(attr, {
           value: value
         })
-        if (!desc.hasAccessor()) {
-          this.target = obj
-          factory.destroy(desc)
-        }
-      }
     }
   }, policy)
 })

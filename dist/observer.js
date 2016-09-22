@@ -1,5 +1,5 @@
 /*
- * observer.js v0.3.2 built in Thu, 22 Sep 2016 10:47:10 GMT
+ * observer.js v0.3.2 built in Thu, 22 Sep 2016 16:00:30 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -167,7 +167,7 @@
     addChangeRecord: function (attr, oldVal) {
       if (!config.lazy) {
         this.fire(attr, this.obj[attr], oldVal);
-      } else if (!(attr in this.changeRecords)) {
+      } else if (!(attr in this.changeRecords) && this.listens[attr]) {
         this.changeRecords[attr] = oldVal;
         if (!this.request_frame) this.request_frame = config.animationFrame ? window.requestAnimationFrame(this.notify) : timeoutframe.request(this.notify);
       }
@@ -217,24 +217,10 @@
           }
         }
       }
-      return this.target;
-    },
-    destroy: function () {
-      if (this.request_frame) {
-        config.animationFrame ? window.cancelAnimationFrame(this.request_frame) : timeoutframe.cancel(this.request_frame);
-        this.request_frame = undefined;
-      }
-      var obj = this.obj;
-      this.beforeDestroy();
-      this.obj = undefined;
-      this.target = undefined;
-      this.listens = undefined;
-      this.changeRecords = undefined;
-      return obj;
+      return this.watchPropNum ? this.target : this.obj;
     },
 
     init: _.emptyFunc,
-    beforeDestroy: _.emptyFunc,
     watch: _.emptyFunc,
     unwatch: _.emptyFunc
   });
@@ -258,13 +244,7 @@
   function un(obj, attr, handler) {
     var observer = _.getOwnProp(obj, config.observerKey);
 
-    if (observer) {
-      obj = arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler);
-      if (!observer.hasListen()) {
-        obj[config.observerKey] = undefined;
-        return observer.destroy();
-      }
-    }
+    if (observer) return arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler);
     return obj;
   }
 
@@ -378,19 +358,6 @@
     },
     hasListen: function (handler) {
       return arguments.length ? this.handlers.contains(handler) : !this.handlers.empty();
-    },
-    destory: function () {
-      proxy$1.un(this.target, this._onTargetProxy);
-      var obj = this._unobserve(this.obj, 0);
-      this.obj = undefined;
-      this.target = undefined;
-      this.expr = undefined;
-      this.handlers = undefined;
-      this.path = undefined;
-      this.observers = undefined;
-      this.observeHandlers = undefined;
-      this.target = undefined;
-      return obj;
     }
   });
 
@@ -426,13 +393,9 @@
 
         if (exp) {
           arguments.length == 2 ? exp.un() : exp.un(handler);
-          if (!exp.hasListen()) {
-            map[expr] = undefined;
-            return exp.destory();
-          }
-          return exp.target;
+          return exp.hasListen() ? exp.target : exp.obj;
         }
-        return proxy$1.proxy(obj) || obj;
+        return obj;
       }
       return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler);
     },
@@ -510,7 +473,7 @@
         return obj;
       },
       eq: function (o1, o2) {
-        return o1 === o2 || o1 && o2 && proxy$1.obj(o1) === proxy$1.obj(o2);
+        return o1 === o2 || proxy$1.obj(o1) === proxy$1.obj(o2);
       },
       proxy: function (obj) {
         if (obj && hasOwn$1.call(obj, es6ProxyKey)) return obj[es6ProxyKey] || obj;
@@ -521,11 +484,6 @@
     return {
       init: function () {
         this.es6proxy = false;
-      },
-      beforeDestroy: function () {
-        this.es6proxy = false;
-        this.obj[es6ProxyKey] = undefined;
-        proxy$1.change(this.obj, undefined);
       },
       watch: function (attr) {
         if (!this.es6proxy) {
@@ -729,11 +687,7 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
       return hasOwn$2.call(obj, descBind) ? obj[descBind] : undefined;
     },
     destroy: function (desc) {
-      if (desc) {
-        var obj = desc.obj;
-        desc.destroy();
-        this.onProxyChange(obj, undefined);
-      }
+      this.onProxyChange(obj, undefined);
     }
   });
 
@@ -795,9 +749,6 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
       } else {
         this.obj[attr] = value;
       }
-    },
-    destroy: function () {
-      this.obj[this.classGenerator.descBind] = undefined;
     }
   });
 
@@ -823,13 +774,6 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
   var policy = {
     init: function () {
       this.watchers = {};
-    },
-    beforeDestroy: function () {
-      var watchers = this.watchers,
-          attr = void 0;
-      for (attr in watchers) {
-        this.unwatch(attr);
-      }this.watchers = undefined;
     },
     watch: function (attr) {
       var watchers = this.watchers;
@@ -936,13 +880,13 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
 
     proxy$1.enable({
       obj: function (obj) {
-        return factory.obj(obj);
+        return obj && factory.obj(obj);
       },
       eq: function (o1, o2) {
-        return o1 === o2 || o1 && o2 && factory.obj(o1) === factory.obj(o2);
+        return o1 === o2 || proxy$1.obj(o1) === proxy$1.obj(o2);
       },
       proxy: function (obj) {
-        return factory.proxy(obj) || obj;
+        return obj && (factory.proxy(obj) || obj);
       }
     });
     factory = core.vbfactory = new VBClassFactory([config.proxyListenKey, config.observerKey, config.expressionKey, _.LinkedList.ListKey].concat(config.defaultProps || []), proxy$1.change);
@@ -965,15 +909,9 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
         var obj = this.obj,
             desc = factory.descriptor(obj);
 
-        if (desc) {
-          this.target = desc.defineProperty(attr, {
-            value: value
-          });
-          if (!desc.hasAccessor()) {
-            this.target = obj;
-            factory.destroy(desc);
-          }
-        }
+        if (desc) desc.defineProperty(attr, {
+          value: value
+        });
       }
     }, policy);
   });

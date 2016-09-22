@@ -55,7 +55,7 @@ const Observer = _.dynamicClass({
   addChangeRecord(attr, oldVal) {
     if (!config.lazy) {
       this.fire(attr, this.obj[attr], oldVal)
-    } else if (!(attr in this.changeRecords)) {
+    } else if (!(attr in this.changeRecords) && this.listens[attr]) {
       this.changeRecords[attr] = oldVal
       if (!this.request_frame)
         this.request_frame = (config.animationFrame ?
@@ -112,24 +112,9 @@ const Observer = _.dynamicClass({
         }
       }
     }
-    return this.target
-  },
-
-  destroy() {
-    if (this.request_frame) {
-      config.animationFrame ? window.cancelAnimationFrame(this.request_frame) : timeoutframe.cancel(this.request_frame)
-      this.request_frame = undefined
-    }
-    let obj = this.obj
-    this.beforeDestroy()
-    this.obj = undefined
-    this.target = undefined
-    this.listens = undefined
-    this.changeRecords = undefined
-    return obj
+    return this.watchPropNum ? this.target : this.obj
   },
   init: _.emptyFunc,
-  beforeDestroy: _.emptyFunc,
   watch: _.emptyFunc,
   unwatch: _.emptyFunc
 })
@@ -154,13 +139,8 @@ function on(obj, attr, handler) {
 function un(obj, attr, handler) {
   let observer = _.getOwnProp(obj, config.observerKey)
 
-  if (observer) {
-    obj = arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler)
-    if (!observer.hasListen()) {
-      obj[config.observerKey] = undefined
-      return observer.destroy()
-    }
-  }
+  if (observer)
+    return arguments.length == 2 ? observer.un(attr) : observer.un(attr, handler)
   return obj
 }
 
@@ -279,20 +259,6 @@ const Expression = _.dynamicClass({
 
   hasListen(handler) {
     return arguments.length ? this.handlers.contains(handler) : !this.handlers.empty()
-  },
-
-  destory() {
-    proxy.un(this.target, this._onTargetProxy)
-    let obj = this._unobserve(this.obj, 0)
-    this.obj = undefined
-    this.target = undefined
-    this.expr = undefined
-    this.handlers = undefined
-    this.path = undefined
-    this.observers = undefined
-    this.observeHandlers = undefined
-    this.target = undefined
-    return obj
   }
 })
 
@@ -331,13 +297,9 @@ export default {
 
         if (exp) {
           arguments.length == 2 ? exp.un() : exp.un(handler)
-          if (!exp.hasListen()) {
-            map[expr] = undefined
-            return exp.destory()
-          }
-          return exp.target
+          return exp.hasListen() ? exp.target : exp.obj
         }
-        return proxy.proxy(obj) || obj
+        return obj
       }
       return arguments.length == 2 ? un(obj, expr) : un(obj, expr, handler)
     },

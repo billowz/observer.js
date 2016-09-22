@@ -18,8 +18,12 @@ function test(name, obj, path, steps, done) {
       _val = watchVal(steps[step])
 
     logger.debug('step[%s]: handler %s(%s) %s(%s) to %s(%s) %s(%s)', step, path, path2, oldVal, _oldVal, val, _val, _oldVal === _val, eq)
-    console.log(arguments)
-    expect(Array.prototype.slice.call(arguments)).eql([path, _val, _oldVal, obj, _oldVal === _val])
+    expect(path).equal(path2)
+    expect(_val).equal(observer.obj(val))
+    expect(_oldVal).equal(observer.obj(oldVal))
+    expect(observer.obj(obj)).equal(observer.obj(o))
+    expect(eq).equal(_oldVal === _val)
+
 
     if (!steps[step + 1]) {
       logger.debug('test end')

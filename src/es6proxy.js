@@ -26,7 +26,7 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
       return obj
     },
     eq(o1, o2) {
-      return o1 === o2 || (o1 && o2 && proxy.obj(o1) === proxy.obj(o2))
+      return o1 === o2 || proxy.obj(o1) === proxy.obj(o2)
     },
     proxy(obj) {
       if (obj && hasOwn.call(obj, es6ProxyKey))
@@ -38,11 +38,6 @@ core.registerPolicy('ES6Proxy', 1, function(config) {
   return {
     init() {
       this.es6proxy = false
-    },
-    beforeDestroy() {
-      this.es6proxy = false
-      this.obj[es6ProxyKey] = undefined
-      proxy.change(this.obj, undefined)
     },
     watch(attr) {
       if (!this.es6proxy) {
