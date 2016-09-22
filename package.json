@@ -3,7 +3,7 @@
   "namespace": "observer",
   "main": "src/index.js",
   "description": "Simple utility for watching object changes.",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "scripts": {
     "lint": "eslint src build",
     "build": "npm run lint && npm run signle-unit && node build/build.js",
@@ -32,7 +32,7 @@
   "private": false,
   "license": "MIT",
   "dependencies": {
-    "utility.js": "~0.0.13"
+    "utility.js": "~0.0.14"
   },
   "devDependencies": {
     "babel-plugin-istanbul": "^1.0.3",
