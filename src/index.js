@@ -5,7 +5,7 @@ import configuration from './configuration'
 import './es6proxy'
 import './es5defprop'
 
-export default _.assign({
+let observer = _.assign({
   eq(o1, o2) {
     return _proxy.eq(o1, o2)
   },
@@ -20,4 +20,8 @@ export default _.assign({
   },
   proxy: _proxy,
   config: configuration.get()
-}, _, core)
+}, core)
+
+export default _.assignIf(_.create(observer), {
+  observer: observer
+}, _)

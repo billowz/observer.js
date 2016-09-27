@@ -1,5 +1,5 @@
 /*
- * observer.js v0.3.4 built in Thu, 22 Sep 2016 16:15:22 GMT
+ * observer.js v0.3.5 built in Tue, 27 Sep 2016 03:51:44 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -331,166 +331,45 @@
     return str.replace(regTrim, '');
   }
 
-  var regFormat = /%%|%(\d+\$)?([-+#0 ]*)(\*\d+\$|\*|\d+)?(\.(\*\d+\$|\*|\d+))?([scboxXuidfegpEGP])/g;
+  var thousandSeparationReg = /(\d)(?=(\d{3})+(?!\d))/g;
 
-  function pad(str, len, chr, leftJustify) {
-    var padding = str.length >= len ? '' : Array(1 + len - str.length >>> 0).join(chr);
-
-    return leftJustify ? str + padding : padding + str;
+  function thousandSeparate(number) {
+    var split = (number + '').split('.');
+    split[0] = split[0].replace(thousandSeparationReg, '$1,');
+    return split.join('.');
   }
 
-  function justify(value, prefix, leftJustify, minWidth, zeroPad) {
-    var diff = minWidth - value.length;
-
-    if (diff > 0) return leftJustify || !zeroPad ? pad(value, minWidth, ' ', leftJustify) : value.slice(0, prefix.length) + pad('', diff, '0', true) + value.slice(prefix.length);
-    return value;
+  var plurals = [{
+    reg: /([a-zA-Z]+[^aeiou])y$/,
+    rep: '$1ies'
+  }, {
+    reg: /([a-zA-Z]+[aeiou]y)$/,
+    rep: '$1s'
+  }, {
+    reg: /([a-zA-Z]+[sxzh])$/,
+    rep: '$1es'
+  }, {
+    reg: /([a-zA-Z]+[^sxzhy])$/,
+    rep: '$1s'
+  }];
+  function plural(str) {
+    var plural = void 0,
+        rep = void 0;
+    for (var i = 0; i < 4; i++) {
+      plural = plurals[i];
+      if (plural.reg.test(str)) return str.replace(plural.reg, plural.rep);
+    }
+    return str;
   }
-
-  function format(str) {
-    return _format(str, Array.prototype.slice.call(arguments, 1)).format;
+  function singular(str) {
+    var singulars = void 0,
+        rep = void 0;
+    for (var i = 0; i < 4; i++) {
+      singular = plurals[i];
+      if (singular.reg.test(str)) return str.replace(singular.reg, singular.rep);
+    }
+    return str;
   }
-
-  function _format(str, args) {
-    var i = 0;
-    str = str.replace(regFormat, function (substring, valueIndex, flags, minWidth, _, precision, type) {
-      if (substring == '%%') return '%';
-
-      var leftJustify = false,
-          positivePrefix = '',
-          zeroPad = false,
-          prefixBaseX = false;
-
-      if (flags) each(flags, function (c) {
-        switch (c) {
-          case ' ':
-            positivePrefix = ' ';
-            break;
-          case '+':
-            positivePrefix = '+';
-            break;
-          case '-':
-            leftJustify = true;
-            break;
-          case '0':
-            zeroPad = true;
-            break;
-          case '#':
-            prefixBaseX = true;
-            break;
-        }
-      });
-
-      if (!minWidth) {
-        minWidth = 0;
-      } else if (minWidth == '*') {
-        minWidth = +args[i++];
-      } else if (minWidth.charAt(0) == '*') {
-        minWidth = +args[minWidth.slice(1, -1)];
-      } else {
-        minWidth = +minWidth;
-      }
-
-      if (minWidth < 0) {
-        minWidth = -minWidth;
-        leftJustify = true;
-      }
-
-      if (!isFinite(minWidth)) throw new Error('sprintf: (minimum-)width must be finite');
-
-      if (precision && precision.charAt(0) == '*') {
-        precision = +args[precision == '*' ? i++ : precision.slice(1, -1)];
-        if (precision < 0) precision = null;
-      }
-
-      if (precision == null) {
-        precision = 'fFeE'.indexOf(type) > -1 ? 6 : type == 'd' ? 0 : void 0;
-      } else {
-        precision = +precision;
-      }
-
-      var value = valueIndex ? args[valueIndex.slice(0, -1)] : args[i++],
-          prefix = void 0,
-          base = void 0;
-
-      switch (type) {
-        case 'c':
-          value = String.fromCharCode(+value);
-        case 's':
-          {
-            value = String(value);
-            if (precision != null) value = value.slice(0, precision);
-            prefix = '';
-            break;
-          }
-        case 'b':
-          base = 2;
-          break;
-        case 'o':
-          base = 8;
-          break;
-        case 'u':
-          base = 10;
-          break;
-        case 'x':
-        case 'X':
-          base = 16;
-          break;
-        case 'i':
-        case 'd':
-          {
-            var _number = parseInt(+value);
-            if (isNaN(_number)) return '';
-            prefix = _number < 0 ? '-' : positivePrefix;
-            value = prefix + pad(String(Math.abs(_number)), precision, '0', false);
-            break;
-          }
-        case 'e':
-        case 'E':
-        case 'f':
-        case 'F':
-        case 'g':
-        case 'G':
-        case 'p':
-        case 'P':
-          {
-            var _number2 = +value;
-            if (isNaN(_number2)) return '';
-            prefix = _number2 < 0 ? '-' : positivePrefix;
-            var method = void 0;
-            if ('p' != type.toLowerCase()) {
-              method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(type.toLowerCase())];
-            } else {
-              // Count significant-figures, taking special-care of zeroes ('0' vs '0.00' etc.)
-              var sf = String(value).replace(/[eE].*|[^\d]/g, '');
-              sf = (_number2 ? sf.replace(/^0+/, '') : sf).length;
-              precision = precision ? Math.min(precision, sf) : precision;
-              method = !precision || precision <= sf ? 'toPrecision' : 'toExponential';
-            }
-            var number_str = Math.abs(_number2)[method](precision);
-            // number_str = thousandSeparation ? thousand_separate(number_str): number_str
-            value = prefix + number_str;
-            break;
-          }
-        case 'n':
-          return '';
-        default:
-          return substring;
-      }
-
-      if (base) {
-        var number = value >>> 0;
-        prefix = prefixBaseX && base != 10 && number && ['0b', '0', '0x'][base >> 3] || '';
-        value = prefix + pad(number.toString(base), precision || 0, '0', false);
-      }
-      var justified = justify(value, prefix, leftJustify, minWidth, zeroPad);
-      return 'EFGPX'.indexOf(type) > -1 ? justified.toUpperCase() : justified;
-    });
-    return {
-      format: str,
-      formatArgCount: i
-    };
-  }
-
   // ==============================================
   // object utils
   // ==============================================
@@ -730,8 +609,9 @@ var _$1 = Object.freeze({
     ltrim: ltrim,
     rtrim: rtrim,
     trim: trim,
-    format: format,
-    _format: _format,
+    thousandSeparate: thousandSeparate,
+    plural: plural,
+    get singular () { return singular; },
     parseExpr: parseExpr,
     get: get,
     has: has,
@@ -776,6 +656,179 @@ var _$1 = Object.freeze({
     }
   });
 
+  var reg = /%(\d+\$|\*|\$)?([-+#0, ]*)?(\d+\$?|\*|\$)?(\.\d+\$?|\.\*|\.\$)?([%sfducboxXeEgGpP])/g;
+var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
+  function pad(str, len, chr, leftJustify) {
+    var l = str.length,
+        padding = l >= len ? '' : Array(1 + len - l >>> 0).join(chr);
+
+    return leftJustify ? str + padding : padding + str;
+  }
+
+  function format(str, args) {
+    var index = 0;
+
+    function parseWidth(width) {
+      if (!width) {
+        width = 0;
+      } else if (width == '*') {
+        width = +args[index++];
+      } else if (width == '$') {
+        width = +args[index];
+      } else if (width.charAt(width.length - 1) == '$') {
+        width = +args[width.slice(0, -1) - 1];
+      } else {
+        width = +width;
+      }
+      return isFinite(width) ? width < 0 ? 0 : width : 0;
+    }
+
+    function parseArg(i) {
+      if (!i || i == '*') return args[index++];
+      if (i == '$') return args[index];
+      return args[i.slice(0, -1) - 1];
+    }
+
+    str = str.replace(reg, function (match, i, flags, minWidth, precision, type) {
+      if (type === '%') return '%';
+
+      var value = parseArg(i);
+      minWidth = parseWidth(minWidth);
+      precision = precision && parseWidth(precision.slice(1));
+      if (!precision && precision !== 0) precision = 'fFeE'.indexOf(type) == -1 ? type == 'd' ? 0 : void 0 : 6;
+
+      console.log('match:' + match + ', index:' + i + '/' + value + ', flags:' + flags + ', width:' + minWidth + ', prec:' + precision + ', type:' + type);
+
+      var leftJustify = false,
+          positivePrefix = '',
+          zeroPad = false,
+          prefixBaseX = false,
+          thousandSeparation = false,
+          prefix = void 0,
+          base = void 0;
+
+      if (flags) each(flags, function (c) {
+        switch (c) {
+          case ' ':
+          case '+':
+            positivePrefix = c;
+            break;
+          case '-':
+            leftJustify = true;
+            break;
+          case '0':
+            zeroPad = true;
+            break;
+          case '#':
+            prefixBaseX = true;
+            break;
+          case ',':
+            thousandSeparation = true;
+            break;
+        }
+      });
+      switch (type) {
+        case 'c':
+          return String.fromCharCode(+value);
+        case 's':
+          if (isNil(value) && !isNaN(value)) return '';
+          value += '';
+          if (precision && value.length > precision) value = value.slice(0, precision);
+          if (value.length < minWidth) value = pad(value, minWidth, zeroPad ? '0' : ' ', false);
+          return value;
+        case 'd':
+          value = parseInt(value);
+          if (isNaN(value)) return '';
+          if (value < 0) {
+            prefix = '-';
+            value = -value;
+          } else {
+            prefix = positivePrefix;
+          }
+          value += '';
+
+          if (value.length < minWidth) value = pad(value, minWidth, '0', false);
+
+          if (thousandSeparation) value = value.replace(thousandSeparationReg$1, '$1,');
+          return prefix + value;
+        case 'e':
+        case 'E':
+        case 'f':
+        case 'g':
+        case 'G':
+        case 'p':
+        case 'P':
+          {
+            var _number = +value;
+            if (isNaN(_number)) return '';
+            if (_number < 0) {
+              prefix = '-';
+              _number = -_number;
+            } else {
+              prefix = positivePrefix;
+            }
+
+            var method = void 0,
+                ltype = type.toLowerCase();
+
+            if ('p' != ltype) {
+              method = ['toExponential', 'toFixed', 'toPrecision']['efg'.indexOf(ltype)];
+            } else {
+              var sf = String(value).replace(/[eE].*|[^\d]/g, '');
+              sf = (_number ? sf.replace(/^0+/, '') : sf).length;
+              if (precision) precision = Math.min(precision, sf);
+              method = !precision || precision <= sf ? 'toPrecision' : 'toExponential';
+            }
+            _number = _number[method](precision);
+
+            if (_number.length < minWidth) _number = pad(_number, minWidth, '0', false);
+            if (thousandSeparation) {
+              var split = _number.split('.');
+              split[0] = split[0].replace(thousandSeparationReg$1, '$1,');
+              _number = split.join('.');
+            }
+            value = prefix + _number;
+            if ('EGP'.indexOf(type) != -1) return value.toUpperCase();
+            return value;
+          }
+        case 'b':
+          base = 2;
+          break;
+        case 'o':
+          base = 8;
+          break;
+        case 'u':
+          base = 10;
+          break;
+        case 'x':
+        case 'X':
+          base = 16;
+          break;
+        case 'n':
+          return '';
+        default:
+          return match;
+      }
+      var number = value >>> 0;
+      prefix = prefixBaseX && base != 10 && number && ['0b', '0', '0x'][base >> 3] || '';
+      number = number.toString(base);
+      if (number.length < minWidth) number = pad(number, minWidth, '0', false);
+      value = prefix + number;
+      if (type == 'X') return value.toUpperCase();
+      return value;
+    });
+
+    return {
+      format: str,
+      count: index
+    };
+  }
+
+  function index$1(str) {
+    return format(str, Array.prototype.slice.call(arguments, 1)).format;
+  }
+  index$1.format = format;
+
   var logLevels = ['debug', 'info', 'warn', 'error'];
   var tmpEl = document.createElement('div');
   var slice = Array.prototype.slice;
@@ -796,8 +849,8 @@ var _$1 = Object.freeze({
     parseMsg: function (args) {
       var msg = args[0];
       if (isString(msg)) {
-        var f = _format.apply(null, args);
-        return [f.format].concat(slice.call(args, f.formatArgCount)).join(' ');
+        var f = index$1.format.apply(null, args);
+        return [f.format].concat(slice.call(args, f.count)).join(' ');
       }
       return args.join(' ');
     },
@@ -1014,13 +1067,12 @@ var _$1 = Object.freeze({
       var list = this._listObj(obj),
           desc = void 0;
 
-      if (!list) return;
-      desc = list[this._id];
-      if (!desc) return;
-
-      this._unlink(desc);
-      delete list[this._id];
-      return this;
+      if (list && (desc = list[this._id])) {
+        this._unlink(desc);
+        delete list[this._id];
+        return true;
+      }
+      return false;
     },
     clean: function () {
       var desc = this._header;
@@ -1079,6 +1131,7 @@ var _$1 = Object.freeze({
   });
 
   var _ = assignIf({
+    format: index$1,
     timeoutframe: timeoutframe,
     Configuration: Configuration,
     Logger: Logger,
@@ -1988,7 +2041,7 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
     }, policy);
   });
 
-  var index = _.assign({
+  var observer = _.assign({
     eq: function (o1, o2) {
       return proxy$1.eq(o1, o2);
     },
@@ -2004,7 +2057,11 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
 
     proxy: proxy$1,
     config: configuration.get()
-  }, _, core);
+  }, core);
+
+  var index = _.assignIf(_.create(observer), {
+    observer: observer
+  }, _);
 
   return index;
 

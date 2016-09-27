@@ -1,5 +1,5 @@
 /*
- * observer.js v0.3.4 built in Thu, 22 Sep 2016 16:15:22 GMT
+ * observer.js v0.3.5 built in Tue, 27 Sep 2016 03:51:44 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -916,7 +916,7 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
     }, policy);
   });
 
-  var index = _.assign({
+  var observer = _.assign({
     eq: function (o1, o2) {
       return proxy$1.eq(o1, o2);
     },
@@ -932,7 +932,11 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
 
     proxy: proxy$1,
     config: configuration.get()
-  }, _, core);
+  }, core);
+
+  var index = _.assignIf(_.create(observer), {
+    observer: observer
+  }, _);
 
   return index;
 
