@@ -1,5 +1,5 @@
 /*
- * observer.js v0.3.5 built in Tue, 27 Sep 2016 03:51:44 GMT
+ * observer.js v0.3.6 built in Tue, 27 Sep 2016 07:57:23 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -74,22 +74,6 @@
         _.overrideHasOwnProlicy(function (prop) {
           return hasOwn.call(proxy$1.obj(this), prop);
         });
-        _.get = function (obj, expr, defVal, lastOwn, own) {
-          var i = 0,
-              path = _.parseExpr(expr, true),
-              l = path.length - 1,
-              prop = void 0;
-
-          while (!_.isNil(obj) && i < l) {
-            prop = path[i++];
-            obj = proxy$1.obj(obj);
-            if (own && !hasOwn.call(obj, prop)) return defVal;
-            obj = obj[prop];
-          }
-          obj = proxy$1.obj(obj);
-          prop = path[i];
-          return i == l && !_.isNil(obj) && (own ? hasOwn.call(obj, prop) : prop in obj) ? obj[prop] : defVal;
-        };
         hasEnabled = true;
       }
     },

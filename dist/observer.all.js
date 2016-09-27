@@ -1,5 +1,5 @@
 /*
- * observer.js v0.3.5 built in Tue, 27 Sep 2016 03:51:44 GMT
+ * observer.js v0.3.6 built in Tue, 27 Sep 2016 07:57:23 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -352,9 +352,21 @@
     reg: /([a-zA-Z]+[^sxzhy])$/,
     rep: '$1s'
   }];
+  var singulars = [{
+    reg: /([a-zA-Z]+[^aeiou])ies$/,
+    rep: '$1y'
+  }, {
+    reg: /([a-zA-Z]+[aeiou])s$/,
+    rep: '$1'
+  }, {
+    reg: /([a-zA-Z]+[sxzh])es$/,
+    rep: '$1'
+  }, {
+    reg: /([a-zA-Z]+[^sxzhy])s$/,
+    rep: '$1'
+  }];
   function plural(str) {
-    var plural = void 0,
-        rep = void 0;
+    var plural = void 0;
     for (var i = 0; i < 4; i++) {
       plural = plurals[i];
       if (plural.reg.test(str)) return str.replace(plural.reg, plural.rep);
@@ -362,10 +374,9 @@
     return str;
   }
   function singular(str) {
-    var singulars = void 0,
-        rep = void 0;
+    var singular = void 0;
     for (var i = 0; i < 4; i++) {
-      singular = plurals[i];
+      singular = singulars[i];
       if (singular.reg.test(str)) return str.replace(singular.reg, singular.rep);
     }
     return str;
@@ -611,7 +622,7 @@ var _$1 = Object.freeze({
     trim: trim,
     thousandSeparate: thousandSeparate,
     plural: plural,
-    get singular () { return singular; },
+    singular: singular,
     parseExpr: parseExpr,
     get: get,
     has: has,
@@ -1199,22 +1210,6 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
         _.overrideHasOwnProlicy(function (prop) {
           return hasOwn$1.call(proxy$1.obj(this), prop);
         });
-        _.get = function (obj, expr, defVal, lastOwn, own) {
-          var i = 0,
-              path = _.parseExpr(expr, true),
-              l = path.length - 1,
-              prop = void 0;
-
-          while (!_.isNil(obj) && i < l) {
-            prop = path[i++];
-            obj = proxy$1.obj(obj);
-            if (own && !hasOwn$1.call(obj, prop)) return defVal;
-            obj = obj[prop];
-          }
-          obj = proxy$1.obj(obj);
-          prop = path[i];
-          return i == l && !_.isNil(obj) && (own ? hasOwn$1.call(obj, prop) : prop in obj) ? obj[prop] : defVal;
-        };
         hasEnabled = true;
       }
     },

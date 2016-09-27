@@ -66,23 +66,6 @@ _.assign(proxy, {
       _.overrideHasOwnProlicy(function(prop) {
         return hasOwn.call(proxy.obj(this), prop)
       })
-      _.get = function(obj, expr, defVal, lastOwn, own) {
-        let i = 0,
-          path = _.parseExpr(expr, true),
-          l = path.length - 1,
-          prop
-
-        while (!_.isNil(obj) && i < l) {
-          prop = path[i++]
-          obj = proxy.obj(obj)
-          if (own && !hasOwn.call(obj, prop))
-            return defVal
-          obj = obj[prop]
-        }
-        obj = proxy.obj(obj)
-        prop = path[i]
-        return (i == l && !_.isNil(obj) && (own ? hasOwn.call(obj, prop) : prop in obj)) ? obj[prop] : defVal
-      }
       hasEnabled = true
     }
   },
