@@ -160,7 +160,7 @@ const VBClassFactory = _.dynamicClass({
 
     proxy = window[this.generateClassConstructor(props, funcMap, funcs)](desc)
     _.each(funcs, (prop) => {
-      proxy[prop] = this.funcProxy(obj[prop], proxy)
+      return proxy[prop] = this.funcProxy(obj[prop], proxy)
     })
     desc.proxy = proxy
 
@@ -169,7 +169,7 @@ const VBClassFactory = _.dynamicClass({
   },
   funcProxy(fn, proxy) {
     return function() {
-      fn.apply((!this || this == window) ? proxy : this, arguments)
+      return fn.apply((!this || this == window) ? proxy : this, arguments)
     }
   },
   eq(o1, o2) {
