@@ -1,5 +1,5 @@
 /*
- * observer.js v0.3.6 built in Tue, 27 Sep 2016 07:57:23 GMT
+ * observer.js v0.4.0 built in Wed, 28 Sep 2016 08:19:26 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -71,9 +71,11 @@
     enable: function (policy) {
       applyPolicy(policy);
       if (!hasEnabled) {
-        _.overrideHasOwnProlicy(function (prop) {
-          return hasOwn.call(proxy$1.obj(this), prop);
+        _.overridePolicy('hasOwn', function (obj, prop) {
+          return hasOwn.call(proxy$1.obj(obj), prop);
         });
+
+        _.overridePolicy('eq', proxy$1.eq);
         hasEnabled = true;
       }
     },
@@ -126,13 +128,11 @@
       var handlers = this.listens[attr];
 
       if (handlers) {
-        (function () {
-          var primitive = _.isPrimitive(val),
-              eq = proxy$1.eq(val, oldVal);
-          if (!primitive || !eq) handlers.each(function (handler) {
-            handler(attr, val, oldVal, _this.target, eq);
-          });
-        })();
+        var primitive = _.isPrimitive(val),
+            eq = proxy$1.eq(val, oldVal);
+        if (!primitive || !eq) handlers.each(function (handler) {
+          handler(attr, val, oldVal, _this.target, eq);
+        });
       }
     },
     notify: function () {
@@ -290,6 +290,14 @@
         if (ridx) {
           if (eq) return;
 
+          if (oldVal) {
+            oldVal = proxy$1.obj(oldVal);
+            _this3._unobserve(oldVal, idx + 1);
+            oldVal = _.get(oldVal, rpath);
+          } else {
+            oldVal = undefined;
+          }
+
           if (val) {
             var mobj = proxy$1.obj(val);
 
@@ -308,14 +316,6 @@
             }
           } else {
             val = undefined;
-          }
-
-          if (oldVal) {
-            oldVal = proxy$1.obj(oldVal);
-            _this3._unobserve(oldVal, idx + 1);
-            oldVal = _.get(oldVal, rpath);
-          } else {
-            oldVal = undefined;
           }
 
           var primitive = _.isPrimitive(val);
@@ -502,8 +502,8 @@
   });
 
 var   hasOwn$2 = Object.prototype.hasOwnProperty;
-  var RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(',');
-  var RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,indexOf,lastIndexOf,length,map,keys,join,pop,push,reverse,reverseRight,some,shift,slice,sort,splice,toSource,unshift'.split(',');
+  var RESERVE_PROPS = 'hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'.split(',');
+  var RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,includes,indexOf,join,keys,lastIndexOf,map,pop,push,reduce,reduceRight,reverse,shift,slice,some,sort,splice,unshift,values'.split(',');
   var VBClassFactory = _.dynamicClass({
     constBind: '__VB_CONST__',
     descBind: '__VB_PROXY__',
@@ -631,17 +631,18 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
       }
 
       proxy = window[this.generateClassConstructor(props, funcMap, funcs)](desc);
-      _.each(funcs, function (prop) {
-        proxy[prop] = _this2.funcProxy(obj[prop], proxy);
-      });
       desc.proxy = proxy;
+
+      _.each(funcs, function (prop) {
+        proxy[prop] = _this2.funcProxy(obj[prop], prop in protoPropMap ? obj : proxy);
+      });
 
       this.onProxyChange(obj, proxy);
       return desc;
     },
-    funcProxy: function (fn, proxy) {
+    funcProxy: function (fn, scope) {
       return function () {
-        fn.apply(!this || this == window ? proxy : this, arguments);
+        return fn.apply(this === window ? scope : this, arguments);
       };
     },
     eq: function (o1, o2) {
@@ -699,7 +700,7 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
         if (!(attr in obj)) {
           obj[attr] = undefined;
         } else if (_.isFunc(obj[attr])) {
-          console.warn('defineProperty not support function [' + attr + ']');
+          logger.warn('defineProperty not support function [' + attr + ']');
         }
         this.classGenerator.create(this.obj, this);
       }
@@ -745,11 +746,13 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
         window.execScript(['Function parseVB(code)', '\tExecuteGlobal(code)', 'End Function'].join('\n'), 'VBScript');
         supported = true;
       } catch (e) {
-        console.error(e.message, e);
+        logger.error(e.message, e);
       }
     }
     return supported;
   };
+
+  var arrayHooks = 'fill,pop,push,reverse,shift,sort,splice,unshift'.split(',');
 
   configuration.register({
     defaultProps: []
@@ -757,21 +760,42 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
 
   var policy = {
     init: function () {
+      this.isArray = _.isArray(this.obj);
       this.watchers = {};
+      if (this.isArray) {
+        this.hookArrayMethod = this.hookArrayMethod.bind(this);
+        this.hookArray();
+      }
     },
     watch: function (attr) {
       var watchers = this.watchers;
-      if (!watchers[attr]) {
+      if (!watchers[attr] && (!this.isArray || attr != 'length')) {
         this.defineProperty(attr, this.obj[attr]);
         watchers[attr] = true;
       }
     },
     unwatch: function (attr) {
       var watchers = this.watchers;
-      if (watchers[attr]) {
+      if (watchers[attr] && (!this.isArray || attr != 'length')) {
         this.undefineProperty(attr, this.obj[attr]);
         watchers[attr] = false;
       }
+    },
+    hookArray: function () {
+      _.each(arrayHooks, this.hookArrayMethod);
+    },
+    hookArrayMethod: function (method) {
+      var obj = this.obj,
+          fn = Array.prototype[method],
+          len = obj.length,
+          self = this;
+
+      obj[method] = function () {
+        var ret = fn.apply(obj, arguments);
+        self.addChangeRecord('length', len);
+        len = obj.length;
+        return ret;
+      };
     }
   };
 
@@ -900,6 +924,14 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
     }, policy);
   });
 
+  function hookArrayFunc(func, obj, callback, scope, own) {
+    var _this = this;
+
+    return func(obj, function (v, k, s, o) {
+      return callback.call(_this, proxy$1.proxy(v), k, s, o);
+    }, scope, own);
+  }
+
   var observer = _.assign({
     eq: function (o1, o2) {
       return proxy$1.eq(o1, o2);
@@ -915,11 +947,43 @@ var   hasOwn$2 = Object.prototype.hasOwnProperty;
     },
 
     proxy: proxy$1,
-    config: configuration.get()
+    config: configuration.get(),
+
+    $each: function (obj, callback, scope, own) {
+      return hookArrayFunc(_.each, obj, callback, scope, own);
+    },
+    $map: function (obj, callback, scope, own) {
+      return hookArrayFunc(_.map, obj, callback, scope, own);
+    },
+    $filter: function (obj, callback, scope, own) {
+      return hookArrayFunc(_.filter, obj, callback, scope, own);
+    },
+    $aggregate: function (obj, callback, defVal, scope, own) {
+      var rs = defVal;
+      each(obj, function (v, k, s, o) {
+        rs = callback.call(this, rs, proxy$1.proxy(v), k, s, o);
+      }, scope, own);
+      return rs;
+    },
+    $keys: function (obj, filter, scope, own) {
+      var keys = [];
+      each(obj, function (v, k, s, o) {
+        if (!filter || filter.call(this, proxy$1.proxy(v), k, s, o)) keys.push(k);
+      }, scope, own);
+      return keys;
+    },
+    $values: function (obj, filter, scope, own) {
+      var values = [];
+      each(obj, function (v, k, s, o) {
+        if (!filter || filter.call(this, proxy$1.proxy(v), k, s, o)) values.push(v);
+      }, scope, own);
+      return values;
+    }
   }, core);
 
   var index = _.assignIf(_.create(observer), {
-    observer: observer
+    observer: observer,
+    utility: _
   }, _);
 
   return index;

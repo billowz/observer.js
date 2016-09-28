@@ -1,5 +1,5 @@
 /*
- * observer.js v0.3.6 built in Tue, 27 Sep 2016 07:57:23 GMT
+ * observer.js v0.4.0 built in Wed, 28 Sep 2016 08:19:26 GMT
  * Copyright (c) 2016 Tao Zeng <tao.zeng.zt@gmail.com>
  * Released under the MIT license
  * support IE6+ and other browsers
@@ -54,17 +54,28 @@
 
   var toStr = Object.prototype.toString;
   var hasOwn = Object.prototype.hasOwnProperty;
-
-  function overrideHasOwnProlicy(fn) {
-    if (isFunc(fn)) hasOwn = fn;
+  var policies = {
+    hasOwn: function (obj, prop) {
+      return hasOwn.call(obj, prop);
+    },
+    eq: function (o1, o2) {
+      return o1 === o2;
+    }
+  };
+  function overridePolicy(name, policy) {
+    policies[name] = policy;
   }
 
-  function hasOwnProlicy() {
-    return hasOwn;
+  function policy(name) {
+    return policies[name];
   }
 
-  function hasOwnProp(obj, prop) {
-    return hasOwn.call(obj, prop);
+  function eq(o1, o2) {
+    return policies.eq(o1, o2);
+  }
+
+  function hasOwnProp(o1, o2) {
+    return policies.hasOwn(o1, o2);
   }
 
   // ==============================================
@@ -182,7 +193,7 @@
     return true;
   }
 
-  function each(obj, callback, scope, own) {
+  function each$1(obj, callback, scope, own) {
     if (isArrayLike(obj)) {
       return _eachArray(obj, callback, scope);
     } else if (!isNil(obj)) {
@@ -228,7 +239,7 @@
   function aggregate(obj, callback, defVal, scope, own) {
     var rs = defVal;
 
-    each(obj, function (val, key, obj, isOwn) {
+    each$1(obj, function (val, key, obj, isOwn) {
       rs = callback.call(this, rs, val, key, obj, isOwn);
     }, scope, own);
     return rs;
@@ -237,10 +248,19 @@
   function keys(obj, filter, scope, own) {
     var keys = [];
 
-    each(obj, function (val, key) {
+    each$1(obj, function (val, key) {
       if (!filter || filter.apply(this, arguments)) keys.push(key);
     }, scope, own);
     return keys;
+  }
+
+  function values(obj, filter, scope, own) {
+    var values = [];
+
+    each$1(obj, function (val, key) {
+      if (!filter || filter.apply(this, arguments)) values.push(val);
+    }, scope, own);
+    return values;
   }
 
   function _indexOfArray(array, val) {
@@ -248,7 +268,7 @@
         l = array.length;
 
     for (; i < l; i++) {
-      if (array[i] === val) return i;
+      if (eq(array[i], val)) return i;
     }
     return -1;
   }
@@ -257,14 +277,14 @@
     var i = array.length;
 
     while (i-- > 0) {
-      if (array[i] === val) return i;
+      if (eq(array[i], val)) return i;
     }
   }
 
   function _indexOfObj(obj, val, own) {
     for (key in obj) {
       if (own === false || hasOwnProp(obj, key)) {
-        if (obj[key] === val) return key;
+        if (eq(obj[key], val)) return key;
       }
     }
     return undefined;
@@ -289,7 +309,7 @@
   function convert(obj, keyGen, valGen, scope, own) {
     var o = {};
 
-    each(obj, function (val, key) {
+    each$1(obj, function (val, key) {
       o[keyGen ? keyGen.apply(this, arguments) : key] = valGen ? valGen.apply(this, arguments) : val;
     }, scope, own);
     return o;
@@ -298,7 +318,7 @@
   function reverseConvert(obj, valGen, scope, own) {
     var o = {};
 
-    each(obj, function (val, key) {
+    each$1(obj, function (val, key) {
       o[val] = valGen ? valGen.apply(this, arguments) : key;
     }, scope, own);
     return o;
@@ -509,7 +529,7 @@
     emptyFunc.prototype = parent;
     var obj = new emptyFunc();
     emptyFunc.prototype = undefined;
-    if (props) each(props, function (prop, name) {
+    if (props) each$1(props, function (prop, name) {
       obj[name] = prop.value;
     });
     return obj;
@@ -546,17 +566,15 @@
       var _this = this;
 
       if (overrides) {
-        (function () {
-          var proto = _this.prototype;
-          each(overrides, function (member, name) {
-            if (isFunc(member)) {
-              member.$owner = _this;
-              member.$name = name;
-            }
-            proto[name] = member;
-          });
-          _this.assign(overrides.statics);
-        })();
+        var proto = this.prototype;
+        each$1(overrides, function (member, name) {
+          if (isFunc(member)) {
+            member.$owner = _this;
+            member.$name = name;
+          }
+          proto[name] = member;
+        });
+        this.assign(overrides.statics);
       }
       return this;
     },
@@ -591,8 +609,9 @@
   }
 
 var _$1 = Object.freeze({
-    overrideHasOwnProlicy: overrideHasOwnProlicy,
-    hasOwnProlicy: hasOwnProlicy,
+    overridePolicy: overridePolicy,
+    policy: policy,
+    eq: eq,
     hasOwnProp: hasOwnProp,
     isPrimitive: isPrimitive,
     isDefine: isDefine,
@@ -607,11 +626,12 @@ var _$1 = Object.freeze({
     isObject: isObject,
     isRegExp: isRegExp,
     isArrayLike: isArrayLike,
-    each: each,
+    each: each$1,
     map: map,
     filter: filter,
     aggregate: aggregate,
     keys: keys,
+    values: values,
     indexOf: indexOf,
     lastIndexOf: lastIndexOf,
     convert: convert,
@@ -646,7 +666,7 @@ var _$1 = Object.freeze({
       var _this = this;
 
       if (arguments.length == 1) {
-        each(name, function (val, name) {
+        each$1(name, function (val, name) {
           _this.cfg[name] = val;
         });
       } else {
@@ -657,7 +677,7 @@ var _$1 = Object.freeze({
     config: function (cfg) {
       var _this2 = this;
 
-      if (cfg) each(this.cfg, function (val, key) {
+      if (cfg) each$1(this.cfg, function (val, key) {
         if (hasOwnProp(cfg, key)) _this2.cfg[key] = cfg[key];
       });
       return this;
@@ -708,8 +728,6 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
       precision = precision && parseWidth(precision.slice(1));
       if (!precision && precision !== 0) precision = 'fFeE'.indexOf(type) == -1 ? type == 'd' ? 0 : void 0 : 6;
 
-      console.log('match:' + match + ', index:' + i + '/' + value + ', flags:' + flags + ', width:' + minWidth + ', prec:' + precision + ', type:' + type);
-
       var leftJustify = false,
           positivePrefix = '',
           zeroPad = false,
@@ -718,7 +736,7 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
           prefix = void 0,
           base = void 0;
 
-      if (flags) each(flags, function (c) {
+      if (flags) each$1(flags, function (c) {
         switch (c) {
           case ' ':
           case '+':
@@ -881,17 +899,17 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
       this.bodyEl.innerHTML = '';
     }
   });
-  var console$1 = window.console;
-  if (console$1 && !console$1.debug) console$1.debug = function () {
-    Function.apply.call(console$1.log, console$1, arguments);
+  var console = window.console;
+  if (console && !console.debug) console.debug = function () {
+    Function.apply.call(console.log, console, arguments);
   };
 
   var Logger = dynamicClass({
     statics: {
       enableSimulationConsole: function () {
-        if (!console$1) {
-          console$1 = new SimulationConsole();
-          console$1.appendTo(document.body);
+        if (!console) {
+          console = new SimulationConsole();
+          console.appendTo(document.body);
         }
       }
     },
@@ -906,11 +924,11 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
       return logLevels[this.level];
     },
     _print: function (level, args, trace) {
-      Function.apply.call(console$1[level], console$1, args);
-      if (trace && console$1.trace) console$1.trace();
+      Function.apply.call(console[level], console, args);
+      if (trace && console.trace) console.trace();
     },
     _log: function (level, args, trace) {
-      if (level < this.level || !console$1) return;
+      if (level < this.level || !console) return;
       var msg = '[%s] %s -' + (isString(args[0]) ? ' ' + args.shift() : ''),
           errors = [];
       args = filter(args, function (arg) {
@@ -920,7 +938,7 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
         }
         return true;
       });
-      each(errors, function (err) {
+      each$1(errors, function (err) {
         args.push.call(args, err.message, '\n', err.stack);
       });
       level = logLevels[level];
@@ -1207,9 +1225,11 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
     enable: function (policy) {
       applyPolicy(policy);
       if (!hasEnabled) {
-        _.overrideHasOwnProlicy(function (prop) {
-          return hasOwn$1.call(proxy$1.obj(this), prop);
+        _.overridePolicy('hasOwn', function (obj, prop) {
+          return hasOwn$1.call(proxy$1.obj(obj), prop);
         });
+
+        _.overridePolicy('eq', proxy$1.eq);
         hasEnabled = true;
       }
     },
@@ -1262,13 +1282,11 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
       var handlers = this.listens[attr];
 
       if (handlers) {
-        (function () {
-          var primitive = _.isPrimitive(val),
-              eq = proxy$1.eq(val, oldVal);
-          if (!primitive || !eq) handlers.each(function (handler) {
-            handler(attr, val, oldVal, _this.target, eq);
-          });
-        })();
+        var primitive = _.isPrimitive(val),
+            eq = proxy$1.eq(val, oldVal);
+        if (!primitive || !eq) handlers.each(function (handler) {
+          handler(attr, val, oldVal, _this.target, eq);
+        });
       }
     },
     notify: function () {
@@ -1426,6 +1444,14 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
         if (ridx) {
           if (eq) return;
 
+          if (oldVal) {
+            oldVal = proxy$1.obj(oldVal);
+            _this3._unobserve(oldVal, idx + 1);
+            oldVal = _.get(oldVal, rpath);
+          } else {
+            oldVal = undefined;
+          }
+
           if (val) {
             var mobj = proxy$1.obj(val);
 
@@ -1444,14 +1470,6 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
             }
           } else {
             val = undefined;
-          }
-
-          if (oldVal) {
-            oldVal = proxy$1.obj(oldVal);
-            _this3._unobserve(oldVal, idx + 1);
-            oldVal = _.get(oldVal, rpath);
-          } else {
-            oldVal = undefined;
           }
 
           var primitive = _.isPrimitive(val);
@@ -1481,7 +1499,7 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
     }
   });
 
-  var policies = [];
+var   policies$1 = [];
   var inited = false;
 
   var core = {
@@ -1541,13 +1559,13 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
       return hasListen.apply(null, arguments);
     },
     registerPolicy: function (name, priority, checker, policy) {
-      policies.push({
+      policies$1.push({
         name: name,
         priority: priority,
         policy: policy,
         checker: checker
       });
-      policies.sort(function (p1, p2) {
+      policies$1.sort(function (p1, p2) {
         return p1.priority - p2.priority;
       });
       logger.info('register observe policy[%s], priority is %d', name, priority);
@@ -1556,7 +1574,7 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
     init: function (cfg) {
       if (!inited) {
         configuration.config(cfg);
-        if (_.each(policies, function (policy) {
+        if (_.each(policies$1, function (policy) {
           if (policy.checker(config)) {
             _.each(policy.policy(config), function (val, key) {
               Observer.prototype[key] = val;
@@ -1638,8 +1656,8 @@ var   thousandSeparationReg$1 = /(\d)(?=(\d{3})+(?!\d))/g;
   });
 
 var   hasOwn$3 = Object.prototype.hasOwnProperty;
-  var RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(',');
-  var RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,indexOf,lastIndexOf,length,map,keys,join,pop,push,reverse,reverseRight,some,shift,slice,sort,splice,toSource,unshift'.split(',');
+  var RESERVE_PROPS = 'hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'.split(',');
+  var RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,includes,indexOf,join,keys,lastIndexOf,map,pop,push,reduce,reduceRight,reverse,shift,slice,some,sort,splice,unshift,values'.split(',');
   var VBClassFactory = _.dynamicClass({
     constBind: '__VB_CONST__',
     descBind: '__VB_PROXY__',
@@ -1767,17 +1785,18 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
       }
 
       proxy = window[this.generateClassConstructor(props, funcMap, funcs)](desc);
-      _.each(funcs, function (prop) {
-        proxy[prop] = _this2.funcProxy(obj[prop], proxy);
-      });
       desc.proxy = proxy;
+
+      _.each(funcs, function (prop) {
+        proxy[prop] = _this2.funcProxy(obj[prop], prop in protoPropMap ? obj : proxy);
+      });
 
       this.onProxyChange(obj, proxy);
       return desc;
     },
-    funcProxy: function (fn, proxy) {
+    funcProxy: function (fn, scope) {
       return function () {
-        fn.apply(!this || this == window ? proxy : this, arguments);
+        return fn.apply(this === window ? scope : this, arguments);
       };
     },
     eq: function (o1, o2) {
@@ -1835,7 +1854,7 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
         if (!(attr in obj)) {
           obj[attr] = undefined;
         } else if (_.isFunc(obj[attr])) {
-          console.warn('defineProperty not support function [' + attr + ']');
+          logger.warn('defineProperty not support function [' + attr + ']');
         }
         this.classGenerator.create(this.obj, this);
       }
@@ -1881,33 +1900,56 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
         window.execScript(['Function parseVB(code)', '\tExecuteGlobal(code)', 'End Function'].join('\n'), 'VBScript');
         supported = true;
       } catch (e) {
-        console.error(e.message, e);
+        logger.error(e.message, e);
       }
     }
     return supported;
   };
 
+  var arrayHooks = 'fill,pop,push,reverse,shift,sort,splice,unshift'.split(',');
+
   configuration.register({
     defaultProps: []
   });
 
-  var policy = {
+  var policy$1 = {
     init: function () {
+      this.isArray = _.isArray(this.obj);
       this.watchers = {};
+      if (this.isArray) {
+        this.hookArrayMethod = this.hookArrayMethod.bind(this);
+        this.hookArray();
+      }
     },
     watch: function (attr) {
       var watchers = this.watchers;
-      if (!watchers[attr]) {
+      if (!watchers[attr] && (!this.isArray || attr != 'length')) {
         this.defineProperty(attr, this.obj[attr]);
         watchers[attr] = true;
       }
     },
     unwatch: function (attr) {
       var watchers = this.watchers;
-      if (watchers[attr]) {
+      if (watchers[attr] && (!this.isArray || attr != 'length')) {
         this.undefineProperty(attr, this.obj[attr]);
         watchers[attr] = false;
       }
+    },
+    hookArray: function () {
+      _.each(arrayHooks, this.hookArrayMethod);
+    },
+    hookArrayMethod: function (method) {
+      var obj = this.obj,
+          fn = Array.prototype[method],
+          len = obj.length,
+          self = this;
+
+      obj[method] = function () {
+        var ret = fn.apply(obj, arguments);
+        self.addChangeRecord('length', len);
+        len = obj.length;
+        return ret;
+      };
     }
   };
 
@@ -1961,7 +2003,7 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
           value: value
         });
       }
-    }, policy);
+    }, policy$1);
   });
 
   core.registerPolicy('DefineGetterAndSetter', 20, function (config) {
@@ -1989,7 +2031,7 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
           value = val;
         });
       }
-    }, policy);
+    }, policy$1);
   });
 
   core.registerPolicy('VBScriptProxy', 30, function (config) {
@@ -2033,8 +2075,16 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
           value: value
         });
       }
-    }, policy);
+    }, policy$1);
   });
+
+  function hookArrayFunc(func, obj, callback, scope, own) {
+    var _this = this;
+
+    return func(obj, function (v, k, s, o) {
+      return callback.call(_this, proxy$1.proxy(v), k, s, o);
+    }, scope, own);
+  }
 
   var observer = _.assign({
     eq: function (o1, o2) {
@@ -2051,11 +2101,43 @@ var   hasOwn$3 = Object.prototype.hasOwnProperty;
     },
 
     proxy: proxy$1,
-    config: configuration.get()
+    config: configuration.get(),
+
+    $each: function (obj, callback, scope, own) {
+      return hookArrayFunc(_.each, obj, callback, scope, own);
+    },
+    $map: function (obj, callback, scope, own) {
+      return hookArrayFunc(_.map, obj, callback, scope, own);
+    },
+    $filter: function (obj, callback, scope, own) {
+      return hookArrayFunc(_.filter, obj, callback, scope, own);
+    },
+    $aggregate: function (obj, callback, defVal, scope, own) {
+      var rs = defVal;
+      each(obj, function (v, k, s, o) {
+        rs = callback.call(this, rs, proxy$1.proxy(v), k, s, o);
+      }, scope, own);
+      return rs;
+    },
+    $keys: function (obj, filter, scope, own) {
+      var keys = [];
+      each(obj, function (v, k, s, o) {
+        if (!filter || filter.call(this, proxy$1.proxy(v), k, s, o)) keys.push(k);
+      }, scope, own);
+      return keys;
+    },
+    $values: function (obj, filter, scope, own) {
+      var values = [];
+      each(obj, function (v, k, s, o) {
+        if (!filter || filter.call(this, proxy$1.proxy(v), k, s, o)) values.push(v);
+      }, scope, own);
+      return values;
+    }
   }, core);
 
   var index = _.assignIf(_.create(observer), {
-    observer: observer
+    observer: observer,
+    utility: _
   }, _);
 
   return index;

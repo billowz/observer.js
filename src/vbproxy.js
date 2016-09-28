@@ -2,8 +2,8 @@ import _ from 'utility'
 import logger from './log'
 
 const hasOwn = Object.prototype.hasOwnProperty,
-  RESERVE_PROPS = 'hasOwnProperty,toString,toLocaleString,isPrototypeOf,propertyIsEnumerable,valueOf'.split(','),
-  RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,indexOf,lastIndexOf,length,map,keys,join,pop,push,reverse,reverseRight,some,shift,slice,sort,splice,toSource,unshift'.split(',')
+  RESERVE_PROPS = 'hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString,toString,valueOf'.split(','),
+  RESERVE_ARRAY_PROPS = 'concat,copyWithin,entries,every,fill,filter,find,findIndex,forEach,includes,indexOf,join,keys,lastIndexOf,map,pop,push,reduce,reduceRight,reverse,shift,slice,some,sort,splice,unshift,values'.split(',')
 
 const VBClassFactory = _.dynamicClass({
   constBind: '__VB_CONST__',
@@ -159,17 +159,18 @@ const VBClassFactory = _.dynamicClass({
     }
 
     proxy = window[this.generateClassConstructor(props, funcMap, funcs)](desc)
-    _.each(funcs, (prop) => {
-      return proxy[prop] = this.funcProxy(obj[prop], proxy)
-    })
     desc.proxy = proxy
+
+    _.each(funcs, (prop) => {
+      proxy[prop] = this.funcProxy(obj[prop], prop in protoPropMap ? obj : proxy)
+    })
 
     this.onProxyChange(obj, proxy)
     return desc
   },
-  funcProxy(fn, proxy) {
+  funcProxy(fn, scope) {
     return function() {
-      return fn.apply((!this || this == window) ? proxy : this, arguments)
+      return fn.apply(this === window ? scope : this, arguments)
     }
   },
   eq(o1, o2) {
@@ -225,7 +226,7 @@ const ObjectDescriptor = _.dynamicClass({
       if (!(attr in obj)) {
         obj[attr] = undefined
       } else if (_.isFunc(obj[attr])) {
-        console.warn('defineProperty not support function [' + attr + ']')
+        logger.warn('defineProperty not support function [' + attr + ']')
       }
       this.classGenerator.create(this.obj, this)
     }
@@ -277,7 +278,7 @@ VBClassFactory.isSupport = function isSupport() {
       ].join('\n'), 'VBScript')
       supported = true
     } catch (e) {
-      console.error(e.message, e)
+      logger.error(e.message, e)
     }
   }
   return supported

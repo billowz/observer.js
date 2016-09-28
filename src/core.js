@@ -31,7 +31,7 @@ const Observer = _.dynamicClass({
     let handlers = this.listens[attr]
 
     if (handlers) {
-      let primitive = _.isPrimitive(val),
+      var primitive = _.isPrimitive(val),
         eq = proxy.eq(val, oldVal)
       if (!primitive || !eq)
         handlers.each((handler) => {
@@ -206,6 +206,14 @@ const Expression = _.dynamicClass({
       if (ridx) {
         if (eq) return
 
+        if (oldVal) {
+          oldVal = proxy.obj(oldVal)
+          this._unobserve(oldVal, idx + 1)
+          oldVal = _.get(oldVal, rpath)
+        } else {
+          oldVal = undefined
+        }
+
         if (val) {
           let mobj = proxy.obj(val)
 
@@ -224,14 +232,6 @@ const Expression = _.dynamicClass({
           }
         } else {
           val = undefined
-        }
-
-        if (oldVal) {
-          oldVal = proxy.obj(oldVal)
-          this._unobserve(oldVal, idx + 1)
-          oldVal = _.get(oldVal, rpath)
-        } else {
-          oldVal = undefined
         }
 
         let primitive = _.isPrimitive(val)

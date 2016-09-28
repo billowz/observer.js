@@ -4,26 +4,49 @@ import proxy from './proxy'
 import VBClassFactory from './vbproxy'
 import configuration from './configuration'
 
+const arrayHooks = 'fill,pop,push,reverse,shift,sort,splice,unshift'.split(',')
+
 configuration.register({
   defaultProps: []
 })
 
 const policy = {
   init() {
+    this.isArray = _.isArray(this.obj)
     this.watchers = {}
+    if (this.isArray) {
+      this.hookArrayMethod = this.hookArrayMethod.bind(this)
+      this.hookArray()
+    }
   },
   watch(attr) {
     let watchers = this.watchers
-    if (!watchers[attr]) {
+    if (!watchers[attr] && (!this.isArray || attr != 'length')) {
       this.defineProperty(attr, this.obj[attr])
       watchers[attr] = true
     }
   },
   unwatch(attr) {
     let watchers = this.watchers
-    if (watchers[attr]) {
+    if (watchers[attr] && (!this.isArray || attr != 'length')) {
       this.undefineProperty(attr, this.obj[attr])
       watchers[attr] = false
+    }
+  },
+  hookArray() {
+    _.each(arrayHooks, this.hookArrayMethod)
+  },
+  hookArrayMethod(method) {
+    let obj = this.obj,
+      fn = Array.prototype[method],
+      len = obj.length,
+      self = this
+
+    obj[method] = function() {
+      let ret = fn.apply(obj, arguments)
+      self.addChangeRecord('length', len)
+      len = obj.length
+      return ret
     }
   }
 }

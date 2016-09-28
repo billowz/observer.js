@@ -63,9 +63,11 @@ _.assign(proxy, {
   enable(policy) {
     applyPolicy(policy)
     if (!hasEnabled) {
-      _.overrideHasOwnProlicy(function(prop) {
-        return hasOwn.call(proxy.obj(this), prop)
+      _.overridePolicy('hasOwn', function(obj, prop) {
+        return hasOwn.call(proxy.obj(obj), prop)
       })
+
+      _.overridePolicy('eq', proxy.eq)
       hasEnabled = true
     }
   },
